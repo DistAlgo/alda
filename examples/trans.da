@@ -1,0 +1,158 @@
+def if_(c): pass
+def trans_rules(): pass
+def trans_left_rec_rules(): pass
+
+class Trans(process):
+  def setup(E): pass
+
+  def trans(E): pass
+
+  def run(): print(trans(E))
+
+  def infer(rules={}):
+    """
+    for input using keyword arguments:
+    if keyword arguments are given, use the given arguments as input,
+    otherwise if named attributes are defined, use defined attributes ?
+    otherwise, use empty sets ?  no, treat as undefined
+    for output using non-keyword arguments:
+    if non-keyward arguments are given, return a set of tuples for each arg,
+    otherwise, write to named attributes of the inferred sets of tuples
+    """
+    pass
+
+class Trans_py(Trans, process):  # using Python but no arg self in def
+
+  def trans(E):
+    T = E
+    W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    while W:
+      T.add(W.pop())
+      W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    return T
+
+class Trans_set(Trans, process):  # using DistAlgo set queries
+
+  def trans(E):
+    T = E
+    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      T.add((x,z))
+    return T
+
+# could change first lines in trans above to:
+#   T = {}
+#   while some((x,z) in E | setof((x,z), (x,y) in T, (y,z) in E),
+#              has= (x,z) not in T):
+
+class Trans_rules(Trans, process):
+
+  def rules (name=trans_rules, edge=['certain',(int,int)],path='certain'):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+
+  def trans(E): 
+    return infer(path, edge=E, rules=trans_rules)
+
+class Trans_left_rec_rules(Trans, process):
+
+  def rules (name=trans_left_rec_rules):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(path(x,z), edge(z,y))
+
+  def trans(E): 
+    return infer(path, edge=E, rules=trans_left_rec_rules)
+
+
+from gen import *
+
+def gen_graph(v,e):
+  """
+  generate a graph of v vertices and e edges
+  and write to a file
+  """
+
+  # Domain definitions
+  # 	DomainVar = Domain(start, size)
+  D1 = Domain(1, v)
+  
+  # Relation Definitions
+  # 	RelVar = Relation("Name", D1, D2, ..., Dn)
+  R1 = Relation("edge", D1, D1)
+  
+  # Constraints
+  # 	RelVar.Set_Rel_Size(Number)
+  # 	RelVar.Set_Attr_Sizes(N1, N2, ..., Nn)
+  # 	RelVar.Set_Attr_Size(AttrPos, Number)
+  # 	RelVar.Set_Attr_Size(AttrPos, 0)
+  # 	RelVar.DefaultAttrSizes()
+  # 	RelVar.Set_Max_Constr4(Attr1, Attr2, Number)
+  # 	R1.Remove_Constr4(Attr1, Attr2, Number)
+  # 	R1.Remove_All_Constr4()
+  R1.Set_Rel_Size(e)
+  #R1.Set_Attr_Sizes(2, 4)
+  #R1.Set_Attr_Size(1, v*6/7)
+  #R1.Set_Attr_Size(2, v*6/7)
+  #R1.Set_Max_Constr4(1, 2, 10)
+  #R1.Remove_Constr4(1, 2, 2)
+  
+  # Database definitions
+  # 	DBVar = Database(Name)
+  # 	DBVar.AddRelations(R1, R2, ..., Rn)
+  DB1 = Database("testDB")
+  DB1.Add_Relations(R1)
+  
+  # Database generation
+  # 	DBVar.Generate()   # equivalent to the following
+  #     R1.Generate() R2.Generate() ... Rn.Generate()
+  DB1.Generate()
+  
+  # Statistics
+  R1.Distr_Constr4()
+  R1.Avg_Constr4()
+  R1.Max_Constr4()
+  R1.Min_Constr4()
+  
+  DB1.SaveLiuPyGraph("v"+str(v)+"e"+str(e))
+  #DB2 = Database("new")
+  #DB2.LoadPickle("testDBPickle")
+  #DB2.SaveAll("new")
+
+
+from timeit import Timer
+
+def main():
+  #edge = {(1,2),(1,8),(2,9)}
+
+  esizes = []
+  esizes += [(1000,e) for e in [2000,4000,6000,8000,10000]]
+  #esizes = [(1000,e) for e in [1500,3000,4500,5000,7500,9000]]
+  #esizes = [(1000,e) for e in [200,400,600,800,1000]]
+  vsizes = []
+  vsizes += [(v,10000) for v in [200,400,600,800,1000]]
+
+  #for (v,e) in [(100,1000)]:
+  for (v,e) in esizes+vsizes:
+    gen_graph(v,e)
+
+
+  o1 = new(Trans_py, [edge])
+  o2 = new(Trans_set, [edge])
+  #o3 = new(Trans_rules, [edge])
+  #o4 = new(Trans_left_rec_rules, [edge])
+  start(o1) 
+  start(o2)
+  #start(o3)
+  #start(o4)
+
+  for (v,e) in esizes+vsizes:
+    graphname = "v"+str(v)+"e"+str(e)
+    out = ''
+    out += str(e)+'\t'+str(v)+'\t'
+
+    eval(open(graphname).read())
+    #print(edge)
+
+    #time for computing transitive closure
+    t=Timer(...)
+    out += str(t.timeit(1))+'\t'
+    #out += str(t.timeit(5)/5.0)
