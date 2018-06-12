@@ -1,0 +1,122 @@
+r1=888
+r2=999
+
+class RBAC(process):
+
+  def setup(Users,Roles,UR,RH): pass
+
+  # using python comprehensions, copied from allRBAC.py, 
+  # except that methods have an extra argument self, and
+  # trans0(RH) was RH, maintained as in NIST standard
+  def trans0(E):
+    T = set(E)
+    W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
+    while bool(W):
+      T.add(W.pop())
+      W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
+#    print(T | set((r,r) for r in Roles))
+    return T | set((r,r) for r in self.Roles)  # dom(E)+ran(E) may be < Roles
+
+  def authorized_users0(role):
+    assert role in self.Roles
+    return set(u for u in self.Users for asc in self.Roles 
+               if (asc,role) in self.trans0(RH) and (u,asc) in self.UR)
+
+
+  # using DistAlgo set queries now
+  def trans(E):
+    T = E
+    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      T.add((x,z))
+    return T | setof((r,r), r in Roles)
+
+#   while some((x,z) in T | setof((x,z), (x,y) in T, (y,z) in E, has= (x,z) not in T)):
+
+  def authorized_users(role):
+    return setof(u, u in Users, (u,r) in UR, (r,_role) in trans(RH))
+
+    return setof(u, u in Users, (u,r) in UR, (r,_role) in transRH)
+
+
+  # using rules with direct predicates as sets and vice versa, being extended
+  def rules():
+    transRH(x,y), if_(RH(x,y))
+    transRH(x,y), if_(RH(x,z), transRH(z,y))
+    transRH(x,x), if_(Roles(x)) # if used as base case, don't need first rule
+
+#  rules myname (declarations):
+#    transRH(x,y) if RH(x,y)
+#    transRH(x,y) if RH(x,z), transRH(z,y)
+#
+#    if RH(x,y): transRH(x,y) 
+#    if RH(x,z), transRH(z,y): transRH(x,y) 
+
+  # using rules with any prediates and "infer"
+  def rules (myname, edge=['certain',(int,int)], path='certain'):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z),path(z,y))
+    path(x,x), if_(Roles(x))
+
+    transRH(x,y), if_(Roles(x))
+
+    transRH(x,y), if_(edge(x,y))
+    transRH(x,y), if_(edge(x,z), transRH(z,y))
+    transRH(x,x), if_(Roles(x)) # if used as base case, don't need first rule
+
+    transRH(x,y), if_(Roles(x))
+
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z),path(z,y))
+    transRH(x,y), if_(Roles(x))
+
+    closure = infer(path, edge = RH)| tranRH
+
+  def trans1(E):
+    return infer(path, edge=E) | setof((r,r), r in Roles)
+
+#  def trans2(edge): # not allow, as it would be equivalent to dynamic scoping
+#    return infer(path) | setof((r,r), r in Roles)
+
+  def trans3(E):
+    infer()  # use edge attributes, write path attributes
+    infer(edge=E)
+    infer(path)
+    infer(path,edge=E)
+    trans = infer(path, edge=E)
+    trans = infer(path(_,_), edge=E)
+    a = r1
+    b = r2
+    areach, reachb = infer(path(a,_), path(_,b), edge=E)
+    areach, reachb = infer(path(a,_), path(_,b), edge=E, filenmae="tmp")
+    return trans, areach, reachb
+
+  def infer():
+    """
+    for input using keyword arguments:
+    if keyword arguments are given, use the given arguments as input,
+    otherwise if named attributes are defined, use defined attributes ?
+    otherwise, use empty sets ?  no, treat as undefined
+    for output using non-keyword arguments:
+    if non-keyward arguments are given, return a set of tuples for each arg,
+    otherwise, write to named attributes of the inferred sets of tuples
+    """
+    pass
+
+  def authorized_users2(role):
+    return setof(u, u in Users, (u,r) in UR, (r,_role) in trans2(RH))
+
+  def run():
+    print('U',Users)
+    print('R',Roles)
+    print('UR',UR)
+    print('RH',RH)
+    print(authorized_users0(r2))
+    print(authorized_users0(r1))
+    print(authorized_users(r2))
+    print(authorized_users(r1))
+#    print(authorized_users2(r2))
+#    print(authorized_users2(r1))
+
+def main():
+  rbac = new(RBAC,[{1,2},{r1,r2},{(1,r1),(2,r2)},{(r1,r2)}])
+  start(rbac)
