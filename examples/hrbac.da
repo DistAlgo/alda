@@ -1,0 +1,326 @@
+class CoreRBAC(process):
+  """
+  Core RBAC keeps several sets including the following:
+
+    USERS: set of users
+    ROLES: set of roles
+    PERMS: set of permissions
+    UR: set of user-role pairs
+    PR: set of permission-role pairs
+
+  with constraints:
+
+    UR subset USERS * ROLES
+    PR subset PERMS * ROLES
+
+  update functions for each set, subject to the constraints above:
+
+    AddUser, DeleteUser, AddRole, DeleteRole, AddPerm, DeletePerm
+    AddUR, DeleteUR, AddPR, DeletePR
+    each Add has pre-conditions:
+      the element is not yet in and the constraints will not be violated. 
+    each Delete has the pre-condition that the element is in,
+      and maintains the constraints.
+
+  query functions including the following:
+  
+    AssignedUsers(role): the set of users assigned to role in UR
+    AssignedRoles(user): the set of roles assigned to user in UR
+    UserPermissions(user): 
+      the set of permissions assigned to the roles assigned to user
+  """
+
+  def setup():
+    self.USERS = set()
+    self.ROLES = set()
+    self.PERMS = set()
+    self.UR = set()         # UR subset USERS * ROLES
+    self.PR = set()         # PR subset PERMS * ROLES
+
+  def AddUser(user):        # pre-condition: user not in USERS
+    USERS.add(user)
+
+  def DeleteUser(user):     # pre-condition: user in USERS
+    UR -= setof((user,r), r in ROLES)	# maintain UR
+    USERs.remove(user)
+
+  def AddRole(role):        # pre: role not in ROLES
+    ROLES.add(role)
+
+  def DeleteRole(role):     # pre: role in ROLES
+    UR -= setof((u,role), u in USERS)	# maintain UR
+    PR -= setof((p,role), p in PERMS)	# maintain PR
+    ROLES.remove(role)
+
+  # missing in ANSI standard
+  def AddPerm(perm):        # pre: perm not in PERMS
+    PERMS.add(perm)
+
+  # missing in ANSI standard
+  def DeletePerm(perm):     # pre: perm in PERMS
+    PR -= setof((perm,r), r in ROLES)	# maintain PR
+    PERMS.remove(perm)
+
+  # called AssignUser in ANSI standard
+  def AddUR(user, role):
+    # pre: user in USERS, role in ROLES, (user,role) not in UR
+    UR.add((user,role))
+
+  # called DeassignUser in ANSI standard
+  def DeleteUR(user, role):  # pre: (user,role) in UR
+    UR.remove((user,role))
+
+  # called GrantPermission in ANSI standard
+  def AddPR(perm, role):
+    # pre: perm in PERMS, role in ROLES, (perm,role) not in PR
+    PR.add((perm,role))
+
+  # called RevokePermission in ANSI standard
+  def DeleteUR(perm, role):  # pre: (perm,role) in PR
+    PR.remove((perm,role))
+
+  def AssignedUsers(role):  # pre: role in ROLES
+    """the set of users assigned to role in UR"""
+    return setof(u, (u,_role) in UR)
+
+  def AssignedRoles(user):  # pre: user in USERS
+    """the set of roles assigned to user in UR"""
+    return setof(r, (_user,r) in UR)
+
+  def UserPermissions(user):  # pre: user in USERS
+    """the set of permissions assigned to the roles assigned to user"""
+    return setof(p, (_user,r) in UR, (p,r) in PR)
+
+
+class HierarchicalRBAC(CoreRBAC,process):
+  """
+  Hierarchical RBAC keeps also a role hierarchy:
+
+    RH: set of pairs of roles, called ascendant and descendant roles,
+    where an ascendant role inherits permissions from a descendant role
+
+  with constraints:
+
+    RH subset ROLES * ROLES, and RH is acyclic
+
+  update functions for RH, subject to the constraints above:
+
+    AddInheritance(asc,desc)
+    DeleteInheritance(asc,desc)
+    with the same kinds of pre-conditions as updates in CoreRBAC
+
+  query functions including the following:
+
+    trans:
+      the transitive closure of role hierarchy union reflexive role pairs
+    AuthorizedUsers(role):
+      the set of users of role or ascendant roles of role
+    AuthorizedRoles(user):
+      the set of roles of user or descendant roles of the roles
+  """
+
+  def setup(RH): 
+    super.setup()
+    self.RH = set()  # RH subset ROLES * ROLES, where asc inh desc
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    RH.add((a,d))
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    RH.remove((a,d))
+
+  def AuthorizedUsers(role):
+    """the set of users of role or ascendant roles of role"""
+    return setof(u, (u,asc) in UR, (asc,_role) in trans(RH))
+
+  # rest of this class: some possible calls, etc. to be worked on
+  def trans1(E):
+    infer()  # use edge attributes, write path attributes
+    infer(edge=E)
+    infer(path)
+    infer(path,edge=E)
+    trans = infer(path, edge=E)
+    trans = infer(path(_,_), edge=E)
+    a = 888
+    b = 999
+    areach, reachb = infer(path(a,_), path(_,b), edge=E)
+    areach, reachb = infer(path(a,_), path(_,b), edge=E, filenmae="tmp")
+    return trans, areach, reachb
+
+  def infer(rules={}):
+    """
+    for input using keyword arguments:
+    if keyword arguments are given, use the given arguments as input,
+    otherwise if named attributes are defined, use defined attributes ?
+    otherwise, use empty sets ?  no, treat as undefined
+    for output using non-keyword arguments:
+    if non-keyward arguments are given, return a set of tuples for each arg,
+    otherwise, write to named attributes of the inferred sets of tuples
+    """
+    pass
+
+  def run():
+    print('U',USERS)
+    print('R',ROLES)
+    print('UR',UR)
+    print('RH',RH)
+    print(AuthorizedUsers(r2))
+    print(AuthorizedUsers(r1))
+
+
+class HRBAC_py(HierarchicalRBAC):  # using Python but no arg self in def
+
+  def trans(E):
+    T = E
+    W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    while W:
+      T.add(W.pop())
+      W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    return T | {(r,r) for r in self.ROLES}  # dom(E)+ran(E) may < ROLES
+
+  def AuthorizedUsers(role):  # assert role in self.ROLES
+    return set(u for u in self.USERS for asc in self.ROLES 
+               if (asc,role) in self.trans(RH) and (u,asc) in self.UR)
+
+
+class HRBAC_set(HierarchicalRBAC):  # using DistAlgo set queries
+
+  def trans(E):
+    """the transitive closure of role hierarchy E union reflexive role pairs
+    """
+    T = E
+    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      T.add((x,z))
+    return T | setof((r,r), r in ROLES)
+
+# could change first lines in trans above to:
+#   T = {}
+#   while some((x,z) in E | setof((x,z), (x,y) in T, (y,z) in E),
+#              has= (x,z) not in T):
+
+  def AuthorizedUsers(role):
+    """the set of users of role or ascendant roles of role"""
+    return setof(u, (u,asc) in UR, (asc,_role) in trans(RH))
+
+  def AuthorizedRoles(user):
+    """the set of roles of user or descendant roles of the roles"""
+    return setof(r, (_user,asc) in UR, (asc,r) in trans(RH))
+
+
+class HRBAC_set_maint(HRBAC_set):
+
+  def setup(RH): 
+    super.setup()
+    self.transRH = set()
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    super.AddInheritance(a,d)
+    transRH = trans(RH)
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    super.DeleteInheritance(a,d)
+    transRH = trans(RH)
+
+  def AuthorizedUsers(role):
+    return setof(u, (u,r) in UR, (r,_role) in transRH)
+
+"""
+class HRBAC_transRH_rules(HRBAC_set_maint):
+
+# in ideal syntax:
+#
+#  rules myname (declarations):
+#    transRH(x,y) if RH(x,y)
+#    transRH(x,y) if RH(x,z), transRH(z,y)
+#
+#    if RH(x,y): transRH(x,y) 
+#    if RH(x,z), transRH(z,y): transRH(x,y) 
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    super.AddInheritance(a,d)
+    infer(rules=transRH_rules)
+    # transRH = infer(transRH, RH=RH rules=transRH_rules)
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    super.DeleteInheritance(a,d)
+    infer(rules=transRH_rules)
+
+  def rules (name=transRH_rules):
+    transRH(x,y), if_(RH(x,y))
+    transRH(x,y), if_(RH(x,z), transRH(z,y))
+    transRH(x,x), if_(ROLES(x)) # with this base case, don't need first rule
+
+class HRBAC_trans_rules(HRBAC_set):
+
+  def rules (name=trans_rules, edge=['certain',(int,int)], path='certain'):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+
+  def trans(E):  # use infer plus set query
+    return infer(path, edge=E, rules=trans_rules) | setof((r,r), r in ROLES)
+
+# not allow, as it would be equivalent to dynamic scoping:
+#
+#  def trans2(edge):
+#    return infer(path) | setof((r,r), r in ROLES)
+
+class HRBAC_trans_with_role_rules(HRBAC_set):
+
+  def rules (name=trans_with_role_rules): # with additional last rule
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+    path(x,y), if_(role(x))
+
+  def trans(E):  # use infer only, pass in also ROLES
+    return infer(path, edge=E, role=ROLES, rules=trans_with_role_rules)
+
+class HRBAC_trans_with_ROLES_rules(HRBAC_set):
+
+  def rules (name=trans_with_ROLES_rules):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z),path(z,y))
+    path(x,x), if_(ROLES(x))
+
+  def trans(E):
+    return infer(path, edge=E, rules=trans_with_ROLES_rules)
+
+class HRBAC_transRH_with_edge_rules(HRBAC_set):
+
+  def rules (name=transRH_with_edge_rules):
+    transRH(x,y), if_(edge(x,y))
+    transRH(x,y), if_(edge(x,z), transRH(z,y))
+    transRH(x,x), if_(ROLES(x))
+
+  def trans(E):
+    return infer(path, edge=E, rules=trans_with_edge_rules)
+
+class HRBAC_trans_with_RH_ROLES_rules(HRBAC_set):
+
+  def rules (name=trans_with_RH_ROLES_rules):
+    path(x,y), if_(RH(x,y))
+    path(x,y), if_(RH(x,z),path(z,y))
+    path(x,x), if_(ROLES(x))
+
+  def trans(E):
+    return infer(path, rules=trans_with_RH_ROLES_rules)
+"""
+
+def main():
+  #rbac = new(RBAC,[{1,2},{r1,r2},{(1,r1),(2,r2)},{(r1,r2)}])
+  #start(rbac)
+
+  o = new(HierarchicalRBAC)
+  """
+  o1 = new(HRBAC_transRH_rules,[])
+  o2 = new(HRBAC_trans_rules)
+  o3 = new(HRBAC_trans_with_role_rules)
+  """
+  o41 = new(HRBAC_set)
+  o42 = new(HRBAC_set_maint)
+  o43 = new(HRBAC_py)
+
+  start(o)
+  #start(o1) 
