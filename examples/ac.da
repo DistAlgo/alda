@@ -1,105 +1,273 @@
-r1=888
-r2=999
+"""
+We consider Role-Based Access Control (RBAC) with 5 components:
 
-class RBAC(process):
+  Core RBAC,
+  Hierarchical RBAC, 
+  Core RBAC with Static Separation of Duty constraint (also called Constrained RBAC),
+  Hierarchical RBAC with Static Separation of Duty constraint, and
+  Administrative RBAC.
 
-  def setup(Users,Roles,UR,RH): pass
+excluding Distributed RBAC, at least for now.
+"""
 
-  # using python comprehensions, copied from allRBAC.py, 
-  # except that methods have an extra argument self, and
-  # trans0(RH) was RH, maintained as in NIST standard
-  def trans0(E):
-    T = set(E)
-    W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
-    while bool(W):
-      T.add(W.pop())
-      W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
-#    print(T | set((r,r) for r in Roles))
-    return T | set((r,r) for r in self.Roles)  # dom(E)+ran(E) may be < Roles
+import hrbac
 
-  def authorized_users0(role):
-    assert role in self.Roles
-    return set(u for u in self.Users for asc in self.Roles 
-               if (asc,role) in self.trans0(RH) and (u,asc) in self.UR)
+class CoreRBACwithSSD(CoreRBAC,process):
+  """
+  Core RBAC with SSD keeps also a set of SSD items, where each item has:
+
+    a name, 
+    a set of roles, and
+    a cardinality c such that 1 <= c < count(roles)
+
+  with constraints:
+
+    all roles in all SSD items  subset ROLES
+
+    for each user, for each SSD item,
+      the number of assigned roles (AssignedRoles) of the user 
+      that are in the item's roles 
+      is no more than the item's cardinality.
+
+  update functions, subject to the constraints above:
+ 
+    CreateSsdSet(name, roles, c): add SSD item having name, roles, c
+    DeleteSsdSet(name): delete SSD item having name
+    AddSsdRoleMember(name, role): add role to SSD item name's roles
+    DeleteSsdRoleMember(name, role): add role from SSD item name's roles
+    SetSsdSetCardinality(name, c): set c to be SSD item name's cardinality 
+    with the same kinds of pre-conditions as updates in CoreRBAC
+
+  query functions including the following:
+  
+    SsdRoleSets(): the set of names of SSD items
+    SsdRoleSetRoles(name): the set of roles in SSD item name
+    SsdRoleSetCardinality(name): the cardinality of SSD item name
+  """
+
+  def setup(): 
+    super.setup()
+    self.SsdNAMES = set() # set of names of constraints
+    self.SsdNR = set()    # set of pairs of name and role
+                          # SsdNR subset SsdNAMES * ROLES
+    self.SsdNC = dict()   # set of pairs of name and cardinality
+                          # SsdNC: SsdNAMES -> int
+
+  # SSD constraint, as post condition for all updates
+  def check_constraint (name = SSD):
+    return each(u in USERS, (name,c) in SsdNC, has=
+                countof(r, r in AssignedRoles(u), (_name,r) in SsdNR) <= c)
+
+  def AssignUser(user, role):
+    CoreRBAC.AssignUser(user, role)
+
+  def CreateSsdSet(name, roles, c):  # todo: last 2 not needed, by post
+    # pre: name not in SsdNAMES, roles subset ROLES, 1 <= c < count(roles)
+    SsdNAMES.add(name)
+    SsdNR |= setof((name,r), r in roles)
+    SsdNC.add((name,c))
+
+  def DeleteSsdSet(name):  # pre: name in SsdNAMES  #don't need post SSD
+    SsdNR -= setof((name,r), r in SsdRoleSetRoles(name))
+    SsdNC.remove((name,SsdRoleSetCardinality(name)))
+    SsdNAMES.remove(name)		      # delete ssd name last
+
+  def AddSsdRoleMember(name, role):
+    # pre: name in SsdNAMES, role in ROLES
+    # pre: role not in SsdRoleSetRoles(name)
+    SsdNR.add((name,role))
+
+  def DeleteSsdRoleMember(name, role):
+    # pre: name in SsdNAMES, role in SsdRoleSetRoles(name)
+    SsdNR.remove((name,role))
+
+  def SetSsdSetCardinality(name, c):
+    # pre: name in SsdNAMES, SsdRoleSetCardinality(name) != c
+    SsdNC.remove((name,SsdRoleSetCardinality(name)))
+    SsdNC.add((name,c))
+
+  def SsdRoleSets():
+    return SsdNAMES
+
+  def SsdRoleSetRoles(name):  # pre: name in SsdNAMES
+    return setof(r, (_name,r) in SsdNR)
+
+  def SsdRoleSetCardinality(name):  # pre: name in SsdNAMES
+    return anyof(setof(c, (_name,c) in SsdNC))
 
 
-  # using DistAlgo set queries now
-  def trans(E):
-    T = E
-    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
-      T.add((x,z))
-    return T | setof((r,r), r in Roles)
+class HierarchicalRBACwithSSD(HierarchicalRBAC,CoreRBACwithSSD,process):
+  """
+  Hierarchical RBAC with SSD combines all from
+  Hierarchical RBAC and Core RBAC with SSD, except that 
+  the SSD constraint uses AuthorizedRoles in place of AssignedRoles.
+  """
 
-  def authorized_users(role):
-    return setof(u, u in Users, (u,r) in UR, (r,_role) in trans(RH))
+  def setup(): 
+    HierarchicalRBAC.setup()
+    CoreRBACwithSSD.setup()
 
-    return setof(u, u in Users, (u,r) in UR, (r,_role) in transRH)
+  # SSD constraint, as post condition for all updates
+  def check_constraint (name = SSD):
+    return each(u in USERS, (name,c) in SsdNC, has=
+                countof(r, r in AuthorizedRoles(u), (_name,r) in SsdNR) <=c)
 
 
-  # using rules with direct predicates as sets and vice versa, being extended
-  def rules():
-    transRH(x,y), if_(RH(x,y))
-    transRH(x,y), if_(RH(x,z), transRH(z,y))
-    transRH(x,x), if_(Roles(x)) # if used as base case, don't need first rule
+class AdminRBAC(HierarchicalRBACwithSSD):
+  """
+  Administrative RBAC for HierarchicalRBACwithSSD
+  has optimization and planning functions:
 
-#  rules myname (declarations):
-#    transRH(x,y) if RH(x,y)
-#    transRH(x,y) if RH(x,z), transRH(z,y)
-#
-#    if RH(x,y): transRH(x,y) 
-#    if RH(x,z), transRH(z,y): transRH(x,y) 
+    MineMinRoles:
+      find a smallest set of roles with UR' and PR' assignments
+      such that UR' * PR' = UR * PR
 
-  # using rules with any prediates and "infer"
-  def rules (myname, edge=['certain',(int,int)], path='certain'):
-    path(x,y), if_(edge(x,y))
-    path(x,y), if_(edge(x,z),path(z,y))
+    MineMinRoleAssignments:
+      find a smallest set of UR' and PR' assignments
+      such that UR' * PR' = UR * PR = UP
 
-  def trans1(E):
-    return infer(path, edge=E) | setof((r,r), r in Roles)
+    GetRolesPlan(user, roles, acts):
+      find a sequence of actions, i.e., updates, in acts that
+      allows user to get roles
 
-#  def trans2(edge): # not allow, as it would be equivalent to dynamic scoping
-#    return infer(path) | setof((r,r), r in Roles)
+    GetRolesShortestPlan(user, roles, acts):
+      find a shortest sequence of actions, i.e., updates, in acts that
+      allows user to get roles
 
-  def trans3(E):
-    infer()  # use edge attributes, write path attributes
-    infer(edge=E)
-    infer(path)
-    infer(path,edge=E)
-    trans = infer(path, edge=E)
-    trans = infer(path(_,_), edge=E)
-    a = r1
-    b = r2
-    areach, reachb = infer(path(a,_), path(_,b), edge=E, path=[(1,2)])
-    areach, reachb = infer(path(a,_), path(_,b), edge=E, filename="tmp")
-    return trans, areach, reachb
+  The first two can have a version that includes finding RH'.
+  Any subset of updates can be used as acts; 
+  all constraints must hold after each action.
 
-  def infer():
+  Administrative RBAC could also be for 
+    CoreRBAC, HierarchicalRBAC, or CoreRBACwithSSD.
+  """
+
+  def setup(UP):
+    HierarchicalRBACwithSSD.setup()
+
+  def MineMinRoles():
     """
-    for input using keyword arguments:
-    if keyword arguments are given, use the given arguments as input,
-    otherwise if named attributes are defined, use defined attributes ?
-    otherwise, use empty sets ?
-    for output using non-keyword arguments:
-    if non-keyward arguments are given, return a set of tuples for each arg,
-    otherwise, write to named attributes of the inferred sets of tuples
+    find a smallest set of roles with UR' and PR' assignments
+    such that UR' * PR' = UR * PR = UP
     """
-    pass
+    return anyof((R, UR', PR'), R subset ran(UR)&ran(PR),
+                 UR' subset dom(UR)*R, PR' subset dom(PR)*R,
+                 UR' * PR' = UR * PR, min R)
 
-  def authorized_users2(role):
-    return setof(u, u in Users, (u,r) in UR, (r,_role) in trans2(RH))
+  def MineMinRoleAssignments():
+    """
+    find a smallest set of UR' and PR' assignments
+    such that UR' * PR' = UR * PR = UP
+    """
+    return anyof((R, UR', PR'), R subset ran(UR)&ran(PR),
+                 UR' subset dom(UR)*R, PR' subset dom(PR)*R,
+                 UR' * PR' = UR * PR, min UR'+PR')
 
-  def run():
-    print('U',Users)
-    print('R',Roles)
-    print('UR',UR)
-    print('RH',RH)
-    print(authorized_users0(r2))
-    print(authorized_users0(r1))
-    print(authorized_users(r2))
-    print(authorized_users(r1))
-#    print(authorized_users2(r2))
-#    print(authorized_users2(r1))
+  def GetRolesPlan(user, roles, acts):
+    """
+    find a sequence of actions in acts that allows the user to get the
+    set of roles
+    """
+    assume true
+    seq = []
+    while not each(r in roles, has= (_user,r) in UR):
+      if some a in acts:
+        do(a)
+        seq.append(a)
+      if some ('assign',user,role) in acts:
+        AssignUser(user,role)
+      if some ('deassign',user,role) in acts:
+        DeassignUser(user,role)
+    achieve anyof(seq: true)
 
-def main():
-  rbac = new(RBAC,[{1,2},{r1,r2},{(1,r1),(2,r2)},{(r1,r2)}])
-  start(rbac)
+  def GetRolesShortestPlan(user, roles, acts):
+    """
+    find a shortest sequence of actions in acts that allows the user
+    to get the set of roles
+    """
+    assume true
+    seq = []
+    cost = 0
+    while not each(r in roles, has= (_user,r) in UR):
+      if some a in acts:
+        do(a)
+        seq.append(a)
+        cost += 1
+    achieve anyof(seq, cost: min cost)
+    # todo: specify cost declaratively, and 
+    # add action to sequence and add cost automatically
+
+
+class DistRBAC(HierarchicalRBACwithSSD,process):
+  """
+  A Distributed RBAC process keeps also the following sets:
+
+    OTHERS: set of other RBAC processes
+    GuestR: set of pairs of a rbac-role pair and a guest role
+
+  with constraints:
+
+    domain(domain(GuestR)) subset OTHERS
+    range(GuestR) subset ROLES
+
+  update functions for each set subject to the constraints above:
+
+    AddGuestRole, DeleteGuestRole
+    AssignGuestRole, DeassignGuestRole
+
+  query functions:
+
+    GuestRoles (rbac,role): the set of guest roles for role of rbac
+    OthersRoles(guest): the set of rbac-role pairs for role guest 
+
+  Distributed RBAC can also be for only
+    CoreRBAC, HierarchicalRBAC, or CoreRBACwithSSD,
+    or Administrative RBAC for any of these.
+
+  """
+
+  def setup(OTHERS):
+    HierarchicalRBACwithSSD.setup()
+    GuestR = set()
+  
+  def run(): await(False) # todo: problems with non dist part, by RPC?
+
+  def AddGuestRole(rbac,role,guest):
+    GuestR.add(((rbac,role),guest))
+
+  def DeleteGuestRole(rbac,role,guest): # pre: ((rbac,role),guest) in GuestR
+    GuestR.remove(((rbac,role),guest))
+
+  def GuestRoles(rbac, role):
+    """the set of guest roles for role of rbac
+    """
+    return setof(guest, ((_rbac,_role),guest) in GuestR)
+
+  def OthersRoles(guest):
+    """the set of rbac-role pairs for role guest 
+    """
+    return setof((rbac,role), (rbac,role),_guest) in GuestR)
+
+  def AssignGuestRole(user,rbac,role):
+    """assign to user of role in rbac the corresponding guest roles
+    """
+    send(('credential',user,role), to= rbac)
+    if await(received(('accept',user,role), from_=rbac)):
+      for r in GuestRoles(rbac, role):
+        AssignUser(user,r)
+
+  def DeassignGuestRole(user,rbac,role):  # pre:
+    """deassign from user of role in rbac the corresponding guest roles
+    """
+    for r in GuestRoles(rbac, role):
+      DeassignUser(user,r)
+
+  def receive(msg=('credential',user,role), from_= rbac):
+    if (user,role) in UR:
+      send(('accept',user,role), to=rbac)
+    else: 
+      send(('reject',user,role), to=rbac)
+
+
+def main(): 
+  r = new(RBAC,[])
