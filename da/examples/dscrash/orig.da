@@ -1,0 +1,37 @@
+import sys
+config(Channel is Reliable, Handling is one)
+
+class P(process):
+    def setup(ps:set, v:P, maxfail:int):
+        self.x = -1
+        self.V = {v: False}
+        self.receiveflag = False
+
+    def run():
+          --start
+          for i in range(maxfail):
+              --one_round
+              for k in V:
+                  if not V[k]:
+                      send(('Value', k), to=ps)
+                      V[k] = True
+              await(receiveflag)
+              receiveflag = False
+          --end
+          send(('done', ), to=ps)
+          x = max(listof(v, v in V, V[v]))
+          output("x = %r" % (x))
+          await(each(p in ps, has=received(('done',), from_=p)))
+
+    def receive(msg=('Value', v)):
+       receiveflag = True
+       if v not in V:
+             V[v] = False
+
+def main():
+      n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+      f = int(sys.argv[2]) if len(sys.argv) > 2 else 50
+      ps = new(P, num= n)
+      for i, p in enumerate(list(ps)):
+            setup({p}, (ps, i, f))
+      start(ps)
