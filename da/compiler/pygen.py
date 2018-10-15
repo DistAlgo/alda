@@ -22,63 +22,11 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-def trace_calls(frame, event, arg, indent=[0]):
-    if event != "call" and event != "return":
-        return
-    co = frame.f_code
-    func_name = co.co_name
-    if func_name == 'write':
-        # Ignore write() calls from print statements
-        return
-    func_line_no = frame.f_lineno
-    func_filename = co.co_filename
-    if 'distalgo' in func_filename:
-        func_filename = func_filename.split('/')[-1]
-        caller = frame.f_back
-        if caller:
-            caller_line_no = caller.f_lineno
-            caller_filename = caller.f_code.co_filename.split('/')[-1]
-        else:
-            caller_line_no = 'None'
-            caller_filename = 'None'
-        if event == 'call':
-            indent[0] += 2
-            print ("-" * indent[0] + '> Call to [%s] on line *%s* of {%s} from line *%s* of {%s}' % \
-                (func_name, func_line_no, func_filename,
-                 caller_line_no, caller_filename))
-        if event == 'return':
-            print ("<" + "-" * indent[0] + ' exit function [%s] on line *%s* of {%s} from line *%s* of {%s}' % \
-                (func_name, func_line_no, func_filename,
-                 caller_line_no, caller_filename))
-            indent[0] -= 2
-    return trace_calls
-    
-
-
-
-
 import sys
-# sys.settrace(trace_calls)
-
-# 
-
-from pprint import pprint
 from ast import *
 from itertools import chain
-from . import dast, symtab, ruleast
+from . import dast, symtab
 from .utils import printd, printw, printe
-
-import os
-import platform
-
-sys.path.append('..')
-
-from pyxsb import pyxsb_start_session, pyxsb_end_session, pyxsb_command, \
-                  pyxsb_query, XSBFunctor, XSBVariable, xsb_to_json, json_to_xsb
-
-XSB_ARCH_DIR = '/usr/local/xsb-3.8.0/config/i386-apple-darwin18.0.0'
-
-
 
 OperatorMap = {
     dast.AddOp      : Add,
@@ -126,18 +74,7 @@ STATE_ATTR_NAME = "_state"
 ENTRYPOINT_NAME = "run"
 CATCHALL_PARAM_NAME = "rest_%d"
 
-
-
 ########## Convenience methods for creating AST nodes: ##########
-
-UniqueUpperCasePrefix = 'V'
-#DefaultFileName = 'tmp' #can use one fixed name if all done dynamically
-INDENT = ' ' * 4
-
-def write_file(filename, string):
-    file = open(filename,'w')
-    file.write(string)
-    file.close()
 
 def pyCall(func, args=[], keywords=[], starargs=None, kwargs=None):
     if isinstance(func, str):
@@ -340,7 +277,6 @@ def fixup_locations_in_block(block, last_lineno=None, last_col_offset=None):
     have to fix it up ourselves.
 
     """
-
     for node in block:
         assert isinstance(node, stmt)
         if last_lineno is not None:
@@ -397,70 +333,6 @@ if __name__ == "__main__":
 """).body
 
 
-
-FACTS_TEMPLATE = """
-for v in {VAL}:
-    xsb_facts += "{PRED_NAME}" + str(v) + ".\\n"
-"""
-
-
-# QUERY_TEMPLATE = """
-# xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
-# start = time.time()
-# start_cputime = time.process_time()
-# subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
-# end = time.time()
-# end_cputime = time.process_time()
-# print('query elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
-# start = time.time()
-# start_cputime = time.process_time()
-# tuples = 0
-# end = time.time()
-# end_cputime = time.process_time()
-# print('convert to wanted format answer file elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
-# """
-
-
-QUERY_TEMPLATE = """
-xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
-start = time.time()
-start_cputime = time.process_time()
-subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
-end = time.time()
-end_cputime = time.process_time()
-print('query elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
-start = time.time()
-start_cputime = time.process_time()
-answers = open("{FILENAME}.answers","r").read()
-end = time.time()
-end_cputime = time.process_time()
-print('read answer file elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
-start = time.time()
-start_cputime = time.process_time()
-tuples = set(tuple(eval(a)) for a in answers.split("\\n")[:-1])
-end = time.time()
-end_cputime = time.process_time()
-print('convert to wanted format answer file elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
-"""
-# QUERY_TEMPLATE = """
-# for query in node.queries.subexprs:
-#     gen += for row in pyxsb_query(query):
-#         print(row)
-# """
-
-
-# READFILE_TEMPLATE = """
-# answers = open("{FILENAME}.answers","r").read()
-# tuples = [tuple(eval(a)) for a in answers.split("\\n")[:-1]]
-# """
-
-# QUERY_TEMPLATE = """
-# xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
-# subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
-# """
-
-import inspect
-
 class PythonGenerator(NodeVisitor):
     """Transforms DistPy AST into Python AST.
 
@@ -503,122 +375,6 @@ class PythonGenerator(NodeVisitor):
         self.postambles = list()
         self.pattern_generator = None
 
-
-    def compile_rules(self, node):
-        """
-        called on a Rules node, write the rules in a file
-        """
-        # for now assume there is only one set of rules in each class,
-        # and use the class name as file name;
-        # later add the name of the Rules node within the class.
-        # so rule files can be written at compile time.
-        # filename = get_classname(node.decls)  # need to connect with da
-        xsb_rules = ':- auto_table.\n'
-        xsb_rules += self.to_xsb(node) 
-        write_file(node.decls+'.rules', xsb_rules)
-
-
-
-
-    def to_xsb(self, node):
-        """
-        called on a Rules node, write rules into XSB rules
-        """
-        if isinstance(node, ruleast.Rules):
-            return '\n'.join(self.to_xsb(rule) for rule in node.rules)
-        if isinstance(node, ruleast.Rule):
-            if node.conds == None: return self.to_xsb(node.concl) + '.'
-            return self.to_xsb(node.concl) + ' :- ' + \
-                ','.join(self.to_xsb(assrtn) for assrtn in node.conds) + '.'
-        if isinstance(node, ruleast.Assertion):
-            return self.to_xsb(node.pred) + '(' + \
-                ','.join(self.to_xsb(arg) for arg in node.args) + ')'
-        if isinstance(node, ruleast.LogicVar):
-            return UniqueUpperCasePrefix + node.name
-        if isinstance(node, ruleast.Constant):
-            return node.name
-
-
-    def compile_infer(self, node):
-        """
-        called on an InferStmt node, generate stmts to replace the infer stmt
-        to execute the inference using XSB
-        """
-        # pprint(self)
-        # pprint(node)
-        # pprint(vars(node))
-        gen = ''
-        gen += 'xsb_facts = ""\n'
-
-        
-        for tupleExpr in node.bindings.subexprs:
-            pred = tupleExpr.subexprs[0].subexprs[0]
-            val = tupleExpr.subexprs[1].subexprs[0]
-            # print('\n ----- compile_infer ------')
-            # pprint(pred)
-            # pprint(vars(val))
-            gen += FACTS_TEMPLATE.format(PRED_NAME=pred, VAL=val)+'\n'
-
-        filename = node.rule.subexprs[0]
-        rulefile = filename+'.rules'
-        factfile = filename+'.facts'
-        
-        gen += 'start = time.time()\nstart_cputime = time.process_time()\n'
-        gen += 'write_file("'+filename+'.facts", xsb_facts)\n\n'
-        gen += 'end = time.time()\nend_cputime = time.process_time()\nprint(\'write fact file elapse time:\',end - start,\'cpu time:\',end_cputime-start_cputime)'
-        # gen += "pyxsb_command(\"consult(\'"+rulefile+"\').\")"
-        # gen += "pyxsb_command\"load_dyn(\'"+factfile+"\').\")"
-
-
-        # for query in node.queries.subexprs:
-        #     print(query)
-        #     gen += for row in pyxsb_query(query):
-        #         print(row)
-
-        for query in node.queries.subexprs:
-            gen += QUERY_TEMPLATE.format(FILENAME=filename,QUERY_STR=query.subexprs[0])+'\n'
-        
-        callxsb = Expr(Call(func=pyName('exec'),args=[Str(gen),Call(func=pyName('globals'),args=[],
-            keywords=[]),Call(func=pyName('locals'),args=[],keywords=[])],keywords=[]))
-
-        rtn = parse('return locals()[\'tuples\']')
-        # pprint(callxsb)
-        # pprint(rtn.body[0])
-
-        callxsb.lineno = node.lineno
-        callxsb.col_offset = node.col_offset
-        # rtn.body[0].lineno = node.lineno
-        # rtn.body[0].col_offset = node.col_offset
-
-        # return [callxsb,rtn.body[0]]
-        return callxsb
-
-        # xsb_facts = ""
-        # for tupleExpr in node.bindings.subexprs:
-        #     pred = tupleExpr.subexprs[0].subexprs[0]
-        #     val = tupleExpr.subexprs[1].subexprs[0]
-        #     print(pred)
-        #     print(val)
-        #     for v in val:
-        #         xsb_facts += pred + str(v)
-
-        # filename = node.rule.subexprs[0]
-        # rulefile = filename+'.rules'
-        # factfile = filename+'.facts'
-
-        # write_file(factfile,xsb_facts)
-        # pyxsb_start_session(XSB_ARCH_DIR)
-        # pyxsb_command('consult(\''+rulefile+'\').')
-        # pyxsb_command('load_dyn(\''+factfile+'\').')
-        # pyxsb_end_session()
-        
-        # for row in pyxsb_query('path(X, Y).'):
-        #     print(row)
-
-
-
-
-
     def visit(self, node):
         """Generic visit method.
 
@@ -626,30 +382,17 @@ class PythonGenerator(NodeVisitor):
         indicated by the 'ast_override' attribute, then return the generated
         code. Otherwise, call the normal visit method.
 
-        # """
+        """
         if node is None:
             return None
 
         assert isinstance(node, dast.DistNode)
-
         self.current_node = node
-
-        if isinstance(node, ruleast.InferStmt):
-            gen = self.compile_infer(node)
-            return gen
-        if isinstance(node, ruleast.Rules):
-            # pprint(vars(node))
-            self.compile_rules(node)
-            return
-            
-
         if hasattr(node, "ast_override"):
             res = node.ast_override
         else:
-            # pprint(node)
             res = super().visit(node)
 
-        
         if isinstance(node, dast.Statement):
             assert isinstance(res, list)
             # This is a statement block, propagate line number info:
@@ -657,9 +400,6 @@ class PythonGenerator(NodeVisitor):
             propagate_attributes(node, res[0])
             return res
         else:
-            # print('self',self)
-            # print('node',vars(node))
-            # print('res',res)
             assert isinstance(res, AST)
             # This is an expression, pass on pre and post bodies:
             copy_location(res, node)
@@ -676,11 +416,8 @@ class PythonGenerator(NodeVisitor):
                     to_block.extend(new_block)
         return to_block
 
-
-
     def body(self, body, res=None):
         """Process a block of statements."""
-        
         if res is None:
             res = []
         for stmt in body:
@@ -695,8 +432,6 @@ class PythonGenerator(NodeVisitor):
                 printe("None result from %s" % str(stmt))
         fixup_locations_in_block(res)
         return res
-
-    
 
     def visit_Program(self, node):
         self.module_args = node._compiler_options
@@ -792,10 +527,6 @@ class PythonGenerator(NodeVisitor):
             defaults=defaults,
             kw_defaults=kw_defaults)
 
-
-    
-
-
     def visit_Process(self, node):
         printd("Compiling process %s" % node.name)
         printd("has methods:%r" % node.methods)
@@ -818,13 +549,12 @@ class PythonGenerator(NodeVisitor):
         cd.body = [self.generate_init(node)]
         if node.configurations:
             cd.body.append(self.generate_config(node))
-        if hasattr(node,'rules'):
-            self.compile_rules(node.rules)
         if node.setup is not None:
             cd.body.extend(self.visit(node.setup))
         if node.entry_point is not None:
             cd.body.extend(self._entry_point(node.entry_point))
         cd.decorator_list = [self.visit(d) for d in node.decorators]
+        cd.body.extend(self.body(node.staticmethods))
         cd.body.extend(self.body(node.methods))
         cd.body.extend(self.generate_handlers(node))
         return [cd]
@@ -852,19 +582,16 @@ class PythonGenerator(NodeVisitor):
             for name in node.parent.ordered_names
         ])
 
-    
-
     def visit_Function(self, node):
-
         fd = FunctionDef()
         fd.name = node.name
         fd.args = self.visit(node.args)
         fd.body = []
-
         if isinstance(node.parent, dast.Process):
             if node.name == "setup":
                 self._generate_setup(node, fd)
-            fd.args.args.insert(0, arg("self", None))
+            if node not in node.parent.staticmethods:
+                fd.args.args.insert(0, arg("self", None))
         fd.body = self.body(node.body, fd.body)
         fd.decorator_list = [self.visit(d) for d in node.decorators]
         fd.returns = None
@@ -1290,7 +1017,11 @@ class PythonGenerator(NodeVisitor):
     def visit_NamedVar(self, node):
         if isinstance(node.scope, dast.Process):
             if node.name in node.scope.methodnames:
-                return pyAttr("self", node.name, self.current_context())
+                return pyAttr("self", node.name,
+                              self.current_context())
+            elif node.name in node.scope.staticnames:
+                return pyAttr(node.scope.name, node.name,
+                              self.current_context())
             else:
                 return pyAttr(pyAttr("self", STATE_ATTR_NAME), node.name,
                               self.current_context())
@@ -1311,22 +1042,11 @@ class PythonGenerator(NodeVisitor):
             # This is a "pure" annotation (since Python 3.6), don't generate
             # anything:
             return []
-        # pprint('-------- visit_AssignmentStmt -----------')
-        # pprint(vars(node))
         self.current_context = Store
         targets = [self.visit(tgt) for tgt in node.targets]
         self.current_context = Load
         val = self.visit(node.value)
-        if isinstance(node.value, ruleast.InferStmt):
-            value = parse('locals()[\'tuples\']').body[0].value
-            # pprint('-------- visit_AssignmentStmt: infer -----------')
-            # print(value)
-            # pprint(vars(value.value))
-            value.lineno = node.value.lineno
-            value.col_offset = node.value.col_offset
-            return [val, pyAssign(targets, value)]
-        else:
-            return [pyAssign(targets, val)]
+        return [pyAssign(targets, val)]
 
     def visit_OpAssignmentStmt(self, node):
         self.current_context = Store
@@ -1497,16 +1217,8 @@ class PythonGenerator(NodeVisitor):
         return main
 
     def visit_ReturnStmt(self, node):
-        # print('\nvisit_ReturnStmt')
-        # pprint(node)
-        # pprint(vars(node))
         if node.value is not None:
-            if isinstance(node.value, ruleast.InferStmt):
-                gen = self.visit(node.value)
-                value = parse('locals()[\'tuples\']').body[0].value
-                return [gen, pyReturn(value)]
-            else:
-                value = self.visit(node.value)
+            value = self.visit(node.value)
         else:
             value = None
         return [pyReturn(value)]

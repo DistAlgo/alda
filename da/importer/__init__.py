@@ -22,39 +22,20 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-class ClockTag: pass
+import sys
 
-class LamportTimestamp(process):
-    """An implementation of Lamport's logical timestamp algorithm.
+PythonVersion = sys.version_info
+if PythonVersion < (3, 7):
+    from . import py36 as real_lib
+elif PythonVersion.major == 3 and PythonVersion.minor == 7:
+    from . import py37 as real_lib
+else:
+    raise RuntimeError("Python version {} is not supported."
+                       .format(PythonVersion))
 
-    See "Leslie Lamport. 1978. Time, clocks, and the ordering of events in a
-    distributed system. Commun. ACM 21, 7 (July 1978), 558-565.
-    DOI=http://dx.doi.org/10.1145/359545.359563"
+da_cache_from_source = real_lib.da_cache_from_source
 
-    """
-    def setup():
-        self._logical_clock = 0
+__all__ = ["da_cache_from_source"]
 
-    def send(message, to, channel=None, noclock=False, **rest):
-        if noclock:
-            # allows sending messages to processes that does not use a logical
-            # clock:
-            return super().send(message, to, channel, **rest)
-        else:
-            return super().send((ClockTag, self._logical_clock, message),
-                                to, channel, **rest)
-
-    def receive(msg=(_ClockTag, rclock, message), from_=src):
-        self._logical_clock = max(self._logical_clock, rclock) + 1
-        super().send(message, to=self, impersonate=src)
-
-    def logical_time():
-        """Returns the current value of the logical clock."""
-        return self._logical_clock
-
-    def incr_logical_time():
-        """Increments the logical clock."""
-        self._logical_clock += 1
-
-    # Need this to avoid the compiler warning:
-    def run(): pass
+# Inject the DistAlgo module loader:
+real_lib._install()
