@@ -1,0 +1,43 @@
+import sys
+config(Channel is Reliable, Handling is one)
+controller = import_da('controller')
+
+class P(process, controller.Controllee):
+    def setup(ctl, ps:set, v:P, maxfail:int):
+        super().setup(ctl)
+        self.x = -1
+        self.V = {v: False}
+        self.receiveflag = False
+
+    @controller.run
+    def run():
+          --start
+          for i in range(maxfail):
+              --one_round
+              for k in V:
+                  if not V[k]:
+                      send(('Value', k), to=ps)
+                      V[k] = True
+              await(receiveflag)
+              receiveflag = False
+          --end
+          x = max(listof(v, v in V, V[v]))
+          output("x = %r" % (x))
+
+    def receive(msg=('Value', v)):
+       receiveflag = True
+       if v not in V:
+             V[v] = False
+
+def main():
+      n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+      f = int(sys.argv[2]) if len(sys.argv) > 2 else 50
+
+      ctl = new(controller.Controller, num= 1)
+      setup(ctl, (n,))
+      start(ctl)
+
+      ps = new(P, num= n)
+      for i, p in enumerate(list(ps)):
+            setup({p}, (ctl, ps, i, f))
+      start(ps)

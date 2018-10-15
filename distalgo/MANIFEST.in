@@ -1,0 +1,8 @@
+prune doc/
+include doc/language.pdf
+include doc/screenshot.png
+include README.md
+include setup.py
+include LICENSE
+
+recursive-include da/examples __init__.py *.da

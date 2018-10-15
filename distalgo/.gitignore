@@ -1,0 +1,16 @@
+*.pyc
+*.dap
+__pycache__/
+*.log
+*.bak
+da/lib/**/*.py
+da/examples/**/*.py
+benchmarks/**/*.py
+dist/
+build/
+pyDistAlgo.egg-info/
+doc/auto/
+doc/*.aux
+doc/*.pdf
+MANIFEST
+.dir-locals.el
