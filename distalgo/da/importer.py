@@ -36,9 +36,11 @@ from importlib._bootstrap_external import _validate_bytecode_header
 from importlib._bootstrap_external import _compile_bytecode
 from importlib._bootstrap_external import _code_to_bytecode
 
-# XXX: any use of `common.get_runtime_option` in this module must always provide
-# a 'default' argument since GlobalOptions may not have been initialized yet:
-from .. import common
+from .common import __version__
+from .common import add_da_module
+# XXX: any use of `get_runtime_option` in this module must always provide a
+# 'default' argument since GlobalOptions may not have been initialized yet:
+from .common import get_runtime_option
 
 DISTALGO_SUFFIXES = ['.da']
 
@@ -49,10 +51,11 @@ def da_cache_from_source(source_path, optimization=None):
     `cache_from_source` to include the DistAlgo version number.
 
     """
+    from . import common
     bytecode_path = util.cache_from_source(source_path, optimization=optimization)
     bytecode_dir, bytecode_file = os.path.split(bytecode_path)
     components = bytecode_file.split('.')
-    components.insert(-1, 'da-{}'.format(common.__version__))
+    components.insert(-1, 'da-{}'.format(__version__))
     bytecode_file = '.'.join(components)
     return os.path.join(bytecode_dir, bytecode_file)
 
@@ -79,19 +82,18 @@ class DASourceFileLoader(machinery.SourceFileLoader):
         super().exec_module(module)
         # Once we get here, we can be sure that the module has been successfully
         # loaded into the system, so we register it in our system:
-        common.add_da_module(module)
+        add_da_module(module)
 
     def source_to_code(self, data, path, *, _optimize=-1):
         """Return the Python code object compiled from DistAlgo source.
 
         """
-        from .. import compiler
+        from . import compiler
 
         codeobj = _call_with_frames_removed(compiler.dastr_to_pycode,
                             data, path, _optimize=_optimize,
-                            args=common.get_runtime_option(
-                                'compiler_args',
-                                default=[]))
+                            args=get_runtime_option('compiler_args',
+                                                    default=[]))
         if codeobj is None:
             raise ImportError("Unable to compile {}.".format(path))
         return codeobj
@@ -116,7 +118,7 @@ class DASourceFileLoader(machinery.SourceFileLoader):
             bytecode_path = None
         else:
             # XXX: begin our change
-            if not common.get_runtime_option('recompile', default=False):
+            if not get_runtime_option('recompile', default=False):
                 # XXX: end our change
                 try:
                     st = self.path_stats(source_path)

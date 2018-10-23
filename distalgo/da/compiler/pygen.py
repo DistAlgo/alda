@@ -554,7 +554,6 @@ class PythonGenerator(NodeVisitor):
         if node.entry_point is not None:
             cd.body.extend(self._entry_point(node.entry_point))
         cd.decorator_list = [self.visit(d) for d in node.decorators]
-        cd.body.extend(self.body(node.staticmethods))
         cd.body.extend(self.body(node.methods))
         cd.body.extend(self.generate_handlers(node))
         return [cd]
@@ -590,8 +589,7 @@ class PythonGenerator(NodeVisitor):
         if isinstance(node.parent, dast.Process):
             if node.name == "setup":
                 self._generate_setup(node, fd)
-            if node not in node.parent.staticmethods:
-                fd.args.args.insert(0, arg("self", None))
+            fd.args.args.insert(0, arg("self", None))
         fd.body = self.body(node.body, fd.body)
         fd.decorator_list = [self.visit(d) for d in node.decorators]
         fd.returns = None
@@ -1017,11 +1015,7 @@ class PythonGenerator(NodeVisitor):
     def visit_NamedVar(self, node):
         if isinstance(node.scope, dast.Process):
             if node.name in node.scope.methodnames:
-                return pyAttr("self", node.name,
-                              self.current_context())
-            elif node.name in node.scope.staticnames:
-                return pyAttr(node.scope.name, node.name,
-                              self.current_context())
+                return pyAttr("self", node.name, self.current_context())
             else:
                 return pyAttr(pyAttr("self", STATE_ATTR_NAME), node.name,
                               self.current_context())

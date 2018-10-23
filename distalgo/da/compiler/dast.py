@@ -2504,8 +2504,6 @@ class Process(CompoundStmt, ArgumentsContainer):
         self.configurations = []
         # List of member methods:
         self.methods = []
-        # List of static methods:
-        self.staticmethods = []
         # 'setup' method:
         self.setup = None
         # 'main' method:
@@ -2516,10 +2514,6 @@ class Process(CompoundStmt, ArgumentsContainer):
     @property
     def methodnames(self):
         return {f.name for f in self.methods}
-
-    @property
-    def staticnames(self):
-        return {f.name for f in self.staticmethods}
 
     @property
     def event_handlers(self):

@@ -80,8 +80,6 @@ def dafile_to_pyast(filename, args=None):
     Returns the generated Python AST.
 
     """
-    if args is None:
-        args = parse_compiler_args([])
     daast = daast_from_file(filename, args)
     if daast is not None:
         pyast = PythonGenerator(filename, args).visit(daast)
@@ -93,7 +91,7 @@ def dafile_to_pyast(filename, args=None):
             isinstance(pyast[0], ast.Module)
         pyast = pyast[0]
         ast.fix_missing_locations(pyast)
-        if args and hasattr(args, 'dump_ast') and args.dump_ast:
+        if args and args.dump_ast:
             print(ast.dump(pyast, include_attributes=True), file=stderr)
         return pyast
     else:
@@ -186,7 +184,7 @@ def _sanitize_filename(dfile, no_symlink=True):
     os.makedirs(dirname, exist_ok=True)
     return dfile
 
-def dafile_to_pseudofile(filename, outname=None, args=None):
+def dafile_to_pseudofile(filename, outname=None):
     """Compiles a DistAlgo source file to Python file.
 
     'filename' is the input DistAlgo source file. Optional parameter 'outname'
@@ -207,9 +205,9 @@ def dafile_to_pseudofile(filename, outname=None, args=None):
     if outname is None:
         outname = purename + ".dap"
     outname = _sanitize_filename(outname)
-    daast = daast_from_file(filename, args)
+    daast = daast_from_file(filename)
     if daast:
-        with open(outname, "w", encoding='utf-8') as outfd:
+        with open(outname, "w") as outfd:
             DastUnparser(daast, outfd)
             stderr.write("Written pseudo code file %s.\n"% outname)
 
@@ -240,7 +238,7 @@ def dafile_to_pyfile(filename, outname=None, args=None):
     outname = _sanitize_filename(outname)
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
-        with open(outname, "w", encoding='utf-8') as outfd:
+        with open(outname, "w") as outfd:
             global OutputSize
             OutputSize += to_file(pyast, outfd)
             stderr.write("Written compiled file %s.\n"% outname)
@@ -318,10 +316,10 @@ def dafile_to_incfiles(args):
     if daast is not None:
         global OutputSize
         inc, ast = gen_inc_module(daast, args, filename=incname)
-        with open(outname, "w", encoding='utf-8') as outfd:
+        with open(outname, "w") as outfd:
             OutputSize += to_file(ast, outfd)
             stderr.write("Written compiled file %s.\n"% outname)
-        with open(incname, "w", encoding='utf-8') as outfd:
+        with open(incname, "w") as outfd:
             OutputSize += to_file(inc, outfd)
             stderr.write("Written interface file %s.\n" % incname)
         return 0
@@ -454,7 +452,7 @@ def main(argv=None):
             stderr.write("Invalid debugging level %s.\n" % str(args.debug))
 
     if args.genpsd:
-        res = dafile_to_pseudofile(args.infile, args.psdfile, args)
+        res = dafile_to_pseudofile(args.infile, args.psdfile)
     elif args.geninc:
         res = dafile_to_incfiles(args)
     elif args.write_bytecode:
