@@ -1,3 +1,50 @@
+import subprocess
+import time
+
+import sys, os
+import argparse
+
+def if_(c): pass
+
+def write_file(filename, string):
+    file = open(filename,'w')
+    file.write(string)
+    file.close()
+
+# from contextlib import contextmanager
+# @contextmanager
+# def suppress_stdout():
+#     with open(os.devnull, "w") as devnull:
+#         old_stdout = sys.stdout
+#         sys.stdout = devnull
+#         try:  
+#             yield
+#         finally:
+#             sys.stdout = old_stdout 
+
+# addUser = {1547, 1040, 1557, 1573, 1576, 1065, 1579, 1584, 1075, 1591, 1082, 1087, 1089, 1091, 1612, 1616, 1617, 1106, 1624, 1116, 1119, 1126, 1642, 1131, 1653, 1144, 1659, 1661, 1672, 1675, 1167, 1681, 1682, 1693, 1190, 1192, 1715, 1725, 1732, 1739, 1743, 1744, 1747, 1755, 1251, 1253, 1769, 1258, 1775, 1266, 1271, 1286, 1802, 1295, 1297, 1310, 1318, 1321, 1835, 1325, 1841, 1852, 1341, 1354, 1359, 1360, 1873, 1876, 1367, 1368, 1884, 1885, 1890, 1384, 1897, 1916, 1920, 1416, 1931, 1419, 1935, 1424, 1442, 1444, 1445, 1446, 1959, 1965, 1455, 1971, 1977, 1978, 1476, 1993, 1487, 1495, 1496, 1497, 1018, 1534}
+# delUser = [234, 726, 521, 561, 131, 140, 680, 734, 133, 684, 866, 832, 214, 644, 440, 232, 580, 162, 834, 617, 785, 539, 691, 802, 871, 448, 384, 179, 760, 355, 503, 728, 522, 637, 408, 809, 163, 702, 988, 960, 764, 260, 32, 681, 417, 37, 303, 582, 136, 683, 653, 716, 150, 850, 387, 106, 804, 677, 874, 612, 80, 368, 864, 195, 318, 743, 4, 15, 99, 597, 439, 751, 255, 722, 350, 64, 200, 322, 519, 642, 323, 945, 146, 615, 358, 895, 443, 620, 471, 132, 272, 547, 598, 438, 429, 326, 673, 497, 928, 718]
+# addRole = {128, 164, 104, 107, 108, 172, 144, 147, 150, 183}
+# delRole = [84, 52, 35, 74, 66, 28, 33, 4, 90, 59]
+# addUR = {(79, 56), (856, 2), (350, 87), (111, 10), (654, 47), (625, 27), (484, 33), (725, 24), (617, 64), (551, 39), (347, 48), (7, 5), (771, 26), (541, 37), (745, 1), (172, 32), (385, 80), (538, 67), (641, 47), (686, 33), (179, 20), (673, 33), (992, 90), (89, 49), (157, 19), (382, 23), (43, 91), (17, 55), (301, 13), (15, 0), (236, 51), (538, 95), (311, 84), (554, 21), (897, 28), (914, 9), (963, 80), (654, 72), (373, 77), (394, 62), (956, 81), (523, 4), (270, 48), (769, 90), (257, 13), (972, 71), (241, 30), (446, 75), (425, 24), (441, 40), (343, 45), (731, 99), (255, 53), (418, 58), (457, 0), (802, 45), (737, 6), (746, 8), (564, 2), (721, 84), (180, 39), (965, 21), (442, 71), (988, 17), (425, 1), (684, 96), (136, 20), (475, 74), (882, 6), (117, 84), (561, 40), (285, 73), (578, 55), (346, 6), (498, 35), (706, 9), (128, 79), (817, 10), (576, 50), (383, 88), (105, 49), (966, 58), (380, 57), (194, 16), (149, 94), (153, 1), (998, 22), (963, 71), (51, 35), (509, 15), (447, 96), (10, 22), (296, 67), (987, 15), (695, 2), (455, 69), (437, 31), (820, 92), (701, 69), (448, 28), (802, 16), (817, 19), (908, 0), (122, 73), (326, 98), (528, 53), (258, 44), (746, 65), (342, 7), (432, 19)}
+# delUR = [(872, 77), (74, 17), (996, 67), (64, 36), (802, 41), (23, 8), (275, 40), (343, 25), (317, 76), (420, 32), (844, 51), (356, 66), (309, 60), (287, 42), (723, 37), (242, 64), (466, 2), (41, 75), (231, 68), (840, 28), (364, 87), (654, 73), (423, 18), (515, 70), (400, 20), (795, 35), (516, 61), (58, 13), (23, 49), (508, 10), (397, 76), (960, 92), (712, 31), (194, 98), (121, 19), (945, 74), (433, 60), (412, 26), (86, 58), (445, 44), (324, 99), (518, 81), (100, 73), (545, 96), (288, 81), (270, 32), (572, 90), (741, 11), (128, 23), (459, 51), (13, 74), (472, 97), (63, 25), (871, 75), (832, 6), (527, 42), (106, 37), (907, 12), (549, 98), (972, 56), (765, 64), (575, 17), (854, 10), (496, 33), (760, 24), (647, 4), (215, 45), (502, 60), (387, 32), (263, 66), (962, 18), (445, 14), (545, 36), (202, 9), (267, 55), (545, 2), (439, 46), (96, 88), (172, 69), (871, 71), (86, 91), (442, 62), (527, 31), (87, 17), (995, 21), (553, 40), (677, 14), (524, 85), (11, 59), (169, 92), (423, 56), (463, 71), (401, 78), (977, 37), (945, 71), (31, 12), (516, 17), (82, 23), (122, 53), (273, 94), (107, 51), (386, 38), (784, 76), (529, 48), (850, 86), (236, 25), (480, 90), (614, 39), (52, 31), (329, 80)]
+# addInher = {(34, 26), (85, 21), (97, 89), (62, 84), (95, 16), (21, 62), (18, 6), (66, 86), (27, 8), (66, 68), (57, 55)}
+# delInher = [(2, 21), (58, 29), (21, 58), (95, 60), (4, 19), (87, 8), (19, 67), (80, 66), (81, 33), (26, 36), (34, 99)]
+
+
+
+# addUser = eval(open('addUser_'+str(numr)+'.py').read())
+# delUser = eval(open('delUser_'+str(numr)+'.py').read())
+# addRole = eval(open('addRole_'+str(numr)+'.py').read())
+# delRole = eval(open('delRole_'+str(numr)+'.py').read())
+# addUR = eval(open('addUR_'+str(numr)+'.py').read())
+# delUR = eval(open('delUR_'+str(numr)+'.py').read())
+# addInher = eval(open('addInher_'+str(numr)+'.py').read())
+# delInher = eval(open('delInher_'+str(numr)+'.py').read())
+
+
+
+
 class CoreRBAC(process):
   """
   Core RBAC keeps several sets including the following:
@@ -30,19 +77,22 @@ class CoreRBAC(process):
       the set of permissions assigned to the roles assigned to user
   """
 
-  def setup():
-    self.USERS = set()
-    self.ROLES = set()
+
+  def setup(_users,_roles,_ur):
+    self.USERS = _users
+    self.ROLES = _roles
     self.PERMS = set()
-    self.UR = set()         # UR subset USERS * ROLES
+    self.UR = _ur         # UR subset USERS * ROLES
     self.PR = set()         # PR subset PERMS * ROLES
+    # self.workload = _workload
+
 
   def AddUser(user):        # pre-condition: user not in USERS
     USERS.add(user)
 
   def DeleteUser(user):     # pre-condition: user in USERS
     UR -= setof((user,r), r in ROLES)	# maintain UR
-    USERs.remove(user)
+    USERS.remove(user)
 
   def AddRole(role):        # pre: role not in ROLES
     ROLES.add(role)
@@ -76,7 +126,7 @@ class CoreRBAC(process):
     PR.add((perm,role))
 
   # called RevokePermission in ANSI standard
-  def DeleteUR(perm, role):  # pre: (perm,role) in PR
+  def DeletePR(perm, role):  # pre: (perm,role) in PR
     PR.remove((perm,role))
 
   def AssignedUsers(role):  # pre: role in ROLES
@@ -119,9 +169,11 @@ class HierarchicalRBAC(CoreRBAC,process):
       the set of roles of user or descendant roles of the roles
   """
 
-  def setup(RH): 
-    super.setup()
-    self.RH = set()  # RH subset ROLES * ROLES, where asc inh desc
+  def setup(_users,_roles,_ur,_rh,_workload,_outfile):
+    super().setup(_users,_roles,_ur)
+    self.RH = _rh  # RH subset ROLES * ROLES, where asc inh desc
+    self.workload = _workload
+    self.outfile = _outfile
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
@@ -130,25 +182,27 @@ class HierarchicalRBAC(CoreRBAC,process):
   def DeleteInheritance(a,d):  # pre: (a,d) in RH
     RH.remove((a,d))
 
-  def AuthorizedUsers(role):
+  def AuthorizedUsers(_role):
     """the set of users of role or ascendant roles of role"""
-    return setof(u, (u,asc) in UR, (asc,_role) in trans(RH))
+    transRH = trans(RH)
+    return setof(u, (u,asc) in UR, (asc,_role) in transRH)
 
   # rest of this class: some possible calls, etc. to be worked on
-  def trans1(E):
-    infer()  # use edge attributes, write path attributes
-    infer(edge=E)
-    infer(path)
-    infer(path,edge=E)
-    trans = infer(path, edge=E)
-    trans = infer(path(_,_), edge=E)
-    a = 888
-    b = 999
-    areach, reachb = infer(path(a,_), path(_,b), edge=E)
-    areach, reachb = infer(path(a,_), path(_,b), edge=E, filenmae="tmp")
-    return trans, areach, reachb
+  def trans(E):
+    pass
+    # infer()  # use edge attributes, write path attributes
+    # infer(edge=E)
+    # infer(path)
+    # infer(path,edge=E)
+    # trans = infer(path, edge=E)
+    # trans = infer(path(_,_), edge=E)
+    # a = 888
+    # b = 999
+    # areach, reachb = infer(path(a,_), path(_,b), edge=E)
+    # areach, reachb = infer(path(a,_), path(_,b), edge=E, filenmae="tmp")
+    # return trans, areach, reachb
 
-  def infer(rules={}):
+  # def infer(rules={}):
     """
     for input using keyword arguments:
     if keyword arguments are given, use the given arguments as input,
@@ -158,18 +212,93 @@ class HierarchicalRBAC(CoreRBAC,process):
     if non-keyward arguments are given, return a set of tuples for each arg,
     otherwise, write to named attributes of the inferred sets of tuples
     """
-    pass
+    # pass
 
   def run():
-    print('U',USERS)
-    print('R',ROLES)
-    print('UR',UR)
-    print('RH',RH)
-    print(AuthorizedUsers(r2))
-    print(AuthorizedUsers(r1))
+    # print('U',USERS)
+    # print('R',ROLES)
+    # print('UR',UR)
+    # print('RH',RH)
+    # start = time.time()
+    # start_cputime = time.process_time()
+    # print('globals',globals())
+    # print(workload)
+    # exec(workload,globals(),locals())
+    # with suppress_stdout():
+    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+    with open(os.devnull, "w") as devnull:
+      old_stdout = sys.stdout
+      sys.stdout = devnull
+      for op,pr in workload:
+        if op in {'AddUser','DeleteUser','AddRole','DeleteRole','AuthorizedUsers'}:
+          for i in pr:
+            eval('self.'+op)(i)
+            # print(op,eval('self.'+op)(i))
+        else:
+          for i,j in pr:
+            eval('self.'+op)(i,j)
+            # print(op,eval('self.'+op)(i,j))
+        # else:
+        #   for i in range(pr):
+        #     print(eval('self.'+op)(i))
+
+      sys.stdout = old_stdout
+    # for i in addUser:
+    #   AddUser(i)
+
+    # for i in delUser:
+    #   try:
+    #     DeleteUser(i)
+    #   except KeyError:
+    #     pass
+
+    # for i in addRole:
+    #   AddRole(i)
+
+    # for i in delRole:
+    #   try:
+    #     DeleteRole(i)
+    #   except KeyError:
+    #     pass
+
+    # for (u,r) in addUR:
+    #   AddUR(u,r)
+
+    # for (u,r) in delUR:
+    #   try:
+    #     DeleteUR(u,r)
+    #   except KeyError:
+    #     pass
+      
+
+    # for (r1,r2) in addInher:
+    #   AddInheritance(r1,r2)
+
+    # for (r1,r2) in delInher:
+      
+    #   try:
+    #     DeleteInheritance(r1,r2)
+    #   except KeyError:
+    #     pass
+
+    # for i in range(100):
+    #   AuthorizedUsers(i)
+
+    # end = time.time()
+    # end_cputime = time.process_time()
+    # eltime = end - start
+    # elcpuTime = end_cputime-start_cputime
+    # print(eltime)
+    utime, stime, cutime, cstime, elapsed_time = os.times()
+    # print(utime, stime, cutime, cstime, elapsed_time)
+    fout = open(outfile,'a')
+    fout.write(str(elapsed_time-elapsed_time1)+','+str(utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1)+'\n')
+    fout.close()
 
 
-class HRBAC_py(HierarchicalRBAC):  # using Python but no arg self in def
+
+
+class HRBAC_py(HierarchicalRBAC,process):  # using Python but no arg self in def
 
   def trans(E):
     T = E
@@ -180,11 +309,13 @@ class HRBAC_py(HierarchicalRBAC):  # using Python but no arg self in def
     return T | {(r,r) for r in self.ROLES}  # dom(E)+ran(E) may < ROLES
 
   def AuthorizedUsers(role):  # assert role in self.ROLES
+    transRH = self.trans(RH)
+    # print(transRH)
     return set(u for u in self.USERS for asc in self.ROLES 
-               if (asc,role) in self.trans(RH) and (u,asc) in self.UR)
+               if (asc,role) in transRH and (u,asc) in self.UR)
 
 
-class HRBAC_set(HierarchicalRBAC):  # using DistAlgo set queries
+class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
 
   def trans(E):
     """the transitive closure of role hierarchy E union reflexive role pairs
@@ -201,33 +332,37 @@ class HRBAC_set(HierarchicalRBAC):  # using DistAlgo set queries
 
   def AuthorizedUsers(role):
     """the set of users of role or ascendant roles of role"""
-    return setof(u, (u,asc) in UR, (asc,_role) in trans(RH))
+    transRH = self.trans(RH)
+    return setof(u, (u,asc) in UR, (asc,_role) in transRH)
 
   def AuthorizedRoles(user):
     """the set of roles of user or descendant roles of the roles"""
-    return setof(r, (_user,asc) in UR, (asc,r) in trans(RH))
+    self.transRH = trans(RH)
+    return setof(r, (_user,asc) in UR, (asc,r) in transRH)
 
 
-class HRBAC_set_maint(HRBAC_set):
+class HRBAC_set_maint(HRBAC_set,process):
 
-  def setup(RH): 
-    super.setup()
-    self.transRH = set()
+  def setup(_users,_roles,_ur,_rh,_workload,_outfile): 
+    super().setup(_users,_roles,_ur,_rh,_workload,_outfile)
+    self.transRH = trans(_rh)
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
-    super.AddInheritance(a,d)
+    super().AddInheritance(a,d)
     transRH = trans(RH)
+    # return transRH
 
   def DeleteInheritance(a,d):  # pre: (a,d) in RH
-    super.DeleteInheritance(a,d)
+    super().DeleteInheritance(a,d)
     transRH = trans(RH)
+    # return transRH
 
   def AuthorizedUsers(role):
     return setof(u, (u,r) in UR, (r,_role) in transRH)
 
-"""
-class HRBAC_transRH_rules(HRBAC_set_maint):
+
+class HRBAC_transRH_rules(HRBAC_set_maint,process):
 
 # in ideal syntax:
 #
@@ -240,44 +375,58 @@ class HRBAC_transRH_rules(HRBAC_set_maint):
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
-    super.AddInheritance(a,d)
-    infer(rules=transRH_rules)
+    super().AddInheritance(a,d)
+    rh = RH
+    # roles = ROLES
+    # users = set('('+str(u)+')' for u in users)
+    roles = set('('+str(r)+')' for r in ROLES)
+    transRH = infer([('rh','rh'),('roles','roles')], ['transRH(_,_)'],'HRBAC_transRH_rules')
+    # return transRH
     # transRH = infer(transRH, RH=RH rules=transRH_rules)
 
   def DeleteInheritance(a,d):  # pre: (a,d) in RH
-    super.DeleteInheritance(a,d)
-    infer(rules=transRH_rules)
+    super().DeleteInheritance(a,d)
+    rh = RH
+    # roles = ROLES
+    roles = set('('+str(r)+')' for r in ROLES)
+    transRH = infer([('rh','rh'),('roles','roles')], ['transRH(_,_)'],'HRBAC_transRH_rules')
+    # return transRH
 
-  def rules (name=transRH_rules):
-    transRH(x,y), if_(RH(x,y))
-    transRH(x,y), if_(RH(x,z), transRH(z,y))
-    transRH(x,x), if_(ROLES(x)) # with this base case, don't need first rule
+  def rules ():
+    transRH(x,y), if_(rh(x,y))
+    transRH(x,y), if_(rh(x,z), transRH(z,y))
+    # transRH(x,x), if_(roles(x)) # with this base case, don't need first rule
 
-class HRBAC_trans_rules(HRBAC_set):
+class HRBAC_trans_rules(HRBAC_set,process):
 
-  def rules (name=trans_rules, edge=['certain',(int,int)], path='certain'):
+  def rules():
     path(x,y), if_(edge(x,y))
     path(x,y), if_(edge(x,z), path(z,y))
 
   def trans(E):  # use infer plus set query
-    return infer(path, edge=E, rules=trans_rules) | setof((r,r), r in ROLES)
+    # pass
+    i = infer([('edge','E')], ['path(_,_)'],'HRBAC_trans_rules')
+    return set(i) | setof((r,r), r in ROLES)
 
 # not allow, as it would be equivalent to dynamic scoping:
 #
 #  def trans2(edge):
 #    return infer(path) | setof((r,r), r in ROLES)
 
-class HRBAC_trans_with_role_rules(HRBAC_set):
+class HRBAC_trans_with_role_rules(HRBAC_set,process):
 
   def rules (name=trans_with_role_rules): # with additional last rule
     path(x,y), if_(edge(x,y))
     path(x,y), if_(edge(x,z), path(z,y))
-    path(x,y), if_(role(x))
+    path(x,x), if_(role(x))
 
   def trans(E):  # use infer only, pass in also ROLES
-    return infer(path, edge=E, role=ROLES, rules=trans_with_role_rules)
+    # pass
+    roles = set('('+str(r)+')' for r in ROLES)
+    return infer([('edge','E'),('role','roles')], ['path(_,_)'], 'HRBAC_trans_with_role_rules')
 
-class HRBAC_trans_with_ROLES_rules(HRBAC_set):
+
+class HRBAC_trans_with_ROLES_rules(HRBAC_set,process):
 
   def rules (name=trans_with_ROLES_rules):
     path(x,y), if_(edge(x,y))
@@ -285,9 +434,12 @@ class HRBAC_trans_with_ROLES_rules(HRBAC_set):
     path(x,x), if_(ROLES(x))
 
   def trans(E):
-    return infer(path, edge=E, rules=trans_with_ROLES_rules)
+    # infer(path, edge=E, rules=HRBAC_trans_with_ROLES_rules)
+    answers = open("{FILENAME}.answers","r").read()
+    tuples = [tuple(eval(a)) for a in answers.split("\\n")[:-1]]
+    return tuples
 
-class HRBAC_transRH_with_edge_rules(HRBAC_set):
+class HRBAC_transRH_with_edge_rules(HRBAC_set,process):
 
   def rules (name=transRH_with_edge_rules):
     transRH(x,y), if_(edge(x,y))
@@ -295,9 +447,11 @@ class HRBAC_transRH_with_edge_rules(HRBAC_set):
     transRH(x,x), if_(ROLES(x))
 
   def trans(E):
-    return infer(path, edge=E, rules=trans_with_edge_rules)
+    pass
+    # return infer(path, edge=E, rules=trans_with_edge_rules)
 
-class HRBAC_trans_with_RH_ROLES_rules(HRBAC_set):
+
+class HRBAC_trans_with_RH_ROLES_rules(HRBAC_set,process):
 
   def rules (name=trans_with_RH_ROLES_rules):
     path(x,y), if_(RH(x,y))
@@ -305,22 +459,64 @@ class HRBAC_trans_with_RH_ROLES_rules(HRBAC_set):
     path(x,x), if_(ROLES(x))
 
   def trans(E):
-    return infer(path, rules=trans_with_RH_ROLES_rules)
-"""
+    pass
+    # return infer(path, rules=trans_with_RH_ROLES_rules)
+
 
 def main():
   #rbac = new(RBAC,[{1,2},{r1,r2},{(1,r1),(2,r2)},{(r1,r2)}])
   #start(rbac)
+  # numr = 200
+  # numq = 50
+  # q = 50
+  # mode = 'python'
 
-  o = new(HierarchicalRBAC)
-  """
-  o1 = new(HRBAC_transRH_rules,[])
-  o2 = new(HRBAC_trans_rules)
-  o3 = new(HRBAC_trans_with_role_rules)
-  """
-  o41 = new(HRBAC_set)
-  o42 = new(HRBAC_set_maint)
-  o43 = new(HRBAC_py)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--numr', type= int, default= 200)
+  parser.add_argument('--numq', type= int, default= 50)
+  parser.add_argument('--q', type= int, default= 50)
+  parser.add_argument('--mode', type= str, default= 'python')
+
+  args=parser.parse_args()
+  
+
+  # global numr
+  # global numq
+  # global q
+  # global mode
+  # print(numr,numq,q,mode)
+
+  users = set(range(10*args.numr))
+  roles = set(range(args.numr))
+  # only use this in AddInheritance/DeleteInheritance
+  # users = set('('+str(u)+')' for u in users)
+  # roles = set('('+str(r)+')' for r in roles)
+  
+  rh = eval(open('./input/HR_'+str(args.numr)+'.py').read())
+  ur = eval(open('./input/UR_'+str(args.numr)+'.py').read())
+  workload = eval(open('./input/hrbacSequence_r'+str(args.numr)+'_q'+str(args.numq)+'_auth'+str(args.q)+'.py').read())
+  outfile = './timing/timing_hrbac_'+args.mode+'_'+'r'+str(args.numr)+'_q'+str(args.numq)+'_auth'+str(args.q)+'.txt'
+
+  if args.mode == 'python':
+    o = new(HRBAC_py,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'distalgo':
+    o = new(HRBAC_set,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'RHrule':
+    o = new(HRBAC_transRH_rules,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'rule':
+    o = new(HRBAC_trans_rules,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'rev_rule':
+    o = new(HRBAC_trans_with_role_rules,[users,roles,ur,rh,workload,outfile])
+
+
+  
+  # o1 = new(HRBAC_transRH_rules)
+  # o2 = new(HRBAC_trans_rules)
+  # o3 = new(HRBAC_trans_with_role_rules)
+  
+  # o41 = new(HRBAC_set)
+  # o42 = new(HRBAC_set_maint)
+  # o43 = new(HRBAC_py)
 
   start(o)
   #start(o1) 

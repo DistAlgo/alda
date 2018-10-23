@@ -1,6 +1,7 @@
-from . import ruleast as ast
+import ruleast as ast
 import subprocess
 import inspect
+from pprint import pprint
 
 UniqueUpperCasePrefix = 'V'
 #DefaultFileName = 'tmp' #can use one fixed name if all done dynamically
@@ -80,7 +81,7 @@ for v in {VAL}:
 
 QUERY_TEMPLATE = """
 xsb_query = "extfilequery:external_file_query(" + filename + "," + "{QUERY_STR}" + ")."
-subprocess.run(["xsb", '-e', "add_lib_dir(a('./xsb')).", "-e", xsb_query])
+subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
 answers = open(filename+".answers","r").read()
 tuples = [tuple(eval(a)) for a in answers.split("\\n")[:-1]]
 """
@@ -175,6 +176,7 @@ r3 = ast.Rule(ast.Assertion(ast.Constant('path'),
                               [ast.LogicVar('X'),ast.LogicVar('Z')])])
 #print(to_xsb(r3))
 
+
 r0 = ast.Rule(ast.Assertion(ast.Constant('edge'),
                              [ast.Constant('5'),ast.Constant('8')]))
 #print(to_xsb(r0))
@@ -182,7 +184,7 @@ r0 = ast.Rule(ast.Assertion(ast.Constant('edge'),
 #unless special directives are used.
 
 rs = ast.Rules('',[r1,r3])
-print('==== rules ===='); print(to_xsb(rs))
+print('==== rules ===='); print(rs); print(to_xsb(rs))
 
 i = ast.InferStmt([('edge','RH')],['path(2,_)'])
 
@@ -198,7 +200,7 @@ filename = 'tmp'
 #RH = {(1,8), (2,9), (1,2)}
 #RH = {(1,8), (2,9), (1,2), (2,3), (4,5), (5,6)}
 RH = {(x,y) for x in range(100) for y in range(100)}
-#print(globals())
+# pprint(globals())
 exec(gen, globals())
 #print(answers)
 print('==== inferred tuples ===='); print(tuples)

@@ -1,15 +1,47 @@
+from pprint import pprint
+import subprocess
+import os
+
+# import sys, os
+import time
 def if_(c): pass
 def trans_rules(): pass
 def trans_left_rec_rules(): pass
+
+inputfile = 'v25e50LiuPy.py'
+mode = 'rev_rule'
 
 class Trans(process):
   def setup(E): pass
 
   def trans(E): pass
 
-  def run(): print(trans(E))
+  def run():
+    # sys.stdout = os.devnull
+    # print(trans(E))
+    # start = time.time()
+    # start_cputime = time.process_time()
+    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+    # print(utime, stime, cutime, cstime, elapsed_time )
+    print(trans(E))
+    # trans(E)
+    # end = time.time()
+    # end_cputime = time.process_time()
+    # eltime = end - start
+    # elcpuTime = end_cputime-start_cputime
+    # print('elapse time:',eltime,'cpu time:',elcpuTime)
+    utime, stime, cutime, cstime, elapsed_time = os.times()
+    # print(utime, stime, cutime, cstime, elapsed_time)
+    fout = open('./timing/timing_trans'+'_'+mode+'_'+inputfile+'.txt','a')
+    fout.write(str(elapsed_time-elapsed_time1)+','+str(utime + stime + cutime + cstime)+'\n')
+    fout.close()
 
-  def infer(rules={}):
+    # f = open("transresultfile.txt", "w")
+    # for item in result:
+    #   f.write("%s\n" % str(item))
+
+
+  # def infer(*args, **kwargs):
     """
     for input using keyword arguments:
     if keyword arguments are given, use the given arguments as input,
@@ -19,48 +51,89 @@ class Trans(process):
     if non-keyward arguments are given, return a set of tuples for each arg,
     otherwise, write to named attributes of the inferred sets of tuples
     """
-    pass
+    # pass
+
 
 class Trans_py(Trans, process):  # using Python but no arg self in def
 
   def trans(E):
     T = E
-    W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
+    # print('W = ',W)
+    # print('E = ',E)
     while W:
       T.add(W.pop())
-      W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+      # print(W)
+      W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
     return T
+
+
 
 class Trans_set(Trans, process):  # using DistAlgo set queries
 
   def trans(E):
     T = E
     while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      # print(x,z)
       T.add((x,z))
     return T
+
 
 # could change first lines in trans above to:
 #   T = {}
 #   while some((x,z) in E | setof((x,z), (x,y) in T, (y,z) in E),
 #              has= (x,z) not in T):
 
+def write_file(filename, string):
+    file = open(filename,'w')
+    file.write(string)
+    file.close()
+
+
 class Trans_rules(Trans, process):
 
-  def rules (name=trans_rules, edge=['certain',(int,int)],path='certain'):
+  def rules():# (name='trans_rules', edge=['certain',(int,int)],path='certain'):
     path(x,y), if_(edge(x,y))
+    # if_(edge(x,z), path(z,y))
     path(x,y), if_(edge(x,z), path(z,y))
 
   def trans(E): 
-    return infer(path, edge=E, rules=trans_rules)
+    # pprint(locals())
+    # tuples = []
+    return infer([('edge','E')] ,['path(_,_)'], 'Trans_rules')
 
 class Trans_left_rec_rules(Trans, process):
 
-  def rules (name=trans_left_rec_rules):
+  def rules():# (name='trans_left_rec_rules'):
     path(x,y), if_(edge(x,y))
-    path(x,y), if_(path(x,z), edge(z,y))
+    path(x,y), if_(path(z,y), edge(x,z))
 
   def trans(E): 
-    return infer(path, edge=E, rules=trans_left_rec_rules)
+    print('-------- Trans_left_rec_rules ----------')
+    # tuples = []
+    return infer([('edge','E')] ,['path(_,_)'], 'Trans_left_rec_rules')
+
+
+def main():
+  # for e in [10,20,30,40,50,60,70,80,90]:
+  #   v = int(e/2)
+  #   gen_graph(v,e)
+
+  data = eval(open('./input/'+inputfile).read())
+  # ############## edge = eval(open('v500e1000EdgeLiuPy.py').read())
+  if mode == 'python':
+    o1 = new(Trans_py, [data])
+    start(o1)
+  elif mode == 'distalgo':
+    o2 = new(Trans_set, [data])
+    start(o2)
+  elif mode == 'rule':
+    o3 = new(Trans_rules, [data])
+    start(o3)
+  elif mode == 'rev_rule':
+    o4 = new(Trans_left_rec_rules, [data])
+    start(o4)
+
 
 
 from gen import *
@@ -72,22 +145,22 @@ def gen_graph(v,e):
   """
 
   # Domain definitions
-  # 	DomainVar = Domain(start, size)
+  #   DomainVar = Domain(start, size)
   D1 = Domain(1, v)
   
   # Relation Definitions
-  # 	RelVar = Relation("Name", D1, D2, ..., Dn)
+  #   RelVar = Relation("Name", D1, D2, ..., Dn)
   R1 = Relation("edge", D1, D1)
   
   # Constraints
-  # 	RelVar.Set_Rel_Size(Number)
-  # 	RelVar.Set_Attr_Sizes(N1, N2, ..., Nn)
-  # 	RelVar.Set_Attr_Size(AttrPos, Number)
-  # 	RelVar.Set_Attr_Size(AttrPos, 0)
-  # 	RelVar.DefaultAttrSizes()
-  # 	RelVar.Set_Max_Constr4(Attr1, Attr2, Number)
-  # 	R1.Remove_Constr4(Attr1, Attr2, Number)
-  # 	R1.Remove_All_Constr4()
+  #   RelVar.Set_Rel_Size(Number)
+  #   RelVar.Set_Attr_Sizes(N1, N2, ..., Nn)
+  #   RelVar.Set_Attr_Size(AttrPos, Number)
+  #   RelVar.Set_Attr_Size(AttrPos, 0)
+  #   RelVar.DefaultAttrSizes()
+  #   RelVar.Set_Max_Constr4(Attr1, Attr2, Number)
+  #   R1.Remove_Constr4(Attr1, Attr2, Number)
+  #   R1.Remove_All_Constr4()
   R1.Set_Rel_Size(e)
   #R1.Set_Attr_Sizes(2, 4)
   #R1.Set_Attr_Size(1, v*6/7)
@@ -96,13 +169,13 @@ def gen_graph(v,e):
   #R1.Remove_Constr4(1, 2, 2)
   
   # Database definitions
-  # 	DBVar = Database(Name)
-  # 	DBVar.AddRelations(R1, R2, ..., Rn)
+  #   DBVar = Database(Name)
+  #   DBVar.AddRelations(R1, R2, ..., Rn)
   DB1 = Database("testDB")
   DB1.Add_Relations(R1)
   
   # Database generation
-  # 	DBVar.Generate()   # equivalent to the following
+  #   DBVar.Generate()   # equivalent to the following
   #     R1.Generate() R2.Generate() ... Rn.Generate()
   DB1.Generate()
   
@@ -113,46 +186,38 @@ def gen_graph(v,e):
   R1.Min_Constr4()
   
   DB1.SaveLiuPyGraph("v"+str(v)+"e"+str(e))
+  DB1.SaveLiuPyGraphEdge("v"+str(v)+"e"+str(e))
   #DB2 = Database("new")
   #DB2.LoadPickle("testDBPickle")
   #DB2.SaveAll("new")
 
+ 
+# from timeit import Timer
+# import time  
+# def main():
+  # esizes = []
+  # esizes += [(1000,e) for e in [2000,4000,6000,8000,10000]]
+  # # #esizes = [(1000,e) for e in [1500,3000,4500,5000,7500,9000]]
+  # # #esizes = [(1000,e) for e in [200,400,600,800,1000]]
+  # vsizes = []
+  # vsizes += [(v,10000) for v in [200,400,600,800,1000]]
 
-from timeit import Timer
+  # #for (v,e) in [(100,1000)]:
+  # for (v,e) in esizes+vsizes:
+  #   gen_graph(v,e)
 
-def main():
-  #edge = {(1,2),(1,8),(2,9)}
+  # for (v,e) in esizes+vsizes:
+  #   graphname = "v"+str(v)+"e"+str(e)+"LiuPy.py"
+  #   out = ''
+  #   out += str(e)+'\t'+str(v)+'\t'
 
-  esizes = []
-  esizes += [(1000,e) for e in [2000,4000,6000,8000,10000]]
-  #esizes = [(1000,e) for e in [1500,3000,4500,5000,7500,9000]]
-  #esizes = [(1000,e) for e in [200,400,600,800,1000]]
-  vsizes = []
-  vsizes += [(v,10000) for v in [200,400,600,800,1000]]
+  #   edge = eval(open(graphname).read())
+  #   o3 = new(Trans_rules,[edge])
+  #   start(o3)
+  #   # print(edge)
 
-  #for (v,e) in [(100,1000)]:
-  for (v,e) in esizes+vsizes:
-    gen_graph(v,e)
-
-
-  o1 = new(Trans_py, [edge])
-  o2 = new(Trans_set, [edge])
-  #o3 = new(Trans_rules, [edge])
-  #o4 = new(Trans_left_rec_rules, [edge])
-  start(o1) 
-  start(o2)
-  #start(o3)
-  #start(o4)
-
-  for (v,e) in esizes+vsizes:
-    graphname = "v"+str(v)+"e"+str(e)
-    out = ''
-    out += str(e)+'\t'+str(v)+'\t'
-
-    eval(open(graphname).read())
-    #print(edge)
-
-    #time for computing transitive closure
-    t=Timer(...)
-    out += str(t.timeit(1))+'\t'
-    #out += str(t.timeit(5)/5.0)
+  #   # time for computing transitive closure
+  #   t=Timer('start(o3)')
+  #   out += str(t.timeit(1))+'\t'
+  #   out += str(t.timeit(5)/5.0)
+  #   print(out)

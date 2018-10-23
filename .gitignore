@@ -102,3 +102,11 @@ ENV/
 
 # XSB compiled modules
 *.xwam
+examples/.idea
+examples/input
+examples/timing
+*.answers
+*.facts
+*.rules
+*.csv
+*.xlsx

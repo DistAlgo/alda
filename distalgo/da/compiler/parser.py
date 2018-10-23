@@ -21,8 +21,47 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+def trace_calls(frame, event, arg, indent=[0]):
+    if event != "call" and event != "return":
+        return
+    co = frame.f_code
+    func_name = co.co_name
+    if func_name == 'write':
+        #Ignore write() calls from print statements
+        return
+    func_line_no = frame.f_lineno
+    func_filename = co.co_filename
+    if 'distalgo' in func_filename:
+        func_filename = func_filename.split('/')[-1]
+        caller = frame.f_back
+        if caller:
+            caller_line_no = caller.f_lineno
+            caller_filename = caller.f_code.co_filename.split('/')[-1]
+        else:
+            caller_line_no = 'None'
+            caller_filename = 'None'
+        if event == 'call':
+            indent[0] += 2
+            print ("-" * indent[0] + '> Call to [%s] on line *%s* of {%s} from line *%s* of {%s}' % \
+                (func_name, func_line_no, func_filename,
+                 caller_line_no, caller_filename))
+        if event == 'return':
+            print ("<" + "-" * indent[0] + ' exit function [%s] on line *%s* of {%s} from line *%s* of {%s}' % \
+                (func_name, func_line_no, func_filename,
+                 caller_line_no, caller_filename))
+            indent[0] -= 2
+    return trace_calls
+    
+
+
+
 
 import sys
+# sys.settrace(trace_calls)
+
+from pprint import pprint
+
+# import sys
 import builtins
 
 from ast import *
@@ -30,6 +69,7 @@ from collections import abc
 
 from da import common
 from . import dast
+from . import ruleast
 from .utils import Namespace
 from .utils import CompilerMessagePrinter
 from .utils import MalformedStatementError
@@ -76,6 +116,10 @@ KW_NULL = "None"
 KW_SUCH_THAT = "has"
 KW_RESET = "reset"
 KW_INC_VERB = "_INC_"
+
+KW_RULES = "rules"
+KW_COND = "if_"
+KW_INFER = "infer"
 
 ##########################
 # Helper functions:
@@ -127,7 +171,7 @@ def daast_from_file(filename, args=None):
             InputSize = len(src)
             return daast_from_str(src, filename, args)
     except Exception as e:
-        print(type(e).__name__, ':', str(e), file=sys.stderr)
+        # print(type(e).__name__, ':', str(e), file=sys.stderr)
         raise e
     return None
 
@@ -424,7 +468,7 @@ class Pattern2Constant(NodeVisitor):
     def visit_FreePattern(self, node):
         # This really shouldn't happen
         mesg = "Can not convert FreePattern to constant!"
-        printe(mesg, node.lineno, node.col_offset)
+        # printe(mesg, node.lineno, node.col_offset)
         return None
 
     def visit_TuplePattern(self, node):
@@ -835,6 +879,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
     def visit_ClassDef(self, node):
         if is_process_class(node):
             if type(self.current_parent) is not dast.Program:
+                # pprint(vars(self))
                 self.error("Process definition must be at top level.", node)
 
             initfun = None
@@ -902,7 +947,21 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         self.error('Python async functions are not supported!', node)
 
     def visit_FunctionDef(self, node):
-        if (self.current_process is None or
+
+        if(node.name == KW_RULES):
+            decl = str(self.state_stack[-1][0].name)
+            n = self.current_scope.add_name(node.name)
+            s = self.create_rules(ruleast.Rules, node, decl)
+            # pprint(vars(s))
+            if self.current_process:
+                self.current_process.rules = s
+            self.current_block = s.rules
+            self.pop_state()
+            self._dummy_process = None
+
+
+
+        elif (self.current_process is None or
                 node.name not in {KW_SENT_EVENT, KW_RECV_EVENT}):
             # This is a normal method
             if self.current_parent is self.current_process:
@@ -973,6 +1032,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             self.body(node.body)
             self.pop_state()
 
+
     def check_await(self, node):
         if (isinstance(node, Call) and
             isinstance(node.func, Name) and
@@ -985,6 +1045,72 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         else:
             return False
 
+
+
+
+    # Rules:
+    def create_assersion(self,node):
+        args = []
+        for a in node.args:
+            # pprint(vars(a))
+            if isinstance(a,Call):
+                args.append(create_assersion(a))
+            elif isinstance(a, Name):
+                args.append(ruleast.LogicVar(a.id))
+        a = ruleast.Assertion(ruleast.Constant(node.func.id),args)
+
+        return a
+
+            
+
+
+    def create_condition(self,node):
+        if node.func.id == KW_COND:
+            assersions = []
+            for a in node.args:
+                assersions.append(self.create_assersion(a))
+            return assersions
+        else:
+            pass
+        
+
+    def visit_Rule(self,node):
+        # pprint(vars(node))
+        r = None
+        if (isinstance(node, Tuple)):   # conclusion, condition
+            concl = self.create_assersion(node.elts[0])
+            conds = self.create_condition(node.elts[1])
+            r = ruleast.Rule(concl,conds)
+
+        elif (isinstance(node, Call)):  # only condition
+            conds = self.create_condition(node)
+            r = ruleast.Rule(None,conds)
+
+        # print(r)
+        # print(vars(r))
+        return r
+
+
+    def create_rules(self, rulecls, ast, decls, nopush=False):
+        # pprint(vars(self))
+        rules = []
+        for r in ast.body:
+            rules.append(self.visit_Rule(r.value))
+
+        rulesobj = rulecls(decls, rules)
+        # print(rulesobj)
+        rulesobj.label = self.current_label
+        self.current_label = None    
+
+        if self.current_block is None or self.current_parent is None:
+            self.error("Statement not allowed in this context.", ast)
+        else:
+            self.current_block.append(rulesobj)
+        if not nopush:
+            self.push_state(rulesobj)
+
+        return rulesobj
+        # ruleobj = rulecls()
 
     # Statements:
     #
@@ -1773,6 +1899,21 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         else:
             raise MalformedStatementError("malformed domain specifier.", node)
 
+
+    def parse_infer(self,node):
+        # pprint(vars(node))
+        try:
+            stmtobj = self.create_expr(ruleast.InferStmt, node)
+            stmtobj.bindings = self.visit(node.args[0])
+            stmtobj.queries = self.visit(node.args[1])
+            stmtobj.rule = self.visit(node.args[2])
+            self.pop_state()
+            # pprint(vars(stmtobj))
+            return stmtobj
+        except MalformedStatementError as e:
+            self.error("malformed statement spec: " + e.reason, e.node)
+
+
     def parse_quantified_expr(self, node):
         if node.func.id == KW_EXISTENTIAL_QUANT:
             context = dast.ExistentialOp
@@ -1951,6 +2092,13 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
             if self.expr_check(ComprehensionTypes, 2, None, node):
                 return self.parse_comprehension(node)
+
+            if self.expr_check({KW_INFER}, 2, 3, node):
+                return self.parse_infer(node)
+                # self.debug("Infer: " + node.func.id, node)
+                # expr = self.create_expr(ruleast.InferStmt, node)
+
+
 
             if self.current_process is not None and \
                self.expr_check({KW_RECV_QUERY, KW_SENT_QUERY}, 1, 1, node,
