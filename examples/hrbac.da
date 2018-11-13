@@ -4,6 +4,8 @@ import time
 import sys, os
 import argparse
 
+import cProfile
+
 def if_(c): pass
 
 def write_file(filename, string):
@@ -174,6 +176,9 @@ class HierarchicalRBAC(CoreRBAC,process):
     self.RH = _rh  # RH subset ROLES * ROLES, where asc inh desc
     self.workload = _workload
     self.outfile = _outfile
+    self.tmpout = 'tmpout'
+    self.tmpfout = open(tmpout,'a')
+    
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
@@ -225,8 +230,11 @@ class HierarchicalRBAC(CoreRBAC,process):
     # print(workload)
     # exec(workload,globals(),locals())
     # with suppress_stdout():
+    # cp = cProfile.Profile()
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     with open(os.devnull, "w") as devnull:
+      
+      # cp.enable()
       old_stdout = sys.stdout
       sys.stdout = devnull
       for op,pr in workload:
@@ -241,8 +249,9 @@ class HierarchicalRBAC(CoreRBAC,process):
         # else:
         #   for i in range(pr):
         #     print(eval('self.'+op)(i))
-
+      # cp.disable()
       sys.stdout = old_stdout
+    # cp.print_stats()
     # for i in addUser:
     #   AddUser(i)
 
@@ -310,9 +319,16 @@ class HRBAC_py(HierarchicalRBAC,process):  # using Python but no arg self in def
 
   def AuthorizedUsers(role):  # assert role in self.ROLES
     transRH = self.trans(RH)
-    # print(transRH)
+    # output(transRH)
     return set(u for u in self.USERS for asc in self.ROLES 
                if (asc,role) in transRH and (u,asc) in self.UR)
+    # output(set(u for u in self.USERS for asc in self.ROLES 
+                # if (asc,role) in transRH and (u,asc) in self.UR)) 
+    # output(role)
+    # tmpfout.write(str(i))
+    # fout.close()
+
+    # sys.exit()
 
 
 class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
@@ -333,7 +349,12 @@ class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
   def AuthorizedUsers(role):
     """the set of users of role or ascendant roles of role"""
     transRH = self.trans(RH)
+    # output(transRH)
+    # output(role)
+    # # output(UR)
     return setof(u, (u,asc) in UR, (asc,_role) in transRH)
+    # output(setof(u, (u,asc) in UR, (asc,_role) in transRH))
+    # sys.exit()
 
   def AuthorizedRoles(user):
     """the set of roles of user or descendant roles of the roles"""
@@ -358,8 +379,12 @@ class HRBAC_set_maint(HRBAC_set,process):
     transRH = trans(RH)
     # return transRH
 
-  def AuthorizedUsers(role):
-    return setof(u, (u,r) in UR, (r,_role) in transRH)
+  # def AuthorizedUsers(role):
+  #   return setof(u, (u,r) in UR, (r,_role) in transRH)
+
+  def AuthorizedUsers(role):  # assert role in self.ROLES
+    return set(u for u in self.USERS for asc in self.ROLES 
+               if (asc,role) in transRH and (u,asc) in self.UR)
 
 
 class HRBAC_transRH_rules(HRBAC_set_maint,process):
@@ -397,33 +422,89 @@ class HRBAC_transRH_rules(HRBAC_set_maint,process):
     transRH(x,y), if_(rh(x,z), transRH(z,y))
     # transRH(x,x), if_(roles(x)) # with this base case, don't need first rule
 
-class HRBAC_trans_rules(HRBAC_set,process):
+class HRBAC_trans_rules(HRBAC_py,process):
 
   def rules():
     path(x,y), if_(edge(x,y))
     path(x,y), if_(edge(x,z), path(z,y))
+    # authuser(u), if_(ur(u,r), path(r,arole), role(arole))
 
   def trans(E):  # use infer plus set query
     # pass
     i = infer([('edge','E')], ['path(_,_)'],'HRBAC_trans_rules')
     return set(i) | setof((r,r), r in ROLES)
 
+
+class HRBAC_trans_rules_all(HRBAC_py,process):
+
+  def rules():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+    authuser(u), if_(ur(u,r), path(r,arole), role(arole))
+
+  def AuthorizedUsers(role):
+    ur = UR
+    rh = RH
+    # output(RH)
+    # output(ur)
+    therole = {'('+str(role)+')'}
+
+    i = infer([('edge','rh'), ('role','therole'), ('ur','ur')], ['authuser(_)'],'HRBAC_trans_rules_all')
+    # output(RH)
+    return set(i) | setof((u,), (u,_role) in UR)
+    # output(role)
+    # sys.exit()
+
+
 # not allow, as it would be equivalent to dynamic scoping:
 #
 #  def trans2(edge):
 #    return infer(path) | setof((r,r), r in ROLES)
 
-class HRBAC_trans_with_role_rules(HRBAC_set,process):
+class HRBAC_trans_with_role_rules(HRBAC_py,process):
 
   def rules (name=trans_with_role_rules): # with additional last rule
     path(x,y), if_(edge(x,y))
     path(x,y), if_(edge(x,z), path(z,y))
     path(x,x), if_(role(x))
+    # au(u), if_(ur(u,asc), path(asc,arole(r)))
+
 
   def trans(E):  # use infer only, pass in also ROLES
     # pass
     roles = set('('+str(r)+')' for r in ROLES)
     return infer([('edge','E'),('role','roles')], ['path(_,_)'], 'HRBAC_trans_with_role_rules')
+
+
+class HRBAC_trans_with_role_rules_all(HRBAC_py,process):
+
+  def rules (): # with additional last rule
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+    path(x,x), if_(roles(x))
+    authuser(u), if_(ur(u,r), path(r,arole), role(arole))
+
+  def AuthorizedUsers(role):
+    ur = UR
+    rh = RH
+    # output(RH)
+    # output(ur)
+    therole = {'('+str(role)+')'}
+    roles = set('('+str(r)+')' for r in ROLES)
+
+    return infer([('edge','rh'), ('role','therole'), ('roles','roles'), ('ur','ur')], ['authuser(_)'],'HRBAC_trans_with_role_rules_all')
+    # output(i)
+    # output(RH)
+    
+
+  # def AuthorizedUsers(role):
+  #   roles = set('('+str(r)+')' for r in ROLES)
+  #   ur = UR
+  #   return infer([('edge','E'),('role','roles')], ['path(_,_)'], 'HRBAC_trans_with_role_rules')
+
+  #   """the set of users of role or ascendant roles of role"""
+    # transRH = self.trans(RH)
+    # return setof(u, (u,asc) in UR, (asc,_role) in transRH)
 
 
 class HRBAC_trans_with_ROLES_rules(HRBAC_set,process):
@@ -472,12 +553,15 @@ def main():
   # mode = 'python'
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('--numr', type= int, default= 200)
-  parser.add_argument('--numq', type= int, default= 50)
-  parser.add_argument('--q', type= int, default= 50)
+  parser.add_argument('--numr', type= int, default= 200)  # number of roles (graph size)
+  parser.add_argument('--numq', type= int, default= 50)   # unit of operations, e.g. 50 adding/deleting user 
+  parser.add_argument('--q', type= int, default= 50)      # number of auth queries
   parser.add_argument('--mode', type= str, default= 'python')
 
+
   args=parser.parse_args()
+
+  print(f'========================================================\n r: {args.numr} q: {args.numq} auth: {args.q} mode: {args.mode} \n========================================================')
   
 
   # global numr
@@ -505,8 +589,15 @@ def main():
     o = new(HRBAC_transRH_rules,[users,roles,ur,rh,workload,outfile])
   elif args.mode == 'rule':
     o = new(HRBAC_trans_rules,[users,roles,ur,rh,workload,outfile])
-  elif args.mode == 'rev_rule':
+  elif args.mode == 'rule_all':
+    o = new(HRBAC_trans_rules_all,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'rolerule':
     o = new(HRBAC_trans_with_role_rules,[users,roles,ur,rh,workload,outfile])
+  elif args.mode == 'rolerule_all':
+    o = new(HRBAC_trans_with_role_rules_all,[users,roles,ur,rh,workload,outfile])
+  else:
+    print('no such mode')
+    sys.exit()
 
 
   

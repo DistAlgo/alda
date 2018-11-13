@@ -24,6 +24,7 @@ external_file_query(FileBase,Query) :-
      ;	true
     ),
     cputime(X),
+    %call(Query),
     open(AnswerFile,write,OStr),
     (call(Query),
      writeq(OStr,Variables),

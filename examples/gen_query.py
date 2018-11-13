@@ -168,7 +168,7 @@ def genWorkLoad():
 		# 		r = random.sample(choice,1)[0]
 		# 	resultSet.add(r)
 		# 	roles.add(r)
-		resultSet = random.sample(choice,numq)
+		resultSet = random.sample(choice,int(numq/10))
 		roles |= set(resultSet)
 		return resultSet
 

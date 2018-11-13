@@ -1,10 +1,11 @@
 mode = 'query'
-case = ['python','distalgo','RHrule','rule','rev_rule']
-numr = [100,200,300,400,500,600,700,800,900,1000]
+# case = ['python','distalgo','RHrule','rule','rule_all','rolerule','rolerule_all']
+case = ['RHrule','rule','rolerule']
+numr = [100,150,200,250,300,350,400,450,500]
 numq = 50
 queries = [50,100,150,200,250,300,350,400,450,500]
 # r = 800
-numavg = -1
+numavg = -10
 
 import numpy
 
@@ -63,5 +64,5 @@ if __name__ == "__main__":
 	if mode == 'role':
 		roleresult(50)
 	if mode == 'query':
-		queryresult(100)
+		queryresult(500)
 

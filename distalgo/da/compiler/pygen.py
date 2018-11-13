@@ -73,8 +73,8 @@ import platform
 
 sys.path.append('..')
 
-from pyxsb import pyxsb_start_session, pyxsb_end_session, pyxsb_command, \
-                  pyxsb_query, XSBFunctor, XSBVariable, xsb_to_json, json_to_xsb
+# from pyxsb import pyxsb_start_session, pyxsb_end_session, pyxsb_command, \
+#                   pyxsb_query, XSBFunctor, XSBVariable, xsb_to_json, json_to_xsb
 
 XSB_ARCH_DIR = '/usr/local/xsb-3.8.0/config/i386-apple-darwin18.0.0'
 
@@ -465,6 +465,8 @@ tuples = set(tuple(eval(a)) for a in answers.split("\\n")[:-1])
 # QUERY_TEMPLATE = """
 # xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
 # subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
+# answers = open("{FILENAME}.answers","r").read()
+# tuples = set()
 # """
 
 import inspect
