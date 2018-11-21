@@ -1,5 +1,5 @@
 :- export external_file_query/2.
-:- import halt/1, close/1, open/3, writeq/2, nl/1 from standard.
+:- import halt/1, tell/1, told/0, writeq/1, nl/0  from standard.
 :- import term_variables/2 from setof.
 :- import concat_atom/2 from string.
 :- import rm/1 from shell.
@@ -14,26 +14,27 @@ external_file_query(FileBase,Query) :-
     ),
     consult(RuleFile),
     (file_exists(FactFile)
-     ->	load_dync(FactFile)
+     ->	load_dyn(FactFile)
      ;	true
     ),
-    %[FactFile],
     term_variables(Query,Variables),
     (file_exists(AnswerFile)
      ->	rm(AnswerFile)
      ;	true
     ),
-    %cputime(X),
-    open(AnswerFile,write,OStr),
-    (call(Query),
-     writeq(OStr,Variables),
-     nl(OStr),
-     fail
-     ;	
-     true
+    tell(AnswerFile),
+    (do_all
+     call(Query),
+     write_list(Variables)
     ),
-    close(OStr),
-    %cputime(Y),
-    %T is Y-X,
-    %write(T),
-    halt.
+    told,
+    halt(0).
+
+write_list([]) :- nl.
+write_list([E|L]) :-
+    writeq(E),
+    (L == []
+     ->	nl
+     ;	write(','),
+	write_list(L)
+    ).

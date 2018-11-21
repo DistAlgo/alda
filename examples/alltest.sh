@@ -1,3 +1,5 @@
+'python' 'distalgo' 'RHrule' 'rule' 'rule_all' 'rolerule' 'rolerule_all'
+
 for nq in 50 100 150 200 250 300 350 400 450 500; do
 	for ((n=0;n<10;n++)); do python3 -m da --message-buffer-size=409600 hrbac.da --numr=400 --numq=50 --q=$nq --mode=python; done;
 	for ((n=0;n<10;n++)); do python3 -m da --message-buffer-size=409600 hrbac.da --numr=400 --numq=50 --q=$nq --mode=distalgo; done;

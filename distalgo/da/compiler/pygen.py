@@ -422,34 +422,66 @@ for v in {VAL}:
 
 
 # QUERY_TEMPLATE = """
+# FNULL = open(os.devnull, 'w')
 # xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
 # start = time.time()
 # start_cputime = time.process_time()
-# subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
+# subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query], stdout=FNULL, stderr=subprocess.STDOUT)
 # end = time.time()
 # end_cputime = time.process_time()
-# print('query elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
+# print(end - start,',',end_cputime-start_cputime, end =",")
+
 # start = time.time()
 # start_cputime = time.process_time()
 # answers = open("{FILENAME}.answers","r").read()
 # end = time.time()
 # end_cputime = time.process_time()
-# print('read answer file elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
+# print(end - start,',',end_cputime-start_cputime, end =",")
+
 # start = time.time()
 # start_cputime = time.process_time()
-# tuples = set(tuple(eval(a)) for a in answers.split("\\n")[:-1])
+# tuple1 = [a.split(',') for a in answers.split("\\n")[:-1]]
 # end = time.time()
 # end_cputime = time.process_time()
-# print('convert to wanted format answer file elapse time:',end - start,'cpu time:',end_cputime-start_cputime)
+# print(end - start,',',end_cputime-start_cputime, end =",")
+
+# start = time.time()
+# start_cputime = time.process_time()
+# tuple2 = [tuple(a.split(',')) for a in answers.split("\\n")[:-1]]
+# end = time.time()
+# end_cputime = time.process_time()
+# print(end - start,',',end_cputime-start_cputime, end =",")
+
+# start = time.time()
+# start_cputime = time.process_time()
+# tuples = set(tuple(a.split(',')) for a in answers.split("\\n")[:-1])
+# end = time.time()
+# end_cputime = time.process_time()
+# print(end - start,',',end_cputime-start_cputime, end =",")
 # """
 
 QUERY_TEMPLATE = """
-xsb_query = "extfilequery:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
+xsb_query = "extfilequery_nb:external_file_query('{FILENAME}'," + "{QUERY_STR}" + ")."
 subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
 answers = open("{FILENAME}.answers","r").read()
-tuples = set(tuple(eval(a)) for a in answers.split("\\n")[:-1])
+tuples = set(tuple(a.split(',')) for a in answers.split("\\n")[:-1])
 """
 
+# df = pandas.read_csv("{FILENAME}.answers", sep=',')
+# data = df.values
+# print(data)
+# tuples = set(tuple(a) for a in data)
+# print(tuples)
+# tuples = [tuple(a.lstrip().rstrip().split(',')) for a in answers.split("\\n")[:-1]]
+
+
+
+# p = subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query], stdout=subprocess.PIPE, universal_newlines=True)
+# output = p.stdout.split('\\n')[2:]
+# tuples = set(tuple(eval(t)) for t in output)
+
+
+#tuples = set(tuple(i for i in t.strip('[]').split(',')) for t in open('{FILENAME}.answers').read().split('\\n')[:-1])
 # QUERY_TEMPLATE = """
 # for query in node.queries.subexprs:
 #     gen += for row in pyxsb_query(query):
@@ -573,9 +605,9 @@ class PythonGenerator(NodeVisitor):
         rulefile = filename+'.rules'
         factfile = filename+'.facts'
         
-        gen += 'start = time.time()\nstart_cputime = time.process_time()\n'
+        # gen += 'start = time.time()\nstart_cputime = time.process_time()\n'
         gen += 'write_file("'+filename+'.facts", xsb_facts)\n\n'
-        gen += 'end = time.time()\nend_cputime = time.process_time()\nprint(\'write fact file elapse time:\',end - start,\'cpu time:\',end_cputime-start_cputime)'
+        # gen += 'end = time.time()\nend_cputime = time.process_time()\nprint(\'write fact file elapse time:\',end - start,\'cpu time:\',end_cputime-start_cputime)'
         # gen += "pyxsb_command(\"consult(\'"+rulefile+"\').\")"
         # gen += "pyxsb_command\"load_dyn(\'"+factfile+"\').\")"
 
@@ -587,7 +619,7 @@ class PythonGenerator(NodeVisitor):
 
         for query in node.queries.subexprs:
             gen += QUERY_TEMPLATE.format(FILENAME=filename,QUERY_STR=query.subexprs[0])+'\n'
-        
+        # print(query.subexprs[0])
         callxsb = Expr(Call(func=pyName('exec'),args=[Str(gen),Call(func=pyName('globals'),args=[],
             keywords=[]),Call(func=pyName('locals'),args=[],keywords=[])],keywords=[]))
 

@@ -1,6 +1,12 @@
 from pprint import pprint
 import subprocess
 import os
+import argparse
+
+import gc
+gc.disable()
+
+import cProfile
 
 # import sys, os
 import time
@@ -8,11 +14,12 @@ def if_(c): pass
 def trans_rules(): pass
 def trans_left_rec_rules(): pass
 
-inputfile = 'v25e50LiuPy.py'
-mode = 'rev_rule'
+# inputfile = 'v25e50LiuPy.py'
+# mode = 'rev_rule'
 
 class Trans(process):
-  def setup(E): pass
+  def setup(E,mode,inputfile): 
+    pass
 
   def trans(E): pass
 
@@ -21,10 +28,17 @@ class Trans(process):
     # print(trans(E))
     # start = time.time()
     # start_cputime = time.process_time()
+    # print('queryElapse, queryCPU, readElapse, readCPU, convertElapse, convertCPU, totalElapse, totalCPU')
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     # print(utime, stime, cutime, cstime, elapsed_time )
-    print(trans(E))
-    # trans(E)
+    # print(trans(E))
+    # cp = cProfile.Profile()
+    # cp.enable()
+    trans(E)
+    # t, tqe, tqc, tre, trc, tce, tcc = trans(E)
+    # print(tqe, tqc, tre, trc, tce, tcc)
+    # cp.disable()
+    # cp.print_stats()
     # end = time.time()
     # end_cputime = time.process_time()
     # eltime = end - start
@@ -35,6 +49,8 @@ class Trans(process):
     fout = open('./timing/timing_trans'+'_'+mode+'_'+inputfile+'.txt','a')
     fout.write(str(elapsed_time-elapsed_time1)+','+str(utime + stime + cutime + cstime)+'\n')
     fout.close()
+    print(elapsed_time-elapsed_time1, ',',utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1)
+
 
     # f = open("transresultfile.txt", "w")
     # for item in result:
@@ -97,6 +113,8 @@ class Trans_rules(Trans, process):
     # if_(edge(x,z), path(z,y))
     path(x,y), if_(edge(x,z), path(z,y))
 
+
+
   def trans(E): 
     # pprint(locals())
     # tuples = []
@@ -109,7 +127,7 @@ class Trans_left_rec_rules(Trans, process):
     path(x,y), if_(path(z,y), edge(x,z))
 
   def trans(E): 
-    print('-------- Trans_left_rec_rules ----------')
+    # print('-------- Trans_left_rec_rules ----------')
     # tuples = []
     return infer([('edge','E')] ,['path(_,_)'], 'Trans_left_rec_rules')
 
@@ -118,20 +136,30 @@ def main():
   # for e in [10,20,30,40,50,60,70,80,90]:
   #   v = int(e/2)
   #   gen_graph(v,e)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--nume', type= int, default= 200)  # number of roles (graph size)
+  parser.add_argument('--mode', type= str, default= 'python')
+
+  args=parser.parse_args()
+
+  v = int(args.nume/2)
+  inputfile = 'v{V}e{E}LiuPy.py'.format(V=v,E=args.nume)
+
+
 
   data = eval(open('./input/'+inputfile).read())
   # ############## edge = eval(open('v500e1000EdgeLiuPy.py').read())
-  if mode == 'python':
-    o1 = new(Trans_py, [data])
+  if args.mode == 'python':
+    o1 = new(Trans_py, [data,args.mode,inputfile])
     start(o1)
-  elif mode == 'distalgo':
-    o2 = new(Trans_set, [data])
+  elif args.mode == 'distalgo':
+    o2 = new(Trans_set, [data,args.mode,inputfile])
     start(o2)
-  elif mode == 'rule':
-    o3 = new(Trans_rules, [data])
+  elif args.mode == 'rule':
+    o3 = new(Trans_rules, [data,args.mode,inputfile])
     start(o3)
-  elif mode == 'rev_rule':
-    o4 = new(Trans_left_rec_rules, [data])
+  elif args.mode == 'rev_rule':
+    o4 = new(Trans_left_rec_rules, [data,args.mode,inputfile])
     start(o4)
 
 

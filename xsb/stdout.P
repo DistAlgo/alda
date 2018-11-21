@@ -1,0 +1,45 @@
+:- export external_file_query/2.
+:- import halt/1, close/1, open/3, writeq/2, nl/1 from standard.
+:- import term_variables/2 from setof.
+:- import concat_atom/2 from string.
+:- import rm/1 from shell.
+
+external_file_query(FileBase,Query) :-
+    concat_atom([FileBase,'.rules'],RuleFile),
+    concat_atom([FileBase,'.facts'],FactFile),
+    concat_atom([FileBase,'.answers'],AnswerFile),
+    (file_exists(RuleFile)
+     ->	true
+     ;	writeln(warning('No Rule file.'))
+    ),
+    consult(RuleFile),
+    (file_exists(FactFile)
+     ->	load_dync(FactFile)
+     ;	true
+    ),
+    %[FactFile],
+    term_variables(Query,Variables),
+    (file_exists(AnswerFile)
+     ->	rm(AnswerFile)
+     ;	true
+    ),
+    %cputime(X),
+    (call(Query),
+     nl,
+     write(Variables),
+     fail;
+     true
+    ),
+    %open(AnswerFile,write,OStr),
+    %(call(Query),
+    % writeq(OStr,Variables),
+    % nl(OStr),
+    % fail
+    % ;	
+    % true
+    %),
+    %close(OStr),
+    %cputime(Y),
+    %T is Y-X,
+    %write(T),
+    halt.
