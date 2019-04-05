@@ -38,11 +38,15 @@ import multiprocessing
 import os.path
 
 from . import common, pattern
-from .common import (builtin, internal, name_split_host, name_split_node,
+from .common import (write_file, builtin, internal, name_split_host, name_split_node,
                      ProcessId, get_runtime_option,
                      ObjectDumper, ObjectLoader)
 from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
     TransportException, AuthenticationException
+
+
+from pprint import pprint
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +78,17 @@ class Command(enum.Enum):
     Message    = 20
     RPC        = 30
     RPCReply   = 31
+    # Crash      = 32
+    # Recover    = 33
+    # CrashAck   = 34
+    # RecoverAck = 35
     Sentinel   = 40
+    
+
 
 _config_object = dict()
+
+UniqueLowerCasePrefix = 'p'
 
 class DistProcess():
     """Abstract base class for DistAlgo processes.
@@ -106,6 +118,8 @@ class DistProcess():
 
     """
     def __init__(self, procimpl, forwarder, **props):
+        # print('sldkjflsjdfs')
+        # print(self._rules_object)
         self.__procimpl = procimpl
         self.__id = procimpl.dapid
         self._log = logging.LoggerAdapter(
@@ -129,6 +143,9 @@ class DistProcess():
 
         self._state = common.Namespace()
         self._events = []
+
+        self.__crashing = False
+
 
     def setup(self, **rest):
         """Initialization routine for the DistAlgo process.
@@ -173,6 +190,10 @@ class DistProcess():
             self.__do_label = self.__label_all
         else:
             self.__do_label = self.__label_one
+        if self.get_config('unmatched', default='drop').casefold() == 'keep':
+            self._keep_unmatched = True
+        else:
+            self._keep_unmatched = False
         self.__default_flags = self.__get_channel_flags(
             self.get_config("channel", default=[]))
         if self.get_config('clock', default='').casefold() == 'lamport':
@@ -181,7 +202,8 @@ class DistProcess():
             self._logical_clock = None
 
     AckCommands = [Command.NewAck, Command.EndAck, Command.StartAck,
-                   Command.SetupAck, Command.ResolveAck, Command.RPCReply]
+                   Command.SetupAck, Command.ResolveAck, Command.RPCReply]#,
+                   # Command.CrashAck, Command.RecoverAck]
     @internal
     def _init_dispatch_table(self):
         self.__command_dispatch_table = [None] * Command.Sentinel.value
@@ -444,7 +466,7 @@ class DistProcess():
 
     @builtin
     def work(self):
-        """Waste some random amount of time.
+        """Waste   random amount of time.
 
         This suspends execution of the process for a period of 0-2 seconds.
 
@@ -516,6 +538,180 @@ class DistProcess():
         """
         self._register_async_event(Command.EndAck, seqno=0)
         self._sync_async_event(Command.EndAck, seqno=0, srcs=self._id)
+
+
+    @builtin
+    def infer(self, bindings=[], queries=[], rule=None):
+        # set_value = False
+        # self._log.info('infer called')
+        if not rule:
+            rule = self.__class__.__name__
+
+        pprint('=================================== infer ===================================')
+        # pprint(self._rules_object)
+        allBindings = set(b for b,_ in bindings)
+        # allLhs = set(self._rules_object[rule]['LhsVars'].keys())
+        # allqueries
+        if not rule in self._rules_object:
+            raise ValueError("infer: can't find rule: " + rule)
+        for u in self._rules_object[rule]['Unbounded']:
+            if u not in allBindings:
+                raise ValueError("infer: not all predicates bond: " + u)
+
+        for r in self._rules_object[rule]['RhsVars']:
+            if r not in allBindings:
+                bindings.append((r, getattr(getattr(self,'_state'), r)))
+
+        # if len(bindings) == 0:
+        #     for v in _rules_object['RhsVars']:
+        #         bindings.append((v, getattr(self, v)))
+
+        if len(queries) == 0:
+            # qArg = []
+            for v in self._rules_object[rule]['LhsVars']:
+                arity = v[1]
+                qstr = v[0]+'('
+                for i in range(arity-1):
+                    qstr += '_,'
+                if arity > 0:
+                    qstr += '_'
+                qstr += ')'
+                queries.append(qstr)
+
+        
+        xsb_facts = ""
+        for b in bindings:
+            if not isinstance(b[1], list) and not isinstance(b[1], set):
+                if isinstance(b[1], tuple):
+                    xsb_facts += UniqueLowerCasePrefix+b[0]+str(b[1])+'.\n'
+                else:
+                    xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(b[1])+').\n'
+            else:
+                for v in b[1]:
+                    if isinstance(v, tuple):
+                        xsb_facts += UniqueLowerCasePrefix+b[0]+str(v)+'.\n'
+                    else:
+                        xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(v)+').\n'
+
+        # print(xsb_facts)
+        write_file(rule+'.facts', xsb_facts)
+
+        results = []
+        for q in queries:
+            xsb_query = "extfilequery_nb:external_file_query('{}',{}).".format(rule,UniqueLowerCasePrefix+q)
+            # print(xsb_query)
+            subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
+            answers = open("{}.answers".format(rule),"r").read()
+            tuples = set(tuple(int(v) for v in a.split(',')) if len(a.split(',')) > 1 else int(a) for a in answers.split("\n")[:-1])
+            results.append(tuples)
+        #         queries.append((v+))
+
+        # for v in 
+        # print('resultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresults')
+        # pprint(results)
+        if len(results) == 0:
+            return results
+        if len(results) == 1:
+            return results[0]
+        return tuple(results)
+
+
+    # another option: crash and recover both by messages.
+    # @builtin
+    # def fakeCrash(self, duration):
+
+    #     """Block current process for timeout time
+
+    #     simulation crashing and bring back
+    #     if timeout == 0: crash completely and never bring back
+
+    #     """
+    #     if timeout > 0:
+    #         # print()
+    #         # print()
+    #         # for i in self.__messageq._q:
+    #         #     print (i)
+    #         tmpMessage = copy.deepcopy(self.__messageq._q)
+    #         # print('========= before crash =========',self._id,tmpMessage)
+    #         time.sleep(duration)
+    #         # print()
+    #         # print('========= after crash =========',self._id,tmpMessage,self.__messageq._q)
+    #         self.__messageq._q = copy.deepcopy(tmpMessage)
+    #         # print(self._id,self.__messageq._q)
+
+    #         # for i in self.__messageq._q:
+    #         #     print (i)
+    #     else:
+    #         hanged()
+
+
+    @builtin
+    def crash(self, procs):
+        self._send1(Command.Message, '__crash__', procs, flags=ChannelCaps.RELIABLEFIFO)
+
+
+    @builtin
+    def recover(self, procs):
+        self._send1(Command.Message, '__recover__', procs, flags=ChannelCaps.RELIABLEFIFO)
+
+
+    # @internal
+    # def _crash(self, procs):
+    #     print('========= _crash ===========')
+    #     res = True
+    #     seqno = self._create_cmd_seqno()
+        
+    #     self._register_async_event(msgtype=Command.CrashAck, seqno=seqno)
+    #     if self._send1(msgtype=Command.Crash, message=seqno, to=procs,
+    #                    flags=ChannelCaps.RELIABLEFIFO):
+    #         self._sync_async_event(msgtype=Command.CrashAck,
+    #                                 seqno=seqno,
+    #                                 srcs=procs)
+    #     else:
+    #         res = False
+    #         self._deregister_async_event(msgtype=Command.CrashAck,
+    #                                       seqno=seqno)
+    #     return res
+
+
+
+    # @internal
+    # def _recover(self, procs):
+    #     print('========= _recover ===========')
+    #     res = True
+    #     seqno = self._create_cmd_seqno()
+        
+    #     self._register_async_event(msgtype=Command.RecoverAck, seqno=seqno)
+    #     if self._send1(msgtype=Command.Recover, message=seqno, to=procs,
+    #                    flags=ChannelCaps.RELIABLEFIFO):
+    #         self._sync_async_event(msgtype=Command.RecoverAck,
+    #                                 seqno=seqno,
+    #                                 srcs=procs)
+    #     else:
+    #         res = False
+    #         self._deregister_async_event(msgtype=Command.RecoverAck,
+    #                                       seqno=seqno)
+    #     return res
+
+    # @internal
+    # def _cmd_Crash(self, src, seqno):
+    #     print('========= _cmd_Crash ===========')
+    #     self.__crashing = True
+    #     self._send1(msgtype=Command.CrashAck,
+    #             message=(seqno, None),
+    #             to=src,
+    #             flags=ChannelCaps.RELIABLEFIFO)
+    #     self._wait_for(lambda: not self.__running)
+
+    # @internal
+    # def _cmd_Recover(self, src, seqno):
+    #     print('========= _cmd_Recover ===========')
+    #     self.__crashing = False
+    #     self._send1(msgtype=Command.RecoverAck,
+    #         message=(seqno, None),
+    #         to=src,
+    #         flags=ChannelCaps.RELIABLEFIFO)
+
 
     @builtin
     def resolve(self, name):
@@ -673,6 +869,7 @@ class DistProcess():
 
     def __process_jobqueue(self, label=None):
         """Runs all pending handlers jobs permissible at `label`.
+
         """
         leftovers = []
         handler = args = None
@@ -690,14 +887,19 @@ class DistProcess():
                 (handler._notlabels is None or label not in handler._notlabels)):
                 try:
                     handler(**args)
+                    if self.__do_label is self.__label_one:
+                        break
                 except Exception as e:
                     self._log.error(
                         "%r when calling handler '%s' with '%s': %s",
                         e, handler.__name__, args, e)
             else:
-                self._log.debug("Skipping (%s, %r) due to label constraint.",
-                                handler, args)
-                leftovers.append((handler, args))
+                if self._keep_unmatched:
+                    dbgmsg = "Skipping (%s, %r) due to label constraint."
+                    leftovers.append((handler, args))
+                else:
+                    dbgmsg = "Dropping (%s, %r) due to label constraint."
+                self._log.debug(dbgmsg, handler, args)
         self.__jobq.extend(leftovers)
 
     @internal
@@ -782,6 +984,18 @@ class DistProcess():
 
         try:
             message = self.__messageq.pop(block, timeout)
+            # print(message[1])
+            if message[1][1] == '__crash__':    # should move all these things to a self defined message handler
+                self.__crashing = True
+                self.output('crashed')
+                return True
+            if message[1][1] == '__recover__':
+                self.__crashing = False
+                self.output('recovered')
+                return True
+            if self.__crashing:
+                return True
+                
         except common.QueueEmpty:
             message = None
         except Exception as e:

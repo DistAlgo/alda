@@ -41,7 +41,7 @@ from functools import wraps
 MAJOR_VERSION = 1
 MINOR_VERSION = 1
 PATCH_VERSION = 0
-PRERELEASE_VERSION = "b10"
+PRERELEASE_VERSION = "b13"
 
 __version__ = "{}.{}.{}{}".format(MAJOR_VERSION, MINOR_VERSION, PATCH_VERSION,
                                    PRERELEASE_VERSION)
@@ -79,6 +79,13 @@ internal_registry = dict()
 
 class InvalidStateException(RuntimeError): pass
 
+class ConfigurationError(RuntimeError): pass
+
+def write_file(filename, string):
+    file = open(filename,'w')
+    file.write(string)
+    file.close()
+    
 def get_runtime_option(key, default=None):
     """Returns the configured value of runtime option 'key', or 'default' if 'key'
     is not configured.
@@ -117,6 +124,45 @@ def _parse_items(items):
             subs[parts[0]] = parts[1]
     return subs
 
+def _set_hostname():
+    """Sets a canonical hostname for this process.
+
+    The "hostname" global option serves three distinct purposes within DistAlgo:
+    1) it determines the network interface(s) on which DistAlgo listens for
+    incoming messages; 2) it is a component of the globally unique `ProcessId`
+    used to identify DistAlgo processes; 3) during message routing, the
+    "hostname" component of the target `ProcessId` is used to determine the
+    proper forwarding path. Therefore, we must ensure that all DistAlgo
+    processes in a distributed network use the same hostname string for each
+    physical host in the network, or else message loss may occur.
+
+    """
+    import socket
+
+    hostname = GlobalOptions.get('hostname')
+    if hostname is None:
+        if len(GlobalOptions['nodename']) > 0:
+            hostname = socket.getfqdn()
+        else:
+            hostname = 'localhost'
+
+    try:
+        GlobalOptions['hostname'] = socket.gethostbyname(hostname)
+    except socket.error as e:
+        if GlobalOptions.get('hostname') is None:
+            msg = (f'This system is configured to use "{hostname}" as its fully '
+                   'qualified domain name, but it is not resolvable. Please '
+                   'specify a hostname or an IP address via the "--hostname"'
+                   '(or equivalently "-H") command line argument. If you only '
+                   'intend to connect to other DistAlgo nodes running on '
+                   'this system, you can use "-H localhost". Otherwise, '
+                   'you must specify a hostname or an IP address that is '
+                   'reachable from remote hosts.')
+        else:
+            msg = f'"{hostname}" is not a resolvable hostname.'
+        raise ConfigurationError(msg) from e
+
+
 def initialize_runtime_options(options=None):
     """Sets and sanitizes runtime options.
 
@@ -124,24 +170,16 @@ def initialize_runtime_options(options=None):
     names to corresponding values.
 
     """
+    import multiprocessing
+
+    from . import compiler
+
     global GlobalOptions
+
     if not GlobalOptions:
         GlobalOptions = dict()
     if options:
         GlobalOptions.update(options)
-
-    # Canonize hostname, essential for properly determining whether a ProcessId
-    # is running on the local machine:
-    if GlobalOptions.get('nodename') is None:
-        GlobalOptions['nodename'] = ''
-    import socket
-    if GlobalOptions.get('hostname') is None:
-        if len(GlobalOptions['nodename']) > 0:
-            GlobalOptions['hostname'] = socket.getfqdn()
-        else:
-            GlobalOptions['hostname'] = 'localhost'
-    GlobalOptions['hostname'] \
-        = socket.gethostbyname(GlobalOptions['hostname'])
 
     # Parse '--substitute-classes' and '--substitute-modules':
     GlobalOptions['substitute_classes'] = \
@@ -149,15 +187,18 @@ def initialize_runtime_options(options=None):
     GlobalOptions['substitute_modules'] = \
                             _parse_items(GlobalOptions.get('substitute_modules'))
 
+    if GlobalOptions.get('nodename') is None:
+        GlobalOptions['nodename'] = ''
+
+    _set_hostname()
+
     # Configure multiprocessing package to use chosen semantics:
-    import multiprocessing
     startmeth = GlobalOptions.get('start_method')
     if startmeth != multiprocessing.get_start_method(allow_none=True):
         multiprocessing.set_start_method(startmeth)
 
     # Convert 'compiler_flags' to a namespace object that can be passed directly
     # to the compiler:
-    from . import compiler
     GlobalOptions['compiler_args'] \
         = compiler.ui.parse_compiler_args(
             GlobalOptions.get('compiler_flags', '').split())
@@ -165,7 +206,8 @@ def initialize_runtime_options(options=None):
     # Make sure the directory for storing trace files exists:
     if GlobalOptions.get('record_trace'):
         if 'logdir' not in GlobalOptions:
-            raise ValueError("'record_trace' enabled without setting 'logdir'")
+            raise ConfigurationError(
+                "'record_trace' enabled without setting 'logdir'")
         os.makedirs(GlobalOptions['logdir'], exist_ok=True)
 
 def set_global_config(props):
@@ -943,75 +985,6 @@ class ModuleIntrument(object):
         delattr(self._control, attr)
         delattr(self._subject, attr)
 
-class frozendict(dict):
-    """Hashable immutable dict implementation
-
-    Copied from http://code.activestate.com/recipes/414283/
-
-    """
-    def _blocked_attribute(obj):
-        raise AttributeError("A frozendict cannot be modified.")
-    _blocked_attribute = property(_blocked_attribute)
-
-    __delitem__ = __setitem__ = clear = _blocked_attribute
-    pop = popitem = setdefault = update = _blocked_attribute
-
-    def __new__(cls, *args, **kws):
-        new = dict.__new__(cls)
-        dict.__init__(new, *args, **kws)
-        return new
-
-    def __init__(self, *args, **kws):
-        pass
-
-    def __hash__(self):
-        try:
-            return self._cached_hash
-        except AttributeError:
-            h = self._cached_hash = hash(tuple(sorted(self.items())))
-            return h
-
-    def __repr__(self):
-        return "frozendict(%s)" % dict.__repr__(self)
-
-BuiltinImmutables = [int, float, complex, tuple, str, bytes, frozenset]
-
-def freeze(obj):
-    """Return a hashable version of `obj`.
-
-    Contents of `obj` may be copied if necessary.
-
-    """
-    if any(isinstance(obj, itype) for itype in BuiltinImmutables):
-        return obj
-
-    if IncOQBaseType is not None:
-        if isinstance(obj, IncOQBaseType):
-            return copy.deepcopy(obj)
-
-    if isinstance(obj, abc.MutableSequence):
-        if isinstance(obj, abc.ByteString):
-            # bytearray -> bytes
-            return bytes(obj)
-        else:
-            # list -> tuple
-            return tuple(freeze(elem) for elem in obj)
-    elif isinstance(obj, abc.MutableSet):
-        # set -> frozenset
-        return frozenset(freeze(elem) for elem in obj)
-    elif isinstance(obj, abc.MutableMapping):
-        # dict -> frozendict
-        return frozendict((freeze(k), freeze(v)) for k, v in obj.items())
-    elif isinstance(obj, abc.Sequence):
-        #NOTE: This part is fragile. For immutable sequence objects, we still
-        # have to recursively freeze its elements, which means we have to create
-        # a new instance of the same type. Here we just assume the class
-        # `__init__` method takes a 'iterable' as argument. Otherwise,
-        # everything falls apart.
-        return type(obj)(freeze(e) for e in obj)
-    else:
-        # everything else just assume hashable & immutable, hahaha:
-        return obj
 
 def _install():
     """Hooks into `multiprocessing.spawn` so that GlobalOptions is propagated to
@@ -1067,6 +1040,4 @@ if __name__ == "__main__":
     def testdepre():
         print("deprecated function")
 
-    t = ('a', 1)
-    print("Freeze " + str(t) + "->" + str(freeze(t)))
     testdepre()

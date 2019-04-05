@@ -521,6 +521,7 @@ class NamedVar(DistNode):
         self.name = name
         self._scope = None
         self._indexes = []
+        self.triggerInfer = set()
 
     @property
     def assignments(self):
@@ -2486,6 +2487,12 @@ class EventHandler(Function):
             return super().name
         return "_%s_handler_%d" % (self.first_parent_of_type(Process).name,
                                    self.index)
+# class Rule(DistNode):
+#     def __init__(self):
+#         self.LhsVars = set()
+#         self.LhsAry = dict()
+#         self.RhsVars = set()
+#         self.Unbounded = set()
 
 class Process(CompoundStmt, ArgumentsContainer):
 
@@ -2504,6 +2511,8 @@ class Process(CompoundStmt, ArgumentsContainer):
         self.configurations = []
         # List of member methods:
         self.methods = []
+        # List of static methods:
+        self.staticmethods = []
         # 'setup' method:
         self.setup = None
         # 'main' method:
@@ -2511,9 +2520,17 @@ class Process(CompoundStmt, ArgumentsContainer):
         # List of event handlers:
         self.events = []
 
+        # Rule Related
+        self.currentRule = None
+        self.RuleConfig = dict()
+
     @property
     def methodnames(self):
         return {f.name for f in self.methods}
+
+    @property
+    def staticnames(self):
+        return {f.name for f in self.staticmethods}
 
     @property
     def event_handlers(self):
@@ -2553,9 +2570,3 @@ class Process(CompoundStmt, ArgumentsContainer):
 
     def __repr__(self):
         return str(self)
-
-
-
-
-
-        
