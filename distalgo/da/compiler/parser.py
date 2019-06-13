@@ -997,6 +997,23 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                 args.append(assers)
             elif isinstance(a, Name):
                 args.append(ruleast.LogicVar(a.id))
+            elif isinstance(a, Num):
+                pprint(vars(a))
+                args.append(ruleast.LogicVar(a.n))
+            elif isinstance(a, UnaryOp):
+                if isinstance(a.op, USub):
+                    v = -1 * a.operand.n
+                elif isinstance(a.op, UAdd):
+                    v = a.operand.n
+                else:
+                    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                    pprint(a)
+                    pprint(vars(a))
+                args.append(ruleast.LogicVar(v))
+            else:
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                pprint(a)
+                pprint(vars(a))
         a = ruleast.Assertion(ruleast.Constant(node.func.id),args)
 
         return a

@@ -423,10 +423,13 @@ class PythonGenerator(NodeVisitor):
             return self.to_xsb(node.pred) + '(' + \
                 ','.join(self.to_xsb(arg) for arg in node.args) + ')'
         if isinstance(node, ruleast.LogicVar):
-            if node.name != '_':
-                return UniqueUpperCasePrefix + node.name
-            else:
+            if node.name == '_':
                 return node.name
+            elif not isinstance(node.name,str):
+                return str(node.name)
+            else:
+                return UniqueUpperCasePrefix + node.name
+            
         if isinstance(node, ruleast.Constant):
             return UniqueLowerCasePrefix + node.name
 
