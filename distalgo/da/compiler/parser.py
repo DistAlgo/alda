@@ -483,7 +483,7 @@ class Pattern2Constant(NodeVisitor):
     def visit_FreePattern(self, node):
         # This really shouldn't happen
         mesg = "Can not convert FreePattern to constant!"
-        printe(mesg, node.lineno, node.col_offset)
+        print(mesg, node.lineno, node.col_offset)
         return None
 
     def visit_TuplePattern(self, node):
@@ -1032,55 +1032,58 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
     def create_rules(self, rulecls, ast, decls, nopush=False):
         # pprint(vars(self))
-        self.current_process.currentRule = dict()
-        self.current_process.currentRule['LhsVars'] = set()
-        self.current_process.currentRule['LhsAry'] = dict()
-        self.current_process.currentRule['RhsVars'] = set()
-        self.current_process.currentRule['Unboundedleft'] = set()
-        self.current_process.currentRule['Unboundedright'] = set()
-        self.current_process.currentRule['Unbounded'] = set()
-        rules = []
-        for r in ast.body:
-            rules.append(self.visit_Rule(r.value))
+        if self.current_process is not None:
+            self.current_process.currentRule = dict()
+            self.current_process.currentRule['LhsVars'] = set()
+            self.current_process.currentRule['LhsAry'] = dict()
+            self.current_process.currentRule['RhsVars'] = set()
+            self.current_process.currentRule['Unboundedleft'] = set()
+            self.current_process.currentRule['Unboundedright'] = set()
+            self.current_process.currentRule['Unbounded'] = set()
+            rules = []
+            for r in ast.body:
+                rules.append(self.visit_Rule(r.value))
 
-        self.current_process.currentRule['RhsVars'] -= self.current_process.currentRule['LhsVars']
-        self.current_process.currentRule['Unbounded'] = self.current_process.currentRule['Unboundedright'] - self.current_process.currentRule['Unboundedleft']
-        # print('============== create_rules ==============')
-        # pprint(self.current_process.currentRule)
-        if len(self.current_process.currentRule['Unbounded']) == 0:
-            for rv in self.current_process.currentRule['RhsVars']:
-                rv.triggerInfer.add(decls)
-                # print('============== added to triggerInfer ==============')
-                # print(rv)
+            self.current_process.currentRule['RhsVars'] -= self.current_process.currentRule['LhsVars']
+            self.current_process.currentRule['Unbounded'] = self.current_process.currentRule['Unboundedright'] - self.current_process.currentRule['Unboundedleft']
+            # print('============== create_rules ==============')
+            # pprint(self.current_process.currentRule)
+            if len(self.current_process.currentRule['Unbounded']) == 0:
+                for rv in self.current_process.currentRule['RhsVars']:
+                    rv.triggerInfer.add(decls)
+                    # print('============== added to triggerInfer ==============')
+                    # print(rv)
 
-        # expr = self.create_expr(dast.DictExpr, node)
-        # for key in node.keys:
-        #     expr.keys.append(self.visit(key))
-        # for value in node.values:
-        #     expr.values.append(self.visit(value))
+            # expr = self.create_expr(dast.DictExpr, node)
+            # for key in node.keys:
+            #     expr.keys.append(self.visit(key))
+            # for value in node.values:
+            #     expr.values.append(self.visit(value))
 
-        self.current_process.RuleConfig[decls] = self.current_process.currentRule
+            self.current_process.RuleConfig[decls] = self.current_process.currentRule
 
-        # self.current_process.RuleConfig[decls] = \
-        #     Dict([Str('LhsVars'),Str('LhsAry'),Str('RhsVars'),Str('Unbounded')],
-        #          [Set(self.current_process.currentRule['LhsVars']),
-        #             Dict([keys for keys,_ in self.current_process.currentRule['LhsAry'].items()],[Num(var) for _,var in self.current_process.currentRule['LhsAry'].items()]),
-        #             Set(self.current_process.currentRule['RhsVars']),
-        #             Set(self.current_process.currentRule['Unbounded'])])
-        # print(self.current_process.RuleConfig)
-        rulesobj = rulecls(decls, rules)
-        # print(rulesobj)
-        rulesobj.label = self.current_label
-        self.current_label = None
+            # self.current_process.RuleConfig[decls] = \
+            #     Dict([Str('LhsVars'),Str('LhsAry'),Str('RhsVars'),Str('Unbounded')],
+            #          [Set(self.current_process.currentRule['LhsVars']),
+            #             Dict([keys for keys,_ in self.current_process.currentRule['LhsAry'].items()],[Num(var) for _,var in self.current_process.currentRule['LhsAry'].items()]),
+            #             Set(self.current_process.currentRule['RhsVars']),
+            #             Set(self.current_process.currentRule['Unbounded'])])
+            # print(self.current_process.RuleConfig)
+            rulesobj = rulecls(decls, rules)
+            # print(rulesobj)
+            rulesobj.label = self.current_label
+            self.current_label = None
 
-        if self.current_block is None or self.current_parent is None:
-            self.error("Statement not allowed in this context.", ast)
+            if self.current_block is None or self.current_parent is None:
+                self.error("Statement not allowed in this context.", ast)
+            else:
+                self.current_block.append(rulesobj)
+            if not nopush:
+                self.push_state(rulesobj)
+
+            return rulesobj
         else:
-            self.current_block.append(rulesobj)
-        if not nopush:
-            self.push_state(rulesobj)
-
-        return rulesobj
+            pprint(vars(self))
 
 
     def visit_FunctionDef(self, node):
@@ -1098,7 +1101,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             s = self.create_rules(ruleast.Rules, node, decl)
             # pprint(vars(s))
             if self.current_process:
-                self.current_process.rules = s
+                self.current_process.rules = s #??
             self.current_block = s.rules
             self.pop_state()
             self._dummy_process = None
@@ -1399,13 +1402,18 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             elif type(e) is Yield:
                 stmtobj = self.create_stmt(dast.YieldStmt, node)
                 self.current_context = Read(stmtobj)
-                stmtobj.value = self.visit(e.value)
+                if e.value is not None:
+                    stmtobj.value = self.visit(e.value)
+                else:
+                    stmtobj.value = None
             elif type(e) is YieldFrom:
                 # 'yield' should be a statement, handle it here:
                 stmtobj = self.create_stmt(dast.YieldFromStmt, node)
                 self.current_context = Read(stmtobj)
-                stmtobj.value = self.visit(e.value)
-
+                if e.value is not None:
+                    stmtobj.value = self.visit(e.value)
+                else:
+                    stmtobj.value = None
             else:
                 stmtobj = self.create_stmt(dast.SimpleStmt, node)
                 self.current_context = Read(stmtobj)
@@ -1772,6 +1780,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             if (node.starargs is not None or node.kwargs is not None):
                 self.warn("extraneous arguments in event expression.", node)
         pattern = self.parse_pattern_expr(node.args[0], literal)
+        print(node.args)
         if node.func.id == KW_RECV_QUERY:
             event = dast.Event(self.current_process,
                                event_type=dast.ReceivedEvent,
@@ -2489,8 +2498,8 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         return expr
 
     def visit_ExtSlice(self, node):
-        self.warn("ExtSlice in subscript not supported.", node)
-        return self.context_expr(dast.PythonExpr, node, nopush=True)
+        # self.warn("ExtSlice in subscript not supported.", node)
+        return self.create_expr(dast.PythonExpr, node, nopush=True)
 
     def visit_Yield(self, node):
         # Should not get here: 'yield' statements should have been handles by

@@ -48,6 +48,8 @@ from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
 from pprint import pprint
 import subprocess
 
+import re
+
 logger = logging.getLogger(__name__)
 
 class DistProcessExit(BaseException):
@@ -78,8 +80,10 @@ class Command(enum.Enum):
     Message    = 20
     RPC        = 30
     RPCReply   = 31
-    # Crash      = 32
-    # Recover    = 33
+    Backup     = 32
+    Restore    = 33
+    Crash      = 34
+    Recover    = 35
     # CrashAck   = 34
     # RecoverAck = 35
     Sentinel   = 40
@@ -144,7 +148,7 @@ class DistProcess():
         self._state = common.Namespace()
         self._events = []
 
-        self.__crashing = False
+        self.__crashed = False
 
 
     def setup(self, **rest):
@@ -196,6 +200,8 @@ class DistProcess():
             self._keep_unmatched = False
         self.__default_flags = self.__get_channel_flags(
             self.get_config("channel", default=[]))
+        # print(self.__default_flags)
+        print(self._config_object)
         if self.get_config('clock', default='').casefold() == 'lamport':
             self._logical_clock = 0
         else:
@@ -226,7 +232,11 @@ class DistProcess():
     def __get_channel_flags(self, props):
         flags = 0
         if isinstance(props, str):
-            props = [props]
+            if props == 'lossy':
+                props = []
+                self._loss_rate = float(self.get_config('loss_rate', default='0.1'))
+            else:
+                props = [props]
         for prop in props:
             pflag = getattr(ChannelCaps, prop.upper(), None)
             if pflag is not None:
@@ -519,11 +529,15 @@ class DistProcess():
         if channel is not None:
             flags = self.__get_channel_flags(channel)
         impersonate = rest.get('impersonate', None)
-        res = self._send1(msgtype=Command.Message,
-                          message=(self._logical_clock, message),
-                          to=to,
-                          flags=flags,
-                          impersonate=impersonate)
+        l = getattr(self,_loss_rate,0)
+        if random.random() > l:
+            res = self._send1(msgtype=Command.Message,
+                              message=(self._logical_clock, message),
+                              to=to,
+                              flags=flags,
+                              impersonate=impersonate)
+        else:
+            res = False
         self.__trigger_event(pattern.SentEvent(
             (self._logical_clock, to, self._id), message))
         return res
@@ -554,9 +568,18 @@ class DistProcess():
         # allqueries
         if not rule in self._rules_object:
             raise ValueError("infer: can't find rule: " + rule)
+
+        remove = set()
         for u in self._rules_object[rule]['Unbounded']:
             if u not in allBindings:
-                raise ValueError("infer: not all predicates bond: " + u)
+                if hasattr(self._state,u):
+                    remove.add(u)
+                    self._rules_object[rule]['RhsVars'].add(u)
+                else:
+                    print("Unexpected error:", sys.exc_info()[0])
+                    raise ValueError("infer: not all predicates bond: " + u)
+
+        self._rules_object[rule]['Unbounded'] -= remove
 
         for r in self._rules_object[rule]['RhsVars']:
             if r not in allBindings:
@@ -647,70 +670,195 @@ class DistProcess():
 
     @builtin
     def crash(self, procs):
-        self._send1(Command.Message, '__crash__', procs, flags=ChannelCaps.RELIABLEFIFO)
+        seqno = self._create_cmd_seqno()
+        self._send1(Command.Crash, seqno, procs, flags=ChannelCaps.RELIABLEFIFO)
 
 
     @builtin
     def recover(self, procs):
-        self._send1(Command.Message, '__recover__', procs, flags=ChannelCaps.RELIABLEFIFO)
+        seqno = self._create_cmd_seqno()
+        self._send1(Command.Recover, seqno, procs, flags=ChannelCaps.RELIABLEFIFO)
 
 
-    # @internal
-    # def _crash(self, procs):
-    #     print('========= _crash ===========')
-    #     res = True
-    #     seqno = self._create_cmd_seqno()
+    @builtin
+    def getEvent(self):
+        print('========== getEvent ============')
+        for attr in dir(self):
+            if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
+                print(attr, getattr(self,attr))
+
+                
+    @builtin
+    def backup(self, *procs, name=None):
+        # print('========== backupcalled ============', procs, name)
+        seqno = self._create_cmd_seqno()
+
+        if not procs:
+            procs = (self._id,)
+
+        #TODO: 
+
+        # elif len(procs) > 1:
+        #     self._log.error('More arguments than expected in backup, expecting 2, providing '+str(len(procs)+1))
         
-    #     self._register_async_event(msgtype=Command.CrashAck, seqno=seqno)
-    #     if self._send1(msgtype=Command.Crash, message=seqno, to=procs,
-    #                    flags=ChannelCaps.RELIABLEFIFO):
-    #         self._sync_async_event(msgtype=Command.CrashAck,
-    #                                 seqno=seqno,
-    #                                 srcs=procs)
-    #     else:
-    #         res = False
-    #         self._deregister_async_event(msgtype=Command.CrashAck,
-    #                                       seqno=seqno)
-    #     return res
+        self._send1(msgtype=Command.Backup,
+                       message=(seqno, name),
+                       to=procs,
+                       flags=ChannelCaps.RELIABLEFIFO)
 
 
+    @builtin
+    def restore(self, *procs, name=None, full=False):
+        # print('---------- restorecalled ------------', procs, name)
+        if not procs:
+            procs = (self._id,)
+        # elif len(procs) > 1:
+        #     self._log.error('More arguments than expected in restore, expecting 2, providing '+str(len(procs)+1))
+        seqno = self._create_cmd_seqno()
+        self._send1(msgtype=Command.Restore,
+                       message=(seqno, name, full),
+                       to=procs,
+                       flags=ChannelCaps.RELIABLEFIFO)
 
-    # @internal
-    # def _recover(self, procs):
-    #     print('========= _recover ===========')
-    #     res = True
-    #     seqno = self._create_cmd_seqno()
+    @internal
+    def _cmd_Backup(self, src, args):
+        self._log.info('>>>>>>>>>>> backing up >>>>>>>>>>>')
+        seqno, name = args
+
+        if name is None:
+            name = ''
+        procID = re.sub(r"[^0-9a-zA-Z_]",'_',str(self._id))
+        path = 'backup_'+procID+'_'+name+'_'+str(time.time_ns())
+
+        try:  
+            os.mkdir(path)
+        except OSError:  
+            self._log.error ("Creation of the directory %s failed" % path)
+        try:  
+            os.mkdir(path+'/_state')
+        except OSError:  
+            self._log.error ("Creation of the directory %s failed" % path+'/_state')
+
+        for key, val in vars(self._state).items():
+            file = open(path+'/_state/'+key,'wb')
+            try:
+                pickle.dump(val, file)
+            except (TypeError, pickle.PicklingError) as e:
+                print(e,':',key)
+            file.close()
+
+        for attr in dir(self):
+            if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
+                file = open(path+'/'+attr,'wb')
+                try:
+                    pickle.dump(getattr(self,attr), file)
+                except (TypeError, pickle.PicklingError) as e:
+                    self._log.error(e,':',attr)
+                file.close()
+                # pprint(attr)
+
+
+    @internal
+    def _cmd_Restore(self, src, args):
+        self._log.info('<<<<<<<<< restoring <<<<<<<<<')
+        seqno, name, full = args
+        # print('<<<<<<<<< restoring <<<<<<<<< seqno, name = args',seqno,name)
+        procID = re.sub(r"[^0-9a-zA-Z_]",'_',str(self._id))
+        # pprint(dir(self))
+
+        if full:
+            if os.path.isdir(name):
+                bak = name
+            else:
+                self._log.warning('warning: no backup found!')
+                return
+        else:
+            if name is None:
+                dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d.startswith('backup_'+procID+'_')]
+            else:
+                dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d.startswith('backup_'+procID+'_'+name+'_')]
+            # print('checkpoint -1')
+            
+            if len(dirs) == 0:
+                self._log.warning('warning: no backup found!')
+                return
+
+            # print('dirs', dirs)
+
+            entries = [(path[-19:], path) for path in dirs]
+            entries = sorted(entries, reverse = True)
+
+            # print(entries)
+            bak = entries[0][1]
+
+        # print('checkpoint 0')
         
-    #     self._register_async_event(msgtype=Command.RecoverAck, seqno=seqno)
-    #     if self._send1(msgtype=Command.Recover, message=seqno, to=procs,
-    #                    flags=ChannelCaps.RELIABLEFIFO):
-    #         self._sync_async_event(msgtype=Command.RecoverAck,
-    #                                 seqno=seqno,
-    #                                 srcs=procs)
-    #     else:
-    #         res = False
-    #         self._deregister_async_event(msgtype=Command.RecoverAck,
-    #                                       seqno=seqno)
-    #     return res
+        # print(bak)
 
-    # @internal
-    # def _cmd_Crash(self, src, seqno):
-    #     print('========= _cmd_Crash ===========')
-    #     self.__crashing = True
-    #     self._send1(msgtype=Command.CrashAck,
-    #             message=(seqno, None),
-    #             to=src,
-    #             flags=ChannelCaps.RELIABLEFIFO)
-    #     self._wait_for(lambda: not self.__running)
+        # for attr in dir(self):
+        #     if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
+        #         # print(attr,type(attr))
+        #         try:
+        #             delattr(self, attr)
+        #         except:
+        #             e = sys.exc_info()[0]
+        #             self._log.error(e)
 
-    # @internal
-    # def _cmd_Recover(self, src, seqno):
-    #     print('========= _cmd_Recover ===========')
-    #     self.__crashing = False
-    #     self._send1(msgtype=Command.RecoverAck,
-    #         message=(seqno, None),
-    #         to=src,
-    #         flags=ChannelCaps.RELIABLEFIFO)
+        # print('checkpoint 1')
+
+        for x in os.listdir(bak):
+            if x.startswith('.'):
+                continue
+            # print(x)
+            if x == '_state':
+                for y in os.listdir(bak+'/_state'):
+                    if y.startswith('.'):
+                        continue
+                    # print('\t'+y)
+                    file = open(bak+'/_state/'+y,'rb')
+                    try:
+                        setattr(self._state,y,pickle.load(file))
+                    except (EOFError, pickle.UnpicklingError) as e:
+                        self._log.error(e,':',y)
+                    file.close()
+            else:
+                file = open(bak+'/'+x,'rb')
+                try:
+                    setattr(self,x,pickle.load(file))
+                except (EOFError, pickle.UnpicklingError) as e:
+                    self._log.error(e,':',x)
+                file.close()
+
+        # print('checkpoint 2')
+                # pprint(x)
+        # print('restoredrestoredrestoredrestoredrestored')
+        # pprint(dir(self))
+        # # pass
+
+    @internal
+    def _cmd_Crash(self, src, seqno):
+        self._log.info('xxxxxxxx CRASHED xxxxxxxx')
+        self.__crashed = True
+        # for attr in dir(self):
+        #     if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
+        #         # print(attr,type(attr))
+        #         try:
+        #             delattr(self, attr)
+        #         except:
+        #             e = sys.exc_info()[0]
+        #             self._log.error(e)
+
+    @internal
+    def _cmd_Recover(self, src, seqno):
+        self._log.info('oooooooo RECOVERED oooooooo')
+        self.__crashed = False
+
+
+   
+        
+        
+
+    
 
 
     @builtin
@@ -984,17 +1132,11 @@ class DistProcess():
 
         try:
             message = self.__messageq.pop(block, timeout)
-            # print(message[1])
-            if message[1][1] == '__crash__':    # should move all these things to a self defined message handler
-                self.__crashing = True
-                self.output('crashed')
+            # print(self._id,message[1])
+            if self.__crashed and not (isinstance(message[1],tuple) and (message[1][0] == Command.Restore or message[1][0] == Command.Recover)):
                 return True
-            if message[1][1] == '__recover__':
-                self.__crashing = False
-                self.output('recovered')
-                return True
-            if self.__crashing:
-                return True
+            if self.__crashed:
+                self._log.info('><><><><>< crashing: received ><><><><>< %r', message[1][0])
                 
         except common.QueueEmpty:
             message = None

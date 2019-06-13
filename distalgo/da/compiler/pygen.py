@@ -423,7 +423,10 @@ class PythonGenerator(NodeVisitor):
             return self.to_xsb(node.pred) + '(' + \
                 ','.join(self.to_xsb(arg) for arg in node.args) + ')'
         if isinstance(node, ruleast.LogicVar):
-            return UniqueUpperCasePrefix + node.name
+            if node.name != '_':
+                return UniqueUpperCasePrefix + node.name
+            else:
+                return node.name
         if isinstance(node, ruleast.Constant):
             return UniqueLowerCasePrefix + node.name
 
@@ -698,6 +701,10 @@ class PythonGenerator(NodeVisitor):
         stmts[0].name = ENTRYPOINT_NAME
         stmts[0].args.args = [arg("self", None)]
         return stmts
+
+
+# a.add() a
+
 
     def _create_setup(self,node):
         parent = node
@@ -1507,7 +1514,7 @@ class PythonGenerator(NodeVisitor):
                     rhs = set(v.name for v in parent.RuleConfig[r]['RhsVars'])
                     if changed in rhs:
                         fire_rules.add(r)
-                        break
+                        # break
                 inferStmt = self._generate_infer(parent,fire_rules)
         return [pyExpr(value)]+inferStmt
 
@@ -1635,6 +1642,11 @@ class PatternComprehensionGenerator(PythonGenerator):
         self.current_context = ctx
         return target
 
+    #### todo add extra condition to condition_list to fix number of components error
+    #### length of pattern and length of elements
+    #### when recursive visiting
+    #### remember the freevar seen.
+    ####    first time seen a variable: free, see it later: bound
     def visit_TuplePattern(self, node):
         condition_list = []
         targets = []
