@@ -115,7 +115,7 @@ def dafile_to_pycode(filename, args=None, _optimize=-1, dfile=None):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    dafile_to_pyfile(filename, args)
+    # dafile_to_pyfile(filename, args)
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
         return _pyast_to_pycode(pyast,

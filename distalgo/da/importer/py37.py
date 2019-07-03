@@ -91,7 +91,7 @@ class DASourceFileLoader(machinery.SourceFileLoader):
         """
         from .. import compiler
         # print('source_to_code:importerimporterimporterimporterimporterimporterimporterimporterimporterimporterimporterimporterimporterimporterimporter')
-        compiler.dafile_to_pyfile(path)
+        # compiler.dafile_to_pyfile(path)
         codeobj = _call_with_frames_removed(compiler.dastr_to_pycode,
                             data, path, _optimize=_optimize,
                             args=common.get_runtime_option(

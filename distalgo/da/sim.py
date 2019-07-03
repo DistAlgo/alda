@@ -201,11 +201,27 @@ class DistProcess():
         self.__default_flags = self.__get_channel_flags(
             self.get_config("channel", default=[]))
         # print(self.__default_flags)
-        print(self._config_object)
+        # self.output('sim._init_config._config_object: ',self._config_object)
         if self.get_config('clock', default='').casefold() == 'lamport':
             self._logical_clock = 0
         else:
             self._logical_clock = None
+
+        # self.output('get_config: enable_crash', self.get_config('enable_crash', default=False))
+        # self.output('get_config: enable_backup', self.get_config('enable_backup', default=False))
+
+
+
+        if self.get_config('enable_crash', default=False) == True:
+            self._enable_crash = True
+        else:
+            self._enable_crash = False
+
+        if self.get_config('enable_backup', default=False) == True:
+            self._enable_backup = True
+        else:
+            self._enable_backup = False
+
 
     AckCommands = [Command.NewAck, Command.EndAck, Command.StartAck,
                    Command.SetupAck, Command.ResolveAck, Command.RPCReply]#,
@@ -251,6 +267,7 @@ class DistProcess():
         """Returns the configuration value for specified 'key'.
 
         """
+        # print('get_config',key)
         cfgobj = get_runtime_option('config')
         if key in cfgobj:
             return cfgobj[key]
@@ -529,7 +546,7 @@ class DistProcess():
         if channel is not None:
             flags = self.__get_channel_flags(channel)
         impersonate = rest.get('impersonate', None)
-        l = getattr(self,_loss_rate,0)
+        l = getattr(self,'_loss_rate',0)
         if random.random() > l:
             res = self._send1(msgtype=Command.Message,
                               message=(self._logical_clock, message),
@@ -538,6 +555,7 @@ class DistProcess():
                               impersonate=impersonate)
         else:
             res = False
+            self._log.warning('message not delivered')
         self.__trigger_event(pattern.SentEvent(
             (self._logical_clock, to, self._id), message))
         return res
@@ -625,7 +643,7 @@ class DistProcess():
             # print(xsb_query)
             subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
             answers = open("{}.answers".format(rule),"r").read()
-            tuples = set(tuple(int(v) for v in a.split(',')) if len(a.split(',')) > 1 else int(a) for a in answers.split("\n")[:-1])
+            tuples = set(tuple(eval(v) for v in a.split(',')) if len(a.split(',')) > 1 else int(a) for a in answers.split("\n")[:-1])
             results.append(tuples)
         #         queries.append((v+))
 
@@ -680,6 +698,7 @@ class DistProcess():
         self._send1(Command.Recover, seqno, procs, flags=ChannelCaps.RELIABLEFIFO)
 
 
+
     @builtin
     def getEvent(self):
         print('========== getEvent ============')
@@ -690,7 +709,9 @@ class DistProcess():
                 
     @builtin
     def backup(self, *procs, name=None):
+        
         # print('========== backupcalled ============', procs, name)
+
         seqno = self._create_cmd_seqno()
 
         if not procs:
@@ -705,6 +726,7 @@ class DistProcess():
                        message=(seqno, name),
                        to=procs,
                        flags=ChannelCaps.RELIABLEFIFO)
+        
 
 
     @builtin
@@ -722,6 +744,10 @@ class DistProcess():
 
     @internal
     def _cmd_Backup(self, src, args):
+        if not self._enable_backup:
+            self._log.error('Backup not enabled')
+            return
+
         self._log.info('>>>>>>>>>>> backing up >>>>>>>>>>>')
         seqno, name = args
 
@@ -760,6 +786,10 @@ class DistProcess():
 
     @internal
     def _cmd_Restore(self, src, args):
+        if not self._enable_backup:
+            self._log.error('Restore not enabled')
+            return
+
         self._log.info('<<<<<<<<< restoring <<<<<<<<<')
         seqno, name, full = args
         # print('<<<<<<<<< restoring <<<<<<<<< seqno, name = args',seqno,name)
@@ -810,19 +840,19 @@ class DistProcess():
             if x.startswith('.'):
                 continue
             # print(x)
-            if x == '_state':
-                for y in os.listdir(bak+'/_state'):
+            if x == '_state' and os.path.isdir(os.path.join(bak,x)):
+                for y in os.listdir(os.path.join(bak,x)):
                     if y.startswith('.'):
                         continue
                     # print('\t'+y)
-                    file = open(bak+'/_state/'+y,'rb')
+                    file = open(os.path.join(bak,x,y),'rb')
                     try:
                         setattr(self._state,y,pickle.load(file))
                     except (EOFError, pickle.UnpicklingError) as e:
                         self._log.error(e,':',y)
                     file.close()
-            else:
-                file = open(bak+'/'+x,'rb')
+            elif os.path.isfile(os.path.join(bak,x)):
+                file = open(os.path.join(bak,x),'rb')
                 try:
                     setattr(self,x,pickle.load(file))
                 except (EOFError, pickle.UnpicklingError) as e:
@@ -837,8 +867,12 @@ class DistProcess():
 
     @internal
     def _cmd_Crash(self, src, seqno):
-        self._log.info('xxxxxxxx CRASHED xxxxxxxx')
-        self.__crashed = True
+        if not self._enable_crash:
+            self._log.error('Crash not enabled')
+            return
+
+            self._log.info('xxxxxxxx CRASHED xxxxxxxx')
+            self.__crashed = True
         # for attr in dir(self):
         #     if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
         #         # print(attr,type(attr))
@@ -850,6 +884,10 @@ class DistProcess():
 
     @internal
     def _cmd_Recover(self, src, seqno):
+        if not self._enable_crash:
+            self._log.error('Recover not enabled')
+            return
+
         self._log.info('oooooooo RECOVERED oooooooo')
         self.__crashed = False
 

@@ -405,6 +405,7 @@ class PythonGenerator(NodeVisitor):
         # print('=========== compile_rules ============')
         xsb_rules = ':- auto_table.\n'
         xsb_rules += self.to_xsb(node) 
+        # print(xsb_rules)
         write_file(node.decls+'.rules', xsb_rules)
 
 
@@ -425,7 +426,8 @@ class PythonGenerator(NodeVisitor):
         if isinstance(node, ruleast.LogicVar):
             if node.name == '_':
                 return node.name
-            elif not isinstance(node.name,str):
+            elif not isinstance(node.name,str) or node.name.startswith("'"):
+                # print(node.name)
                 return str(node.name)
             else:
                 return UniqueUpperCasePrefix + node.name
@@ -676,7 +678,8 @@ class PythonGenerator(NodeVisitor):
             cd.body.append(self.generate_config(node))
         
         if hasattr(node,'rules'):
-            self.compile_rules(node.rules)
+            for r in node.rules:
+                self.compile_rules(r)
         if node.setup is not None:
             cd.body.extend(self.visit(node.setup))
         elif len(node.RuleConfig) > 0:

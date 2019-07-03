@@ -1000,6 +1000,9 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             elif isinstance(a, Num):
                 pprint(vars(a))
                 args.append(ruleast.LogicVar(a.n))
+            elif isinstance(a, Str):
+                pprint(vars(a))
+                args.append(ruleast.LogicVar("'"+a.s+"'"))
             elif isinstance(a, UnaryOp):
                 if isinstance(a.op, USub):
                     v = -1 * a.operand.n
@@ -1118,7 +1121,10 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             s = self.create_rules(ruleast.Rules, node, decl)
             # pprint(vars(s))
             if self.current_process:
-                self.current_process.rules = s #??
+                if hasattr(self.current_process,'rules'):
+                    self.current_process.rules.append(s)
+                else:
+                    self.current_process.rules = [s] #??
             self.current_block = s.rules
             self.pop_state()
             self._dummy_process = None
@@ -1797,7 +1803,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             if (node.starargs is not None or node.kwargs is not None):
                 self.warn("extraneous arguments in event expression.", node)
         pattern = self.parse_pattern_expr(node.args[0], literal)
-        print(node.args)
+        # print(node.args)
         if node.func.id == KW_RECV_QUERY:
             event = dast.Event(self.current_process,
                                event_type=dast.ReceivedEvent,
