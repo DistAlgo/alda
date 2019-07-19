@@ -143,6 +143,8 @@ def gen_facts(filename):
     if os.path.isdir(filename):
         path = os.path.abspath(filename)
         packName = os.path.basename(path)
+        if not os.path.exists(dbFolder):
+            os.mkdir(dbFolder)
         projectFolder = os.path.join(dbFolder,packName)
         if not os.path.exists(projectFolder):
             os.mkdir(projectFolder)
