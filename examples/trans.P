@@ -1,7 +1,0 @@
-:- auto_table.
-load_dync('Trans_left_rec_rules.facts').
-path(Vx,Vy) :- edge(Vx,Vy).
-path(Vx,Vy) :- path(Vx,Vz),edge(Vz,Vy).
-printReach :- path(_,_),fail.
-printReach.
-timeReach :- cputime(X),input,printReach,cputime(Y),T is Y-X,write(T).

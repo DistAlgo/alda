@@ -510,19 +510,33 @@ class PythonGenerator(NodeVisitor):
             nodeproc = self.visit(node.nodecls)
         body = list(self.preambles)
         body.append(self.generate_config(node))
+        if hasattr(node,'rules'):
+            imptinfer = ImportFrom('da.rule',[alias('infer', None)],0)
+            body.append(imptinfer)
+            body.extend(self.body(node.rules))
+            ruleobj = self._generate_rules(node,True)
+            body.extend(ruleobj)
+
+
         for stmt in body:
             stmt.lineno = 1
         body.extend(mainbody)
         if node.nodecls is not None:
             body.extend(nodeproc)
+       
         body.extend(self.postambles)
         return [Module(body)]
 
 
+    # generate rule object containing information of rules defined in current scope
+    # self._rules_object
+    def _generate_rules(self,node,globalRule=False):
+        if globalRule:
+            target = pyName(RULES_OBJECT_NAME, Store())
+        else:
+            target = pyAttr('self',RULES_OBJECT_NAME, Store())
 
-    def _generate_rules(self,node):
-
-        a = pyAssign(  [pyAttr("self",RULES_OBJECT_NAME, Store())], 
+        a = pyAssign(  [target], 
                         Dict([Str(key) for key, _ in node.RuleConfig.items()],
                              [Dict( [Str('LhsVars'),Str('RhsVars'),Str('Unbounded'),Str('UnboundedLeft')],
                                     [Set([pyTuple([Str(v.name), Num(val['LhsAry'][v])]) for v in val['LhsVars']]),
@@ -536,37 +550,53 @@ class PythonGenerator(NodeVisitor):
             if len(val['Unbounded']) == 0 and len(val['LhsVars']) > 0:
                 fire_rules.append(key)
 
-        inferStmt = self._generate_infer(node, fire_rules)
-        return [a]+inferStmt
+        if not globalRule:
+            inferStmt = self._generate_infer(node, fire_rules)
+            return [a]+inferStmt
+        else:
+            return [a]
         
 
     def _generate_infer(self, node, fire_rules):
 
         callInfer = []
         parent_process = node
-        while not isinstance(parent_process, dast.Process):
+        while not (isinstance(parent_process, dast.Process) or isinstance(parent_process, dast.Program)):
+            # pprint(vars(parent_process))
             if not hasattr(parent_process, 'process'):
                 parent_process = parent_process.parent
             else:
                 parent_process = parent_process.process
 
+        # pprint(vars(parent_process))
+        if isinstance(parent_process, dast.Program):
+            target = 'infer'
+            inferarg = [pyCall(pyName('globals'))]
+        else:
+            target = pyAttr("self", 'infer')
+            inferarg = []
+            
+
         ruleConfig = parent_process.RuleConfig
 
         if len(fire_rules) > 0:
-
+            # pprint(vars(parent_process))
             for r in fire_rules:
                 query = ruleConfig[r]['LhsVars']
-                lhs = []
-                qArg = []
+                # lhs = []
+                # qArg = []
                 for q in query:
-                    lhs.append(pyAttr(pyAttr("self", STATE_ATTR_NAME),q.name,Store()))
+                    if target == 'infer':
+                        lhs_target = pyName(q.name, Store())
+                    else:
+                        lhs_target = pyAttr(pyAttr("self", STATE_ATTR_NAME),q.name,Store())
+                    # lhs.append(lhs_target)
                     arity = ruleConfig[r]['LhsAry'][q]
                     qstr = q.name+'(' + ','.join('_'*arity) + ')'
-                    qArg.append(Str(qstr))
-
-                inferStmt = pyAssign(lhs,pyCall(pyAttr("self", 'infer'), args=[], keywords=[('rule',Str(r)),('queries',pyList(qArg))]))
-                copy_location(inferStmt, node)
-                callInfer.append(inferStmt)
+                    # qArg.append(Str(qstr))
+                    inferStmt = pyAssign([lhs_target],pyCall(target, args=inferarg, keywords=[('rule',Str(r)),('queries',pyList([Str(qstr)]))]))
+                    copy_location(inferStmt, node)
+                    callInfer.append(inferStmt)
 
         return callInfer
 
@@ -674,9 +704,9 @@ class PythonGenerator(NodeVisitor):
         if node.configurations:
             cd.body.append(self.generate_config(node))
         
-        if hasattr(node,'rules'):
-            for r in node.rules:
-                self.compile_rules(r)
+        # if hasattr(node,'rules'):
+        #     for r in node.rules:
+        #         self.compile_rules(r)
         if node.setup is not None:
             cd.body.extend(self.visit(node.setup))
         elif len(node.RuleConfig) > 0:
@@ -690,6 +720,8 @@ class PythonGenerator(NodeVisitor):
         cd.decorator_list = [self.visit(d) for d in node.decorators]
         cd.body.extend(self.body(node.staticmethods))
         cd.body.extend(self.body(node.methods))
+        if hasattr(node,'rules'):
+            cd.body.extend(self.body(node.rules))
 
         if len(node.RuleConfig) > 0:
             cd.body.extend(self._generate_override_functions(node))
@@ -729,38 +761,52 @@ class PythonGenerator(NodeVisitor):
         fd.args.args.insert(0, arg("self", None))
         return fd
 
+    # for a class a inherit b, if variables are changed in functions of b, but rules related to a, 
+    # generate a override function in a that first call super.func_in_b(), then call infer
     def _generate_override_functions(self,node):
         addFunctions = dict()
         for rule in node.RuleConfig:
             if len(node.RuleConfig[rule]['Unbounded']) == 0 and len(node.RuleConfig[rule]['LhsVars']) > 0:
+                # updates of right hand side variables will trigger automatic infer
                 for rhs in node.RuleConfig[rule]['RhsVars']:
                     for ctx, stmt in rhs._indexes:
+                        # updates happen at Assignment context and Update context
                         if ctx == dast.AssignmentCtx or ctx == dast.UpdateCtx:
+                            # find the statement of assignment or update
                             for s in stmt:
                                 if s:
+                                    # find the function containing this statement
                                     parent = s.parent
                                     while not isinstance(parent,dast.Function):
                                         parent = parent.parent
-
+                                    # collect all the local defined methods
+                                    # if the parent function is not override by local function, 
+                                    # collects needed information for adding infer
                                     localMethod = set(m.name for m in node.methods)
-                                    if parent.name != 'setup' and not parent.name in localMethod and not parent.name in addFunctions:
-                                        addFunctions[parent.name] = dict()
-                                        addFunctions[parent.name]['origFunc'] = parent._ast
-                                        addFunctions[parent.name]['args'] = self.visit(parent.args)
-                                        addFunctions[parent.name]['rules'] = set()
+                                    if parent.name != 'setup' and not parent.name in localMethod:
+                                        if parent.name not in addFunctions:
+                                            addFunctions[parent.name] = dict()
+                                            addFunctions[parent.name]['origFunc'] = parent._ast
+                                            addFunctions[parent.name]['args'] = self.visit(parent.args)
+                                            addFunctions[parent.name]['rules'] = set()
                                         addFunctions[parent.name]['rules'].add(rule)
         # pprint(node)
         # pprint(addFunctions)
         funcs = []
         for func, info in addFunctions.items():
-            fd = FunctionDef()
+            fd = FunctionDef()      # create a new function inherits the parent's function
             fd.name = func
-            fd.args = info['args']
+            fd.args = info['args']  # function args the same as parents args
             fd.body = []
             funcargs = [pyName(argname.arg) for argname in fd.args.args]
+            # 1. call super.parent_function with orig arguments
+            # ???? TODO, may contain bugs. not only args, but keywords and keyargs
             fd.body.append(pyExpr(pyCall(pyAttr(pyCall('super'),fd.name),args=funcargs)))
+            # 2. call infer
             fd.body.extend(self._generate_infer(node, info['rules']))
             fd.decorator_list = []
+            # set the return value the same as supers return value
+            # ???? TODO, may contain bugs. may need to add an assignment statement to orig function
             fd.returns = info['origFunc'].returns
             fd.args.args.insert(0, arg("self", None))
             funcs.append(fd)
@@ -793,7 +839,7 @@ class PythonGenerator(NodeVisitor):
         if isinstance(node.parent, dast.Process):
             if node.name == "setup":
                 self._generate_setup(node, fd)
-
+                # add inf
                 if len(node.parent.RuleConfig) > 0:
                     ruleStmt = self._generate_rules(node.parent)
 
@@ -933,13 +979,26 @@ class PythonGenerator(NodeVisitor):
                      if node.kwargs is not None else None)
 
     def visit_BuiltinCallExpr(self, node):
+        if node.func == 'infer':
+            parent = node
+            while not(isinstance(parent,dast.Process) or isinstance(parent,dast.Program)):
+                parent = parent.parent
+            if isinstance(parent,dast.Program): 
+                return pyCall(node.func,
+                         [pyCall(pyName('globals'))]+[self.visit(a) for a in node.args],
+                         [(key, self.visit(value)) for key, value in node.keywords],
+                         self.visit(node.starargs)
+                         if node.starargs is not None else None,
+                         self.visit(node.kwargs)
+                         if node.kwargs is not None else None)
+        
         return pyCall(pyAttr("self", node.func),
-                     [self.visit(a) for a in node.args],
-                     [(key, self.visit(value)) for key, value in node.keywords],
-                     self.visit(node.starargs)
-                     if node.starargs is not None else None,
-                     self.visit(node.kwargs)
-                     if node.kwargs is not None else None)
+                         [self.visit(a) for a in node.args],
+                         [(key, self.visit(value)) for key, value in node.keywords],
+                         self.visit(node.starargs)
+                         if node.starargs is not None else None,
+                         self.visit(node.kwargs)
+                         if node.kwargs is not None else None)
 
     visit_SetupExpr = visit_StartExpr = visit_ConfigExpr = visit_BuiltinCallExpr
 
@@ -1260,7 +1319,7 @@ class PythonGenerator(NodeVisitor):
             # anything:
             return []
         self.current_context = Store
-        
+        # pprint(vars(node))
         targets = [self.visit(tgt) for tgt in node.targets]
         # triggered_variables = self.triggered_variables
         fire_rules = self.current_triggered_rules
@@ -1505,20 +1564,26 @@ class PythonGenerator(NodeVisitor):
     def visit_SimpleStmt(self, node):
         value = self.visit(node.expr)
         inferStmt = []
-        if isinstance(value, Call) and isinstance(value.func, Attribute) and isinstance(value.func.value, Attribute):
-            changed = value.func.value.attr
-            parent = node.parent
-            while not isinstance(parent, dast.Process):
-                parent = parent.parent
-            
-            if len(parent.RuleConfig) > 0:
-                fire_rules = set()
-                for r in parent.RuleConfig:
-                    rhs = set(v.name for v in parent.RuleConfig[r]['RhsVars'])
-                    if changed in rhs:
-                        fire_rules.add(r)
-                        # break
-                inferStmt = self._generate_infer(parent,fire_rules)
+        # print('value',vars(value))
+        # print('value.func',vars(value.func))
+        # if hasattr(value.func,'value'):
+        #     print('value.func.value',vars(value.func.value))
+        # pprint(vars(value.func.value))
+        if isinstance(value, Call) and isinstance(value.func, Attribute) and isinstance(value.func.value, Name):
+            changed = value.func.value.id
+            op = value.func.attr
+            if op in KnownUpdateMethods:
+                parent = node.parent
+                while not (isinstance(parent, dast.Process) or isinstance(parent, dast.Program)):
+                    parent = parent.parent
+                if len(parent.RuleConfig) > 0:
+                    fire_rules = set()
+                    for r in parent.RuleConfig:
+                        rhs = set(v.name for v in parent.RuleConfig[r]['RhsVars'])
+                        if changed in rhs:
+                            fire_rules.add(r)
+                            # break
+                    inferStmt = self._generate_infer(parent,fire_rules)
         return [pyExpr(value)]+inferStmt
 
     def visit_BreakStmt(self, node):
@@ -1543,6 +1608,7 @@ class PythonGenerator(NodeVisitor):
                 names.append(alias(item.name, None))
             else:
                 names.append(alias(item.name, item.asname.name))
+        # print(node.module, names, node.level)
         return [ImportFrom(node.module, names, node.level)]
 
     def visit_AssertStmt(self, node):

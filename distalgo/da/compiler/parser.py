@@ -537,6 +537,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         self.current_block = None
         self.current_context = None
         self.current_label = None
+        self.current_rule = None
         # Allows temporarily overriding `current_process`:
         self._dummy_process = None
         self.program = execution_context
@@ -976,20 +977,16 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         # pprint(n)
         if n is not None:
             if lhs:
-                self.current_process.currentRule['LhsVars'].add(n)
-                self.current_process.currentRule['LhsAry'][n] = len(node.args)
+                self.current_rule['LhsVars'].add(n)
+                self.current_rule['LhsAry'][n] = len(node.args)
             else:
-                self.current_process.currentRule['RhsVars'].add(n)
+                self.current_rule['RhsVars'].add(n)
         else:
             if lhs:
-                 self.current_process.currentRule['Unboundedleft'].add(node.func.id)
-                 self.current_process.currentRule['UnboundedleftAry'][node.func.id] = len(node.args)
+                 self.current_rule['Unboundedleft'].add(node.func.id)
+                 self.current_rule['UnboundedleftAry'][node.func.id] = len(node.args)
             else:
-                 self.current_process.currentRule['Unboundedright'].add(node.func.id)
-
-        # self.current_process.currentRule['Unbounded'].add(self.current_process.currentRule['Unboundedright']-)
-
-        # self.current_process.currentRule['RhsVars'] -=  self.current_process.currentRule['LhsVars']
+                 self.current_rule['Unboundedright'].add(node.func.id)
 
 
         for a in node.args:
@@ -1053,59 +1050,34 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
     def create_rules(self, rulecls, ast, decls, nopush=False):
         # pprint(vars(self))
-        if self.current_process is not None:
-            self.current_process.currentRule = dict()
-            self.current_process.currentRule['LhsVars'] = set()
-            self.current_process.currentRule['LhsAry'] = dict()
-            self.current_process.currentRule['RhsVars'] = set()
-            self.current_process.currentRule['Unboundedleft'] = set()
-            self.current_process.currentRule['UnboundedleftAry'] = dict()
-            self.current_process.currentRule['Unboundedright'] = set()
-            self.current_process.currentRule['Unbounded'] = set()
-            rules = []
-            for r in ast.body:
-                rules.append(self.visit_Rule(r.value))
+        # if self.current_process is not None:
+        self.current_rule = dict()
+        self.current_rule['LhsVars'] = set()
+        self.current_rule['LhsAry'] = dict()
+        self.current_rule['RhsVars'] = set()
+        self.current_rule['Unboundedleft'] = set()
+        self.current_rule['UnboundedleftAry'] = dict()
+        self.current_rule['Unboundedright'] = set()
+        self.current_rule['Unbounded'] = set()
+        rules = []
+        for r in ast.body:
+            rules.append(self.visit_Rule(r.value))
 
-            self.current_process.currentRule['RhsVars'] -= self.current_process.currentRule['LhsVars']
-            self.current_process.currentRule['Unbounded'] = self.current_process.currentRule['Unboundedright'] - self.current_process.currentRule['Unboundedleft']
-            # print('============== create_rules ==============')
-            # pprint(self.current_process.currentRule)
-            if len(self.current_process.currentRule['Unbounded']) == 0:
-                for rv in self.current_process.currentRule['RhsVars']:
-                    rv.triggerInfer.add(decls)
-                    # print('============== added to triggerInfer ==============')
-                    # print(rv)
+        self.current_rule['RhsVars'] -= self.current_rule['LhsVars']
+        self.current_rule['Unbounded'] = self.current_rule['Unboundedright'] - self.current_rule['Unboundedleft']
+        # print('============== create_rules ==============')
+        if len(self.current_rule['Unbounded']) == 0:
+            for rv in self.current_rule['RhsVars']:
+                rv.triggerInfer.add(decls)
+                # print('============== added to triggerInfer ==============')
+                # print(rv)
 
-            # expr = self.create_expr(dast.DictExpr, node)
-            # for key in node.keys:
-            #     expr.keys.append(self.visit(key))
-            # for value in node.values:
-            #     expr.values.append(self.visit(value))
+        rulesobj = rulecls(decls, rules)
+        rulesobj.label = self.current_label
+        self.current_label = None
 
-            self.current_process.RuleConfig[decls] = self.current_process.currentRule
+        return rulesobj
 
-            # self.current_process.RuleConfig[decls] = \
-            #     Dict([Str('LhsVars'),Str('LhsAry'),Str('RhsVars'),Str('Unbounded')],
-            #          [Set(self.current_process.currentRule['LhsVars']),
-            #             Dict([keys for keys,_ in self.current_process.currentRule['LhsAry'].items()],[Num(var) for _,var in self.current_process.currentRule['LhsAry'].items()]),
-            #             Set(self.current_process.currentRule['RhsVars']),
-            #             Set(self.current_process.currentRule['Unbounded'])])
-            # print(self.current_process.RuleConfig)
-            rulesobj = rulecls(decls, rules)
-            # print(rulesobj)
-            rulesobj.label = self.current_label
-            self.current_label = None
-
-            if self.current_block is None or self.current_parent is None:
-                self.error("Statement not allowed in this context.", ast)
-            else:
-                self.current_block.append(rulesobj)
-            if not nopush:
-                self.push_state(rulesobj)
-
-            return rulesobj
-        else:
-            pprint(vars(self))
 
 
     def visit_FunctionDef(self, node):
@@ -1118,17 +1090,43 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                         decl = node.args.defaults[i].s
                         break
             if not decl:
-                decl = str(self.state_stack[-1][0].name)
-            n = self.current_scope.add_name(node.name)
+                try:
+                    decl = str(self.state_stack[-1][0].name)
+                except:
+                    self.error("Empty rule name not allowed.")
+
+            # n = self.current_scope.add_name(node.name)
             s = self.create_rules(ruleast.Rules, node, decl)
-            # pprint(vars(s))
-            if self.current_process:
-                if hasattr(self.current_process,'rules'):
-                    self.current_process.rules.append(s)
-                else:
-                    self.current_process.rules = [s] #??
-            self.current_block = s.rules
-            self.pop_state()
+            # pprint(node)
+            # pprint(vars(node))
+            # print('>>>>>>>>>>>>>>>>>> current_scope >>>>>>>>>>>>>>>>>>')
+            # pprint(self.current_scope)
+            # pprint(vars(self.current_scope))
+            # print('>>>>>>>>>>>>>>>>>> current_parent >>>>>>>>>>>>>>>>>>')
+            # pprint(self.current_parent)
+
+            if not hasattr(self.current_parent,'RuleConfig'):
+                self.current_parent.RuleConfig = dict()
+            self.current_parent.RuleConfig[decl] = self.current_rule
+
+            if hasattr(self.current_parent,'rules'):
+                self.current_parent.rules.append(s)
+            else:
+                self.current_parent.rules = [s]
+
+            # if isinstance(self.current_parent, dast.Process):
+            #     if hasattr(self.current_process,'rules'):
+            #         self.current_process.rules.append(s)
+            #     else:
+            #         self.current_process.rules = [s]
+            # elif isinstance(self.current_parent, dast.Program):
+            #     if hasattr(self.current_parent,'rules'):
+            #         self.current_parent.rules.append(s)
+            #     else:
+            #         self.current_parent.rules = [s]
+            # else:
+            #     self.error("Invalid context for '%s' statement." % KW_RULES, node)
+
             self._dummy_process = None
 
         elif (self.current_process is None or
@@ -1369,11 +1367,18 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
             # Post-3.7 style await:
             elif isinstance(e, Await):
+                # print('visit_Expr')
+                # pprint(vars(e))
+                # pprint(vars(e.value))
                 stmtobj = self.create_stmt(dast.AwaitStmt, node)
                 self.current_context = Read(stmtobj)
-                branch = dast.Branch(stmtobj, node,
-                                     condition=self.visit(e.value))
-                stmtobj.branches.append(branch)
+                # if await condition e.value is call to timeout with 1 argument
+                if expr_check(KW_AWAIT_TIMEOUT, 1, 1, e.value):
+                    stmtobj.timeout = self.visit(e.value.args[0])
+                else:
+                    branch = dast.Branch(stmtobj, node,
+                                         condition=self.visit(e.value))
+                    stmtobj.branches.append(branch)
 
             elif expr_check(KW_SEND, 1, 1, e, keywords={KW_SEND_TO},
                             optional_keywords=None):

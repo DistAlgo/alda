@@ -1,0 +1,189 @@
+from pprint import pprint
+import sys, os
+import pickle
+from da.compiler.pygen import PythonGenerator
+from da.compiler.utils import to_source
+import da.compiler.dast as dast
+from declare import VariableDeclare
+# pyast = dafile_to_pyast(filename, args)
+
+
+class Analysis_rule(process,VariableDeclare):
+
+	def setup(filename, pkgInfo=None, mode='rule', query='subclass'):
+		super().setup(filename, pkgInfo)
+		print(filename,mode,query)
+		
+
+	def run():
+		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+
+		result = eval('self.query_'+query+'_'+mode)()
+
+		utime, stime, cutime, cstime, elapsed_time = os.times()
+
+		if not os.path.exists('./output'):
+			os.mkdir('./output')
+		f = open('./output/'+query+'_pyast_'+packName+'_'+mode,'w')
+		f.write('\n'.join(str(x) for x in result))
+		f.close()
+
+		if not os.path.exists('./timing'):
+			os.mkdir('./timing')
+		outfile = os.path.join('./timing',self.packName+'_'+mode+'_'+query)
+		fout = open(outfile,'a')
+		fout.write(str(elapsed_time-elapsed_time1)+','+str(utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1)+'\n')
+		fout.close()
+
+
+	
+	def rules(name='transitive_closure'):
+		path(x,y), if_(edge(x,y))
+		path(x,y), if_(edge(x,z), path(z,y))
+
+	def query_class_rule():
+		c = infer(rule='classes')
+		# result = setof((x,ValueDict[y],ValueDict[z]),(x,y,z) in c)
+		# pprint(c)
+		# 1. find if same class name in multiple files
+		m = setof((cname, tupleof((cid,f) ,(cid,_cname,f) in c)), (_,cname,_) in c)
+		# pprint(m)
+		# ((clsname, ((clsid1,f1),(clsid2,f2))) ,)
+		for x,y in m:
+			if len(y) > 1:
+				print(ValueDict[x])
+				for a,b in y:
+					print(a,ValueDict[b])
+				print('========================')
+
+		# 2. find if same class name in single file
+
+		return result
+
+	def rules(name='classes'):
+		Classes(cid,cname,f), if_(ClassDef(cid, cname, _, _, _, _, f))
+
+	def query_subclass_python():
+		sub = set()
+		for _, a, baseid, _, _, _, f in ClassDef:
+			nosup = False
+			for baseid2,y,f2 in Collection:
+				if baseid2 == baseid and y == 0 and f2 == f:
+					sub.add((a,'None',f))
+					nosup = True
+					break
+			if nosup:
+				continue
+			for baseid2,nid2,_,f2 in Member:
+				if baseid == baseid2 and f2 == f:
+					for nid3,b,_,f3 in Name:
+						if nid2 == nid3 and f3 == f:
+							sub.add((a,b,f))
+
+		return setof((ValueDict[a],ValueDict[b] if b != 'None' else None,ValueDict[c]), (a,b,c) in sub)
+
+	def query_subclass_distalgo():
+		sub = setof((a,b,f), (_, a, baseid, _, _, _, f) in ClassDef,
+							 (_baseid,nid,_,_f) in Member,
+							 (_nid,b,_,_f) in Name) |\
+			  setof((a,'None',f),(_, a, baseid, _, _, _, f) in ClassDef,
+			  				 (_baseid,0,_f) in Collection)
+
+		return setof((ValueDict[a],ValueDict[b] if b != 'None' else None,ValueDict[c]), (a,b,c) in sub)
+
+	def query_subclass_rule():
+		sub = infer(rule='inheritinfo')
+		return setof((ValueDict[a],ValueDict[b] if b != 'None' else None,ValueDict[c]), (a,b,c) in sub)
+
+	def rules(name='inheritinfo'):
+		InheritInfo(a,b,f), if_(ClassDef(_, a, baseid, _, _, _, f),
+								Member(baseid,nid,_,f),
+								Name(nid,b,_,f))
+		InheritInfo(a,'None',f), if_(ClassDef(_, a, baseid, _, _, _, f),
+							  		 Collection(baseid,0,f))
+	
+	def query_subclass_combine():
+		sub1 = infer(rule='subclass_inherit')
+		sub2 = setof((a,'None',f),(_, a, baseid, _, _, _, f) in ClassDef,
+							 not some((_baseid,_,_,_f) in Member))
+		sub = sub1 | sub2
+		return setof((ValueDict[a],ValueDict[b] if b != 'None' else None,ValueDict[c]), (a,b,c) in sub)
+
+	def rules(name='subclass_inherit'):
+		InheritInfo(a,b,f), if_(ClassDef(_, a, baseid, _, _, _, f),
+								Member(baseid,nid,_,f),
+								Name(nid,b,_,f))
+
+	def rules(name='import'):
+		ImportInfo(module,'None',as_name,'None',file_id), if_(Import(_, mod_lst, file_id),
+															  Member(mod_lst, module_ele, _, file_id),
+															  alias(module_ele,module,as_name,file_id))
+		ImportInfo(module, name, as_name, level,file_id), if_(ImportFrom(module, names, level, file_id),
+															  Member(names,name_ele,_,file_id),
+															  alias(name_ele,name,as_name,file_id))
+
+	# def rules(name='function'):
+	# 	FuncName(a,cid,f), if_( CallExpr(cid,nid,_,_,_,_,f),
+	# 							NameExpr(nid,snid,f),
+	# 							Member(snid,iid,_,f),
+	# 							NamedVar(iid,a,f))
+
+	# def rules(name='namespace'):
+	# 	FileElement(file_id,ele_id), if_(Module(_,body_id,file_id),
+	# 									 Member(body_id,ele_id,_,file_id))
+	# 	Namespace(name,'Class',file_id), if_(FileElement(file_id,ele_id),
+	# 										 ClassDef(ele_id,name,_,_,_,_,file_id))
+	# 	Namespace(name,'Function',file_id), if_(FileElement(file_id,ele_id),
+	# 											FunctionDef(ele_id,name,_,_,_,_,file_id))
+	# 	Namespace(name,'Variable',file_id), if_(FileElement(file_id,ele_id),
+	# 											Assign(ele_id,targets,_,file_id),
+	# 											Member(targets,var_id,_,file_id),
+	# 											Name(var_id,name,_,file_id))
+
+
+# mode in {'rule', 'python', 'distalgo', 'combine'}
+def main():
+	print(len(sys.argv))
+	pprint(sys.argv)
+	if len(sys.argv) < 2:
+		print('len(sys.argv) < 2')
+		filename = './data/numpy'
+		pkgInfo = './data/numpy/astFacts/pkginfo_numpy.py'
+		mode = 'rule'
+		query = 'subclass'
+	else:
+		filename = os.path.join('./data',sys.argv[1])
+		pkgInfo = os.path.join('./data',sys.argv[1],'astFacts/pkginfo_'+sys.argv[1]+'.py')
+		if len(sys.argv) < 3:
+			print('len(sys.argv) < 3')
+			mode = 'rule'
+		else:
+			mode = sys.argv[2]
+			if len(sys.argv) < 4:
+				print('len(sys.argv) < 4')
+				query = 'subclass'
+			else:
+				query = sys.argv[3]
+
+
+	config(enable_backup=True)
+
+	# rules
+	o = new(Analysis_rule,[filename,pkgInfo,mode,query])
+	start(o)
+
+	# distalgo
+	# o = Analysis_da(filename)
+
+	# utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+	# o.run()
+	# utime, stime, cutime, cstime, elapsed_time = os.times()
+	# print(str(elapsed_time-elapsed_time1)+','+str(utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1))
+	
+	
+	
+	
+	
+
+
+

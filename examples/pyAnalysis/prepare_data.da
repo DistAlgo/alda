@@ -1,0 +1,19 @@
+import pyast_views as dv
+import analysis_ast as aa
+import os,sys
+
+def copy_rename(folder):
+	pass
+
+
+def main():
+	if len(sys.argv) < 2:
+		print('please provide the directory of the project')
+		return
+	path = os.path.abspath(sys.argv[1])
+	if os.path.isdir(path):
+		projectDir = dv.gen_facts(path)
+		aa.gen_variable(projectDir)
+	else:
+		print('invalid project folder')
+

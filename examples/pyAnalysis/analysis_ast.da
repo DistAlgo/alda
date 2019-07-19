@@ -1,0 +1,92 @@
+import sys, os
+from pprint import pprint
+from ast import literal_eval
+import pickle
+
+
+
+modeETX = '.py' #'.da'
+
+
+def read_all(folder):
+	global data
+	data = set()
+	for file in os.listdir(folder):
+		name, etx = os.path.splitext(file)
+		if etx == modeETX:
+			f = open(os.path.join(folder,file), 'r')
+			try:
+				data |= set(literal_eval(x) for x in f if x)
+			except:
+				e = sys.exc_info()
+				print(e)
+				print(file)
+			f.close()
+
+
+def gen_tagDict(filename):
+	# global tagDict
+	tagDict = dict()
+	for x in data:
+		if x[0] not in tagDict:
+			tagDict[x[0]] = set()
+		tagDict[x[0]].add(x)
+	return tagDict
+
+
+def gen_tagVariable(datafolder, tagDict):
+	
+	specialTag = {'is_Sub', 'Member'}
+	containerTag = {'Collection'}
+	ignoreAttr = {'lineno', 'col_offset'}
+
+	datafolder = os.path.join(datafolder,'_state')
+	if not os.path.exists(datafolder):
+		os.mkdir(datafolder)
+
+	for key, value in tagDict.items():
+		f = open(os.path.join(datafolder,key),'wb')
+		if key == 'is_Sub':
+			entry = setof((a,b), (_,a,b) in value)
+		elif key in containerTag:
+			entry = setof((a,b,fs),(_, a, b, fs) in value)
+		elif key == 'Member':
+			entry = setof((a,b,i,fs), (_,a,b,i,fs) in value)
+		else:
+			try:
+				entry = setof((id_,)+tuple(listof(a if a else None, (_,a) in fields))+tuple(listof(d if d else None,(c,d) in attributes, c not in ignoreAttr))+(fs,), (_,id_,fields,attributes,fs) in value)
+			except:
+				e = sys.exc_info()
+				print(key)
+				pprint(value)
+
+		pickle.dump(entry,f)
+		f.close()
+
+
+data = set()
+
+
+def gen_variable(filename):
+	packName = os.path.basename(filename)
+	inputDir = os.path.join(filename,'astFacts')
+	outDir = os.path.join(filename,'pickleFacts')
+	if not os.path.exists(outDir):
+		os.mkdir(outDir)
+
+	read_all(inputDir)
+	f = open(os.path.join(outDir,packName+'_data'),'wb')
+	pickle.dump(data,f)
+	f.close()
+	valueTag = gen_tagDict(os.path.join(outDir,packName))
+	gen_tagVariable(filename,valueTag)
+
+
+def main():
+	filename = sys.argv[1]
+	gen_variable(filename)
+	
+
+
+
+

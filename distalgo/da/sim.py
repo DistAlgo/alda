@@ -37,8 +37,11 @@ import collections
 import multiprocessing
 import os.path
 
+
+
 from . import common, pattern
-from .common import (write_file, builtin, internal, name_split_host, name_split_node,
+from .common import (write_file, read_answer, rule_path,
+                     builtin, internal, name_split_host, name_split_node,
                      ProcessId, get_runtime_option,
                      ObjectDumper, ObjectLoader)
 from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
@@ -49,6 +52,7 @@ from pprint import pprint
 import subprocess
 
 import re
+from .rule import infer as ruleinfer
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +194,7 @@ class DistProcess():
 
     @internal
     def _init_config(self):
-        self.output('_init_config',self.__class__)
+        # self.output('_init_config',self.__class__)
         if self.get_config('handling', default='one').casefold() == 'all':
             self.__do_label = self.__label_all
         else:
@@ -210,6 +214,9 @@ class DistProcess():
         
         self._enable_crash = self.get_config('enable_crash', default=False)
         self._enable_backup = self.get_config('enable_backup', default=False)
+
+        # print('_init_config',self._config_object)
+
 
 
 
@@ -236,11 +243,13 @@ class DistProcess():
                         getattr(self, handlername)
 
     def __get_channel_flags(self, props):
+        # print('__get_channel_flags',props)
         flags = 0
         if isinstance(props, str):
             if props == 'lossy':
                 props = []
                 self._loss_rate = float(self.get_config('loss_rate', default='0.1'))
+                self._delay = self.get_config('delay', default=0)
             else:
                 props = [props]
         for prop in props:
@@ -519,6 +528,15 @@ class DistProcess():
         if isinstance(self._logical_clock, int):
             self._logical_clock += 1
 
+
+    @internal
+    def _delay_send(self,**params):
+        self._log.info('delay sending for %r seconds', self._delay,)
+        time.sleep(self._delay)
+        self._send1(**params)
+        self._log.info('delayed message sent')
+
+
     @builtin
     def send(self, message, to, channel=None, **rest):
         """Send a DistAlgo message.
@@ -537,12 +555,17 @@ class DistProcess():
             flags = self.__get_channel_flags(channel)
         impersonate = rest.get('impersonate', None)
         l = getattr(self,'_loss_rate',0)
-        if random.random() > l:
-            res = self._send1(msgtype=Command.Message,
-                              message=(self._logical_clock, message),
-                              to=to,
-                              flags=flags,
-                              impersonate=impersonate)
+        if l == 0 or random.random() > l:
+            keyargs = {'msgtype': Command.Message,
+                        'message': (self._logical_clock, message),
+                        'to':to, 'flags':flags, 'impersonate':impersonate}
+            delay = getattr(self,'_delay',0)
+            if delay > 0:
+                x = threading.Thread(target=self._delay_send, kwargs=keyargs)
+                x.start()
+                res = True
+            else:
+                res = self._send1(**keyargs)
         else:
             res = False
             self._log.warning('message not delivered')
@@ -564,91 +587,10 @@ class DistProcess():
 
     @builtin
     def infer(self, bindings=[], queries=[], rule=None):
-        # set_value = False
-        # self._log.info('infer called')
         if not rule:
             rule = self.__class__.__name__
-
-        pprint('=================================== infer ===================================')
-        # pprint(self._rules_object)
-        allBindings = set(b for b,_ in bindings)
-        # allLhs = set(self._rules_object[rule]['LhsVars'].keys())
-        # allqueries
-        if not rule in self._rules_object:
-            raise ValueError("infer: can't find rule: " + rule)
-
-        remove = set()
-        for u in self._rules_object[rule]['Unbounded']:
-            if u not in allBindings:
-                if hasattr(self._state,u):
-                    remove.add(u)
-                    self._rules_object[rule]['RhsVars'].add(u)
-                else:
-                    print("Unexpected error:", sys.exc_info()[0])
-                    raise ValueError("infer: not all predicates bond: " + u)
-
-        self._rules_object[rule]['Unbounded'] -= remove
-
-        for r in self._rules_object[rule]['RhsVars']:
-            if r not in allBindings:
-                bindings.append((r, getattr(getattr(self,'_state'), r)))
-
-        # if len(bindings) == 0:
-        #     for v in _rules_object['RhsVars']:
-        #         bindings.append((v, getattr(self, v)))
-
-        if len(queries) == 0:
-            # qArg = []
-            for v in self._rules_object[rule]['UnboundedLeft']:
-                qstr = v[0]+'(' + ','.join('_'*v[1]) + ')'
-                queries.append(qstr)
-        else:
-            for (i, item) in enumerate(queries):
-                if item.find('(') < 0:
-                    for v,a in self._rules_object[rule]['UnboundedLeft']:
-                        if v == item:
-                            qstr = v+'(' + ','.join('_'*a) + ')'
-                            queries[i] = qstr
-
-            # queries = [q+'('+','.join('_'*a)+')' if some((q,a) in self._rules_object[rule]['LhsVars']) else q for q in queries]
-
-
+        return ruleinfer(self._state.__dict__, bindings, queries, rule, self._rules_object)
         
-        xsb_facts = ""
-        for b in bindings:
-            if not isinstance(b[1], list) and not isinstance(b[1], set):
-                if isinstance(b[1], tuple):
-                    xsb_facts += UniqueLowerCasePrefix+b[0]+str(b[1])+'.\n'
-                else:
-                    xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(b[1])+').\n'
-            else:
-                for v in b[1]:
-                    if isinstance(v, tuple):
-                        xsb_facts += UniqueLowerCasePrefix+b[0]+str(v)+'.\n'
-                    else:
-                        xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(v)+').\n'
-
-        # print(xsb_facts)
-        write_file(rule+'.facts', xsb_facts)
-
-        results = []
-        for q in queries:
-            xsb_query = "extfilequery_nb:external_file_query('{}',{}).".format(rule,UniqueLowerCasePrefix+q)
-            # print(xsb_query)
-            subprocess.run(["xsb", '-e', "add_lib_dir(a('../xsb')).", "-e", xsb_query])
-            answers = open("{}.answers".format(rule),"r").read()
-            tuples = set(tuple(eval(v) for v in a.split(',')) if len(a.split(',')) > 1 else int(a) for a in answers.split("\n")[:-1])
-            results.append(tuples)
-        #         queries.append((v+))
-
-        # for v in 
-        # print('resultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresultsresults')
-        # pprint(results)
-        if len(results) == 0:
-            return results
-        if len(results) == 1:
-            return results[0]
-        return tuple(results)
 
 
     # another option: crash and recover both by messages.
