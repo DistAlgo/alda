@@ -1526,7 +1526,7 @@ class PythonGenerator(NodeVisitor):
         else:
             callInfer = []
 
-        return [propagate_fields(Delete(targets))]
+        return [propagate_fields(Delete(targets))] + callInfer
 
     def visit_YieldStmt(self, node):
         if node.value is not None:

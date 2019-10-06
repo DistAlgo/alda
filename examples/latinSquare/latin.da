@@ -1,0 +1,55 @@
+from pprint import pprint
+
+def constraint(name='latinsquare', parameter={n}, variable={x,y,z}):
+	n: int																# int: n;
+	x: dict(key=(ints(1,n),ints(1,n)),val=ints(1,n))					# array[1..n,1..n] of var 1..n: x;
+	# y: setof(ints(1,n))
+	c1 = each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n)))	# constraint forall(i in 1..n) (alldifferent(j in 1..n)(x[i,j]));
+	c2 = each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))	# constraint forall(j in 1..n) (alldifferent(i in 1..n)(x[i,j]));
+	c3 = each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n))) and each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))
+	# c4 = (each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n))) or each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n))))
+	def c4():
+		each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n)))
+		each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))
+	def c5():
+		each(i in ints(1,n), has=(alldiff(x[i,j] for j in ints(1,n)) and alldiff(x[j,i] for j in ints(1,n))))
+	def c6():
+		x < 10 or x > 15
+		n == 10
+		x+y+z == 13
+		2*x+7*y < 10
+
+	return anyof(x, c3)
+	# return anyof(x, c1, c2)												# anyof: get one solution; setof: get all solution, using command line option -a
+	# return maxof(a+b, c3, c4, c5)
+
+# def query(constraint, **args):
+# 	return 'test_query'
+
+
+# def main():
+n = 10
+# _ = None	# need to add automatically, and hidden from the user
+x = [ [_,_,_,1,_,_,_,_,_,_],
+	  [_,_,1,_,_,_,_,_,_,_],
+	  [_,1,_,_,_,2,_,_,_,_],
+	  [1,_,_,_,2,_,_,_,_,_],
+	  [_,_,_,2,1,_,_,_,_,_],
+	  [_,_,2,_,_,1,_,_,_,_],
+	  [_,_,_,_,_,_,1,_,_,_],
+	  [_,_,_,_,_,_,_,1,_,2],
+	  [_,_,_,_,_,_,_,_,2,_],
+	  [_,_,_,_,_,_,_,2,_,_] ]
+# x = [ _,_,_,1,_,_,_,_,_,_,
+# 	  _,_,1,_,_,_,_,_,_,_,
+# 	  _,1,_,_,_,2,_,_,_,_,
+# 	  1,_,_,_,2,_,_,_,_,_,
+# 	  _,_,_,2,1,_,_,_,_,_,
+# 	  _,_,2,_,_,1,_,_,_,_,
+# 	  _,_,_,_,_,_,1,_,_,_,
+# 	  _,_,_,_,_,_,_,1,_,2,
+# 	  _,_,_,_,_,_,_,_,2,_,
+# 	  _,_,_,_,_,_,_,2,_,_ ]
+# cvar = None
+result = query(constraint='latinsquare', n=n, x=x)
+pprint(result)

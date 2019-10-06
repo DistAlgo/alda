@@ -1,9 +1,9 @@
 # Compiler package for Distalgo
 
-from .pygen import PythonGenerator
-from .parser import Parser
-from .parser import daast_from_file
-from .parser import daast_from_str
+from .expygen import PythonGenerator
+from .exparser import Parser
+from .exparser import daast_from_file
+from .exparser import daast_from_str
 from .ui import dafile_to_pyast
 from .ui import dafile_to_pyfile
 from .ui import dafile_to_pycode

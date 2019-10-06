@@ -53,6 +53,7 @@ import subprocess
 
 import re
 from .rule import infer as ruleinfer
+from .query import query as constraint_query
 
 logger = logging.getLogger(__name__)
 
@@ -590,6 +591,10 @@ class DistProcess():
         if not rule:
             rule = self.__class__.__name__
         return ruleinfer(self._state.__dict__, bindings, queries, rule, self._rules_object)
+
+    @builtin
+    def query(self, constraint, **args):
+        return constraint_query(self=self._state.__dict__, constraint=constraint, **args)
         
 
 

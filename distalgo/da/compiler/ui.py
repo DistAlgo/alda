@@ -32,9 +32,9 @@ import argparse
 from .. import __version__
 from ..importer import da_cache_from_source
 from .utils import is_valid_debug_level, set_debug_level, to_source, to_file
-from .parser import daast_from_file
-from .parser import daast_from_str
-from .pygen import PythonGenerator
+from .exparser import daast_from_file
+from .exparser import daast_from_str
+from .expygen import PythonGenerator
 from .incgen import gen_inc_module
 from .pseudo import DastUnparser
 
@@ -58,6 +58,7 @@ def dastr_to_pyast(src, filename='<str>', args=None):
     compiler. Returns the generated Python AST.
 
     """
+    print('dastr_to_pyast')
     daast = daast_from_str(src, filename, args)
     if daast is not None:
         pyast = PythonGenerator(filename, args).visit(daast)
@@ -80,6 +81,7 @@ def dafile_to_pyast(filename, args=None):
     Returns the generated Python AST.
 
     """
+    print('dafile_to_pyast')
     if args is None:
         args = parse_compiler_args([])
     daast = daast_from_file(filename, args)
@@ -115,7 +117,7 @@ def dafile_to_pycode(filename, args=None, _optimize=-1, dfile=None):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    # dafile_to_pyfile(filename, args)
+    print('dafile_to_pycode')
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
         return _pyast_to_pycode(pyast,
@@ -133,7 +135,7 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    # print('dastr_to_pycode: uiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiuiui')
+    print('dastr_to_pycode')
     pyast = dastr_to_pyast(src, filename, args)
     if pyast is not None:
         return _pyast_to_pycode(pyast, filename, _optimize)
@@ -148,6 +150,7 @@ def dafile_to_pystr(filename, args=None):
     compiler. Returns the generated Python code as a string.
 
     """
+    print('dafile_to_pystr')
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
         return to_source(pyast)
@@ -163,6 +166,7 @@ def dastr_to_pystr(src, filename='<str>', args=None):
     compiler. Returns the generated Python code as a string.
 
     """
+    print('dastr_to_pystr')
     pyast = dastr_to_pyast(src, filename, args)
     if pyast is not None:
         return to_source(pyast)
@@ -196,6 +200,7 @@ def dafile_to_pseudofile(filename, outname=None, args=None):
     filename is inferred by replacing the suffix of 'filename' with '.py'.
 
     """
+    print('dafile_to_pseudofile')
     purename, _, suffix = filename.rpartition(".")
     if len(purename) == 0:
         purename = suffix
@@ -227,6 +232,7 @@ def dafile_to_pyfile(filename, outname=None, args=None):
     'args.filename' with '.py'.
 
     """
+    print('dafile_to_pyfile')
     purename, _, suffix = filename.rpartition(".")
     if len(purename) == 0:
         purename = suffix
@@ -255,6 +261,7 @@ def dafile_to_pycfile(filename, outname=None, optimize=-1, args=None,
     """Byte-compile one DistAlgo source file to Python bytecode.
 
     """
+    print('dafile_to_pycfile')
     import importlib._bootstrap_external
 
     if outname is None:
@@ -267,7 +274,12 @@ def dafile_to_pycfile(filename, outname=None, optimize=-1, args=None,
     code = dafile_to_pycode(filename, args, _optimize=optimize, dfile=dfile)
     if code is not None:
         source_stats = os.stat(filename)
-        bytecode = importlib._bootstrap_external._code_to_bytecode(
+        PythonVersion = sys.version_info
+        if PythonVersion < (3, 7):
+            bytecode = importlib._bootstrap_external._code_to_bytecode(
+                code, source_stats.st_mtime, source_stats.st_size)
+        else:
+             bytecode = importlib._bootstrap_external._code_to_timestamp_pyc(
                 code, source_stats.st_mtime, source_stats.st_size)
         mode = importlib._bootstrap_external._calc_mode(filename)
         importlib._bootstrap_external._write_atomic(outname, bytecode, mode)
@@ -298,7 +310,7 @@ def dafile_to_incfiles(args):
     plus '_inc.py'.
 
     """
-
+    print('dafile_to_incfiles')
     filename = args.infile
     outname = args.outfile
     incname = args.incfile
@@ -387,6 +399,12 @@ def _add_compiler_args(parser):
                     action='store_true')
     ap.add_argument('--module-name', type=str, default='__main__',
                     help="Name of the module to be compiled.")
+    ap.add_argument('--rule',
+                    help="Enable Rules",
+                    action='store_true')
+    ap.add_argument('--constraint',
+                    help="Enable Constraint Solving",
+                    action='store_true')
 
 def parse_compiler_args(argv):
     ap = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
@@ -434,6 +452,7 @@ def main(argv=None):
                     dest="psdfile", default=None)
     ap.add_argument('infile', metavar='SOURCEFILE', type=str,
                     help="DistAlgo input source file.")
+
     args = ap.parse_args(argv)
 
     if args.benchmark:
