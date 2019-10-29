@@ -200,6 +200,12 @@ def parseArgs():
                         " DistAlgo processes."
                         " 'process' uses OS processes,"
                         " 'thread' uses OS threads.")
+    parser.add_argument('--rule', default=False,
+                        help="Enable Rules",
+                        action='store_true')
+    parser.add_argument('--constraint', default=False,
+                        help="Enable Constraint Solving",
+                        action='store_true')
     parser.add_argument("-v", "--version", action="version",
                         version=common.__version__)
     group = parser.add_mutually_exclusive_group()

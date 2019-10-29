@@ -4,7 +4,7 @@ MZ_MODEL_HOME = os.path.join(os.path.dirname(__file__),'compiler','constraint','
 
 from pprint import pprint
 
-SOVLER_DEFAULT = 'chuffed'
+SOVLER_DEFAULT = 'gecode'
 
 def flat_list(inputlist, dimension=1, current_len=[]):
 	if isinstance(inputlist,list) and len(inputlist) > 0 and isinstance(inputlist[0],list):
@@ -14,7 +14,7 @@ def flat_list(inputlist, dimension=1, current_len=[]):
 			output += l
 		return flat_list(output, dimension+1, current_len)
 	elif isinstance(inputlist,list):
-		tmplist = ['_' if l is None else str(l) for l in inputlist]
+		tmplist = ['_' if (l is None or l == 0) else str(l) for l in inputlist]
 		tmplen = ','.join(['1..%s'%l for l in current_len])
 		return 'array%sd(%s,[%s])' % (dimension,tmplen,','.join(tmplist))
 	else:

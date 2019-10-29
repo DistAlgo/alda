@@ -23,11 +23,31 @@ MZ_QUAN_DICT = {
 
 MZ_COMP_OP = {
 	In: 'in',
-	dast.EqOp: '='
+	dast.EqOp: '=',
+	dast.NotEqOp: '!=',
+	dast.LtOp: '<',
+    dast.LtEOp: '<=',
+    dast.GtOp: '>',
+    dast.GtEOp: '>=',
+}
+
+MZ_BIN_OP = {
+	dast.MultOp: '*',
+	dast.AddOp: '+',
+	dast.SubOp: '-',
+	dast.DivOp: '/',
+	dast.ModOp: 'mod'
 }
 
 MZ_GLOBALFUNCS = {
 	'alldiff': 'all_different'
+}
+
+MZ_CPRH_OP = {
+	dast.MinCompExpr: 'min',
+	dast.MaxCompExpr: 'max',
+	dast.SumCompExpr: 'sum',
+	dast.LenCompExpr: 'length'
 }
 
 
@@ -40,7 +60,7 @@ def to_source(tree):
 class PythonGenerator(pygen.PythonGenerator):
 	def __init__(self, filename="", options=None):
 		super().__init__(filename, options)
-		# print('constraint_PythonGenerator')
+		print('constraint_PythonGenerator')
 		self.constraint_options = dict()
 		self.constraint_info = set()
 
@@ -105,8 +125,11 @@ class PythonGenerator(pygen.PythonGenerator):
 				return text + 'set of '+MZ_TYPE_DICT[domain.domain.type]
 			if isinstance(domain, cast.DomainArray):
 				text = 'array['
-				tmptext = [trans_Domain(d) for d in domain.dimension]
-				text += ','.join(tmptext)
+				if isinstance(domain.dimension, list):
+					tmptext = [trans_Domain(d) for d in domain.dimension]
+					text += ','.join(tmptext)
+				else:
+					text += trans_Domain(domain.dimension)
 				text += '] of '
 				if var:
 					text += 'var '
@@ -154,14 +177,7 @@ class PythonGenerator(pygen.PythonGenerator):
 				text += ' )( '
 
 				if isinstance(constraint.target, dast.SubscriptExpr):
-					target = constraint.target.subexprs[0].name
-					text += target + '['
-					if isinstance(constraint.target.subexprs[1], dast.TupleExpr):
-						s = [i.id for i in self.visit_TupleExpr(constraint.target.subexprs[1]).elts]
-						text +=','.join(s)
-					else:
-						print('TODO: constraint_pygen: trans_Constraint -> subscirpt non tuple')
-					text += ']'
+					text += trans_SubscriptExpr(constraint.target)
 				else:
 					print('TODO: constraint_pygen: trans_Constraint -> not isinstance(constraint.target,SubscriptExpr)')
 
@@ -169,14 +185,71 @@ class PythonGenerator(pygen.PythonGenerator):
 				return text
 
 			elif isinstance(constraint, dast.ComparisonExpr):
-				left = constraint.subexprs[0].name
+				# print('dast.ComparisonExpr')
+				# pprint(vars(constraint))
+				left = constraint.subexprs[0]
 				op = MZ_COMP_OP[constraint.comparator]
-				target = self.visit_BinaryExpr(constraint.subexprs[1])
-				return '%s %s %s' % (left, op, to_source(target))
+				target = constraint.subexprs[1]
+				return '%s %s %s' % (trans_SubExpr(left), op, trans_SubExpr(target))
+			elif isinstance(constraint, dast.ComprehensionExpr):
+				return trans_SubExpr(constraint)
 			else:
 				print('TODO: constraint_pygen: trans_Constraint -> other kinds of constraints')
-				pprint(constraint)
-				return ''
+				print(constraint)
+				pprint(vars(constraint))
+				return to_source(self.visit(constraint))
+
+		def trans_SubscriptExpr(node):
+			if isinstance(node, dast.SubscriptExpr):
+				text = ''
+				target = node.subexprs[0].name
+				text += target + '['
+				if isinstance(node.subexprs[1], dast.TupleExpr):
+					s = [i.id for i in self.visit_TupleExpr(node.subexprs[1]).elts]
+					text +=','.join(s)
+				elif isinstance(node.subexprs[1], dast.NameExpr):
+					name = self.visit(node.subexprs[1])
+					text += to_source(name)[:-1]
+				else:
+					print('TODO: constraint_pygen: trans_Constraint -> subscirpt non Tuple, non Name')
+					print(node.subexprs[1])
+					pprint(vars(node.subexprs[1]))
+				text += ']'
+				return text
+
+		def trans_Iter(node):
+			# pprint(vars(node))
+			target = node.target.id
+			iterator = ''
+			if isinstance(node.iter, Call):
+				if node.iter.func.id in {'ints', 'floats'}:
+					args = [to_source(a)[:-1] for a in node.iter.args]
+					iterator = args[0]+'..'+args[1]
+				else:
+					iterator = to_source(node.iter)[:-1]
+			else:
+				print('TODO: trans_Iter')
+				# pprint(vars(node.iter))
+			return '%s in %s' % (target, iterator)
+
+
+		def trans_SubExpr(node):
+			# print(node)
+			# pprint(vars(node))
+			if isinstance(node, dast.ComprehensionExpr):
+				# pprint(vars(node))
+				target = trans_SubExpr(node.elem)
+				iterator = [trans_Iter(self.visit(s)) for s in node.subexprs]
+				return '%s([ %s | %s ])' % (MZ_CPRH_OP[type(node)], target, ','.join(iterator))
+			elif isinstance(node, dast.BinaryExpr):
+				left = trans_SubExpr(node.subexprs[0])
+				right = trans_SubExpr(node.subexprs[1])
+				op = MZ_BIN_OP[node.operator]
+				return left+op+right
+			elif isinstance(node, dast.SubscriptExpr):
+				return trans_SubscriptExpr(node)
+			else:
+				return to_source(self.visit(node))[:-1]
 
 		def trans_Objective(obj):
 			if obj.operation == 'satisfy':
@@ -190,28 +263,32 @@ class PythonGenerator(pygen.PythonGenerator):
 			# print(filename)
 			file = open(os.path.join(MZ_MODEL_HOME,filename+'.mzn'),'w')
 			file.write('include "globals.mzn";\n')
-			for vname, var in c['variable'].items():
-				if var:
-					domain = trans_Domain(var.domain, True)
-					file.write('%s: %s;\n' % (domain, vname))
-				else:
-					...
-					# TODO: warning
+			if 'variable' in c:
+				for vname, var in c['variable'].items():
+					if var:
+						domain = trans_Domain(var.domain, True)
+						file.write('%s: %s;\n' % (domain, vname))
+					else:
+						...
+						# print('TODO: warning, variable not found')
 
-			for vname, var in c['parameter'].items():
-				if var:
-					domain = trans_Domain(var.domain)
-					file.write('%s: %s;\n' % (domain, vname))
-					# print(domain)
-				else:
-					...
-					# TODO: warning
+			if 'parameter' in c:
+				for vname, var in c['parameter'].items():
+					if var:
+						domain = trans_Domain(var.domain)
+						file.write('%s: %s;\n' % (domain, vname))
+						# print(domain)
+					else:
+						...
+						# print('TODO: warning, parameter found')
 
 			obj = c['objective']
 			if obj.allFlag:
 				self.constraint_options[filename] = ['all_solutionss']
 			for constraint in obj.constraints:
 				text = 'constraint \n\t'
+				if constraint == obj.target:
+					text += '%s = ' % obj.target
 				text += trans_Constraint(c['constraint'][constraint].body)
 				file.write(text+';\n')
 
@@ -250,8 +327,9 @@ class PythonGenerator(pygen.PythonGenerator):
 			return super().visit_BuiltinCallExpr(node)
 
 	def visit_CallExpr(self, node):
-		func_name = node.subexprs[0].name
-		if func_name == 'query':
+		# pprint(vars(node))
+		# func_name = node.subexprs[0].name
+		if isinstance(node.subexprs[0], dast.NameExpr) and node.subexprs[0].name == 'query':
 			return self._generate_query(node)
 		else:
 			return super().visit_CallExpr(node)

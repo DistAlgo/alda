@@ -1,0 +1,63 @@
+from pprint import pprint
+
+def constraint(name='latinsquare', parameter={n}, variable={x}):
+	n: int																# int: n;
+	x: dict(key=(ints(1,n),ints(1,n)),val=ints(1,n))					# array[1..n,1..n] of var 1..n: x;
+
+	c1 = each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n)))	# constraint forall(i in 1..n) (alldifferent(j in 1..n)(x[i,j]));
+	c2 = each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))	# constraint forall(j in 1..n) (alldifferent(i in 1..n)(x[i,j]));
+	# c3 = each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n))) and each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))
+	# c4 = (each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n))) or each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n))))
+	# def c4():
+	# 	each(i in ints(1,n), has=alldiff(x[i,j] for j in ints(1,n)))
+	# 	each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))
+	# def c5():
+	# 	each(i in ints(1,n), has=(alldiff(x[i,j] for j in ints(1,n)) and alldiff(x[j,i] for j in ints(1,n))))
+	
+	# return anyof(x, c3)
+	return anyof(x, c1, c2)												# anyof: get one solution; setof: get all solution, using command line option -a
+	
+
+# n = 30
+# _ = None	# added automatically, and hidden from the user
+x = [ [_,_,_,1,_,_,_,_,_,_],
+	  [_,_,1,_,_,_,_,_,_,_],
+	  [_,1,_,_,_,2,_,_,_,_],
+	  [1,_,_,_,2,_,_,_,_,_],
+	  [_,_,_,2,1,_,_,_,_,_],
+	  [_,_,2,_,_,1,_,_,_,_],
+	  [_,_,_,_,_,_,1,_,_,_],
+	  [_,_,_,_,_,_,_,1,_,2],
+	  [_,_,_,_,_,_,_,_,2,_],
+	  [_,_,_,_,_,_,_,2,_,_] ]
+
+# inputfolder = "/Users/COTTON/Downloads/LatinSquare-master/data/feasible"
+# import os
+# import re
+# # import timeit
+
+# outputfile = "./test_gecode.csv"
+# of = open(outputfile,'a')
+
+# for f in os.listdir(inputfolder):
+# 	number = re.findall(r'\d+', f)
+# 	if len(number) > 1:
+# 		print(f)
+# 		n = number[0]
+# 		x = eval(open(os.path.join(inputfolder,f)).read())
+# 		# print(n)
+# 		# pprint(x)
+# 		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+# 		result = query(constraint='latinsquare', n=n, x=x)
+# 		utime, stime, cutime, cstime, elapsed_time = os.times()
+# 		eltime = str(elapsed_time-elapsed_time1)
+# 		cputime = str(utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1)
+# 		of.write('%s\t%s\t%s\t%s\n' % (f, eltime, cputime, result[0].statistics['time'].total_seconds()))
+# 		# pprint(result)
+# 		# break
+# of.close()
+
+
+
+result = query(constraint='latinsquare', n=10, x=x)
+pprint(result)

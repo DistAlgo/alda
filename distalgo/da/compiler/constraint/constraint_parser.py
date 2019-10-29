@@ -22,7 +22,7 @@ def gensym(prefix):
         i += 1
         yield prefix+str(i)
 
-generator = gensym('ranvar_')
+generator = gensym('obj_')
 
 
 class Parser(parser.Parser):
@@ -84,7 +84,7 @@ class Parser(parser.Parser):
 		domain = self.visit_Domain(node.annotation)
 		# print(domain)
 		# pprint(vars(domain))
-		if name in self.current_constraint['parameter']:
+		if 'parameter' in self.current_constraint and name in self.current_constraint['parameter']:
 			self.current_constraint['parameter'][name] = cast.Variable(name, domain)
 		else:
 			self.current_constraint['variable'][name] = cast.Variable(name, domain)
@@ -103,7 +103,10 @@ class Parser(parser.Parser):
 			relation = node.op
 			body = [self.visit_ConstraintSet(i) for i in node.values]
 			return cast.ConstraintSet(relation, body)
-		# if isinstance(node, Compare):
+		if isinstance(node, Compare):
+			# print('visit_ConstraintSet: Compare')
+			# pprint(vars(node))
+			return self.visit_Compare(node)
 
 		return self.visit_Constraint(node)
 
@@ -121,19 +124,30 @@ class Parser(parser.Parser):
 				# TODO: InDirectOperator = {'countof', 'sumof', 'lenof'}
 
 			constraints = []
+			# print('cparser: visit_Objective')
 			for c in node.args:
+				# pprint(vars(c))
 				if isinstance(c, Name):
 					constraints.append(c.id)
 				else:
 					tmpName = next(generator)
 					constraints.append(tmpName)
-					augConstraint = Compare(left=Name(id=tmpName), ops = [Eq()], comparators=[c])
-					# print('><><>><><>><><>><><>><><>><><>><><>><><>><><>><><>><><>><><>')
-					# pprint(vars(augConstraint))
-					body = self.visit_ConstraintSet(augConstraint)
+					if isinstance(node, BoolOp) or isinstance(node, Compare):
+						body = visit_ConstraintSet(node)
+					else:
+						# augConstraint = Compare(left=Name(id=tmpName), ops = [Eq()], comparators=[c])
+						body = self.visit_ConstraintSet(c)
+						self.current_constraint['variable'][tmpName] = cast.Variable(tmpName, cast.DomainBasic('int', None))
+						# TODO: automatic type detection
+						...
+
 					# pprint(vars(body))
 					self.current_constraint['constraint'][tmpName] = cast.Constraint(tmpName, body)
 					constraints.append(tmpName)
+
+			if constraints[0] not in self.current_constraint['variable']:
+				self.current_constraint['variable'][constraints[0]] = cast.Variable(constraints[0], cast.DomainBasic('int', None))
+				return cast.Objective(operation, constraints[0], allFlag, constraints)
 
 			return cast.Objective(operation, constraints[0], allFlag, constraints[1:])
 
@@ -165,18 +179,19 @@ class Parser(parser.Parser):
 		# pprint(vars(node))
 		if isinstance(node, Call):
 			func_name = node.func.id
-			# pprint(vars(node.args[0]))
 			target = self.visit(node.args[0].elt)
 			domain_spec = [self.visit_DomainSpec(i) for i in node.args[0].generators]
 			return cast.FunctionalConstraint(func_name, target, domain_spec)
 		elif isinstance(node, BoolOp):
 			body = [self.visit_Predicate(b) for b in node.values]
 			return cast.ConstraintSet(node.op, body)
+		elif isinstance(node, Compare):
+			return self.visit(node)
 		else:
 			print('TODO: ><><><><><><><><><><><><><><><><>< visit_Predicate')
 			print(node)
 			pprint(vars(node))
-			# TODO
+
 
 	def parse_quantified_expr(self, node):
 		if self.current_constraint:
@@ -241,7 +256,7 @@ class Parser(parser.Parser):
 			super().visit_FunctionDef(node)
 
 	def visit_Call(self,node): 
-		if node.func.id == 'query':
+		if isinstance(node.func, Name) and node.func.id == 'query':
 			if not hasattr(self.program, 'constraint_info'):
 				self.program.constraint_info = set()
 			for k in node.keywords:

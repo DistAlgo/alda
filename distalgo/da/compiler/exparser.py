@@ -1,5 +1,6 @@
 import sys
 from ast import *
+from .. import common
 
 def daast_from_file(filename, args):
 	"""Generates DistAlgo AST from source file.
@@ -10,7 +11,6 @@ def daast_from_file(filename, args):
 
 	"""
 	try:
-		# print('exparser: daast_from_file')
 		with open(filename, 'r') as infd:
 			global InputSize
 			src = infd.read()
@@ -32,8 +32,8 @@ def daast_from_str(src, filename='<str>', args=None):
 
 	"""
 	try:
-		if hasattr(args,'constraint'):
-			# print('exparser: daast_from_str')
+		if common.get_runtime_option('constraint', default=False):
+			print('exparser: daast_from_str')
 			from .constraint.constraint_parser import Parser
 		else:
 			from .parser import Parser
@@ -50,7 +50,7 @@ def daast_from_str(src, filename='<str>', args=None):
 	return None
 
 def Parser(filename, args):
-	if hasattr(args,'constraint'):
+	if common.get_runtime_option('constraint', default=False):
 		from .constraint.constraint_parser import Parser
 	else:
 		from .parser import Parser

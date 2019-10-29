@@ -65,6 +65,11 @@ KW_COMP_SET = "setof"
 KW_COMP_TUPLE = "tupleof"
 KW_COMP_LIST = "listof"
 KW_COMP_DICT = "dictof"
+KW_COMP_MIN = "minof"
+KW_COMP_MAX = "maxof"
+KW_COMP_SUM = "sumof"
+KW_COMP_LEN = "lenof"
+KW_COMP_COUNT = "countof"
 KW_AWAIT = "await"
 KW_AWAIT_TIMEOUT = "timeout"
 KW_SEND = "send"
@@ -277,7 +282,8 @@ AggregateMap = {
     KW_AGGREGATE_SIZE : dast.SizeExpr,
     KW_AGGREGATE_SUM  : dast.SumExpr
 }
-ComprehensionTypes = {KW_COMP_SET, KW_COMP_TUPLE, KW_COMP_DICT, KW_COMP_LIST}
+ComprehensionTypes = {KW_COMP_SET, KW_COMP_TUPLE, KW_COMP_DICT, KW_COMP_LIST, 
+                      KW_COMP_MAX, KW_COMP_MIN, KW_COMP_SUM, KW_COMP_LEN, KW_COMP_COUNT}
 EventKeywords = {KW_EVENT_DESTINATION, KW_EVENT_SOURCE, KW_EVENT_LABEL,
                  KW_EVENT_TIMESTAMP}
 Quantifiers = {KW_UNIVERSAL_QUANT, KW_EXISTENTIAL_QUANT}
@@ -2019,6 +2025,15 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             expr_type = dast.DictCompExpr
         elif node.func.id == KW_COMP_TUPLE:
             expr_type = dast.TupleCompExpr
+            
+        elif node.func.id == KW_COMP_MIN:
+            expr_type = dast.MinCompExpr
+        elif node.func.id == KW_COMP_MAX:
+            expr_type = dast.MaxCompExpr
+        elif node.func.id == KW_COMP_SUM:
+            expr_type = dast.SumCompExpr
+        elif node.func.id == KW_COMP_LEN or node.func.id == KW_COMP_COUNT:
+            expr_type = dast.LenCompExpr
 
         expr = self.create_expr(expr_type, node)
         self.enter_query()

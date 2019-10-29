@@ -110,3 +110,4 @@ examples/timing
 *.rules
 *.csv
 *.xlsx
+example_storage

@@ -1,0 +1,24 @@
+from pprint import pprint
+
+def constraint(name='cuttingstock', parameter={L,K,N,i_length,i_demand}, variable={pieces,items}):
+	L: int
+	K: int
+	N: int
+	i_length: dict(key=ints(1,N), val=int)
+	i_demand: dict(key=ints(1,N), val=int)
+
+	pieces: dict(key=ints(1,K), val=ints(0,K))
+	items: dict(key=(ints(1,K), ints(1,N)), val=int)
+
+	c1 = each(k in ints(1,K), i in ints(1,N), has= items[k,i] >= 0)
+	c2 = each(i in ints(1,N), has= sumof(items[k, i] * pieces[k], k in ints(1,K)) >= i_demand[i])
+	c3 = each(k in ints(1,K), has= sumof(items[k, i] * i_length[i], i in ints(1,N)) <= L)
+
+	obj = sumof(pieces[k], k in ints(1,K))
+
+	return minof(obj, c1, c2, c3)
+
+
+i_demand = [2,2,4]
+result = query(constraint = 'cuttingstock', N=3, K=sum(i_demand), L=10, i_length=[7,5,3], i_demand=i_demand)
+pprint(result)

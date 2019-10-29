@@ -1,8 +1,11 @@
+from .. import common
+
 def PythonGenerator(filename, args):
-	if hasattr(args,'constraint'):
-		# print('expygen: PythonGenerator')
+	print('expygen')
+	if common.get_runtime_option('constraint', default=False):
+		print('expygen: PythonGenerator')
 		from .constraint.constraint_pygen import PythonGenerator
-	elif hasattr(args,'rule'):
+	elif common.get_runtime_option('rule', default=False):
 		from .rule.rule_pygen import PythonGenerator
 	else:
 		from .pygen import PythonGenerator

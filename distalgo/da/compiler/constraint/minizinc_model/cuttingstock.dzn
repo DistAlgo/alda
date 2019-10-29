@@ -1,0 +1,5 @@
+N = 3;
+K = 8;
+L = 10;
+i_length = array1d(1..3,[7,5,3]);
+i_demand = array1d(1..3,[2,2,4]);

@@ -1168,6 +1168,14 @@ class PythonGenerator(NodeVisitor):
                         ast = ListComp(elem, generators)
                     elif isinstance(node, dast.TupleCompExpr):
                         ast = pyCall("tuple", args=[GeneratorExp(elem, generators)])
+                    elif isinstance(node, dast.MinCompExpr):
+                        ast = pyCall("min", args=[GeneratorExp(elem, generators)])
+                    elif isinstance(node, dast.MaxCompExpr):
+                        ast = pyCall("max", args=[GeneratorExp(elem, generators)])
+                    elif isinstance(node, dast.SumCompExpr):
+                        ast = pyCall("sum", args=[GeneratorExp(elem, generators)])
+                    elif isinstance(node, dast.LenCompExpr):
+                        ast = pyCall("len", args=[GeneratorExp(elem, generators)])
                     elif isinstance(node, dast.GeneratorExpr):
                         ast = GeneratorExp(elem, generators)
                     else:
@@ -1187,6 +1195,7 @@ class PythonGenerator(NodeVisitor):
                         ast = IfExp(test,
                                     propagate_fields(pyTuple([elem])),
                                     pyTuple([]))
+                    # elif isinstance(node, dast.TupleCompExpr):
                     elif isinstance(node, dast.GeneratorExpr):
                         # Impossible:
                         self.error("Illegal generator expression.", node)
@@ -1211,6 +1220,11 @@ class PythonGenerator(NodeVisitor):
     visit_ListCompExpr = visit_ComprehensionExpr
     visit_DictCompExpr = visit_ComprehensionExpr
     visit_TupleCompExpr = visit_ComprehensionExpr
+
+    visit_MinCompExpr = visit_ComprehensionExpr
+    visit_MaxCompExpr = visit_ComprehensionExpr
+    visit_SumCompExpr = visit_ComprehensionExpr
+    visit_LenCompExpr = visit_ComprehensionExpr
 
     def visit_ComparisonExpr(self, node):
         left = self.visit(node.left)
