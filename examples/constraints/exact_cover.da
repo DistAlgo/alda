@@ -1,0 +1,29 @@
+def constraint(name= 'exact_cover', parameter={X,subsets,S}):
+	# Variables
+	X: set[int]  		# the universe
+	subsets: set[int]	# id of subsets in S
+	# S[i,j]: the ith subset in S contains the jth element in the universe
+	S: dict(key= (subsets, X), val= ints(0,1))
+	# indicate which subset in S is included in solution
+	T: dict(key= subsets, val= ints(0,1))
+	
+	# Constraints
+	# each element in the universe is covered exactly once by sets in S
+	cover = each(i in X, has= sumof(T[j]*S[j,i], j in subsets) == 1)
+	
+	# Target
+	# find the minimum number of sets to cover the universe
+	return anyof(T, cover, to_min(sum(T)))
+
+
+
+from pprint import pprint
+
+X = {1,2,3,4,5}
+subsets = {1,2,3}
+S = [[1,0,1,1,0],
+	 [0,1,0,0,1],
+	 [1,1,1,1,0]]
+
+result = query(constraint='exact_cover')
+pprint(result)

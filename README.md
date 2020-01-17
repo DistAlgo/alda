@@ -4,7 +4,13 @@
 1. Install XSB from http://xsb.sourceforge.net/
 2. Install DistAlgo: add path of `distalgo` folder to your `PATH` environment variable.
 
-## Example
+
+## Constaint Example
+1. USAGE: `python3 -m da --constraint <filename>`
+2. some working examples are inside `examples/constraints` folder.
+
+
+## Rule Example
 ### Trans
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_trans.sh`.  

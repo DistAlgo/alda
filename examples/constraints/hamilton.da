@@ -1,0 +1,34 @@
+def constraint(name='hamilton', parameter={n, edge}):
+	# Variables:
+	n: int                                                 # number of vertices
+	edge: dict(key= (ints(1,n), ints(1,n)), val= ints(0,1))    # a set of edges
+	route: dict(key= ints(1,n), val= ints(1,n)) # a route, sequence of vertices
+	
+	# Constraints:
+	# visit all vertices exactly one
+	once = alldiff(route[i], i in ints(1,n))
+	# the sequence of vertices form a circle
+	def circle():
+		edge[route[n],route[1]] == 1
+		each(i in ints(1,n-1), has= edge[route[i],route[i+1]] == 1)
+
+	# Target:
+	# find a route satisfies the constraints
+	return anyof(route, once, circle)
+
+
+
+from pprint import pprint
+
+# data from https://www.chegg.com/homework-help/questions-and-answers/solve-problem-genetic-algorithm-ga-q7873215
+n = 7
+edge = [[0,1,1,0,0,0,1],
+		[1,0,1,1,0,0,0],
+		[1,1,0,1,1,0,1],
+		[0,1,1,0,1,1,0],
+		[0,0,1,1,0,1,1],
+		[0,0,0,1,1,0,1],
+		[1,0,1,0,1,1,0]]
+
+result = query(constraint='hamilton')
+pprint(result)

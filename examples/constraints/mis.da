@@ -1,0 +1,33 @@
+def constraint(name= 'mis', parameter={vertex, edge}):
+	# Variables:
+	vertex: set[int]                                  # set of vertices
+	edge: dict(key= (vertex, vertex), val= ints(0,1)) # set of edges
+	# a set of vertices formulating an independent set
+	mis: dict(key= vertex, val= ints(0,1))   
+	
+	# Constraints:
+	# no edges between any two vertices in the set
+	independent = each(i in vertex, j in vertex, has= 
+	                   i == j or mis[i] == 0 or mis[j] == 0 or edge[i,j] == 0)
+	
+	# Target:
+	# find a independent set of maximum size
+	return anyof(mis, independent, to_max(sum(mis)))
+
+
+
+from pprint import pprint
+
+# data from https://en.wikipedia.org/wiki/Maximal_independent_set
+vertex = {1,2,3,4,5,6,7,8}
+edge = [[0,1,1,0,0,0,1,0],
+		[1,0,0,1,0,0,0,1],
+		[1,0,0,1,1,0,0,0],
+		[0,1,1,0,0,1,0,0],
+		[0,0,1,0,0,1,1,0],
+		[0,0,0,1,1,0,0,1],
+		[1,0,0,0,1,0,0,1],
+		[0,1,0,0,0,1,1,0]]
+
+result = query(constraint='mis')
+pprint(result)

@@ -4,52 +4,14 @@ from pprint import pprint
 from . import constraint_ast as cast
 import os,io
 from da.tools.unparse import Unparser
+from .translate_minizinc import Translator
 
 
-MZ_MODEL_HOME = os.path.join(os.path.dirname(__file__),'minizinc_model')
-if not os.path.exists(MZ_MODEL_HOME):
-	os.mkdir(MZ_MODEL_HOME)
+KW_CONSTRAINT = 'constraint'
 
-MZ_TYPE_DICT = {
-	'int': 'int',
-	'float': 'float',
-	'str': 'string',
-	'bool': 'bool'
-}
+SOLVER = 'MiniZinc'	# default solver
 
-MZ_QUAN_DICT = {
-	'each': 'forall'
-}
-
-MZ_COMP_OP = {
-	In: 'in',
-	dast.EqOp: '=',
-	dast.NotEqOp: '!=',
-	dast.LtOp: '<',
-    dast.LtEOp: '<=',
-    dast.GtOp: '>',
-    dast.GtEOp: '>=',
-}
-
-MZ_BIN_OP = {
-	dast.MultOp: '*',
-	dast.AddOp: '+',
-	dast.SubOp: '-',
-	dast.DivOp: '/',
-	dast.ModOp: 'mod'
-}
-
-MZ_GLOBALFUNCS = {
-	'alldiff': 'all_different'
-}
-
-MZ_CPRH_OP = {
-	dast.MinCompExpr: 'min',
-	dast.MaxCompExpr: 'max',
-	dast.SumCompExpr: 'sum',
-	dast.LenCompExpr: 'length'
-}
-
+CONSTRAINT_OBJECT_NAME = "_constraint_object"
 
 
 def to_source(tree):
@@ -61,249 +23,340 @@ class PythonGenerator(pygen.PythonGenerator):
 	def __init__(self, filename="", options=None):
 		super().__init__(filename, options)
 		print('constraint_PythonGenerator')
-		self.constraint_options = dict()
-		self.constraint_info = set()
+		self.constraint_options = dict()	# get from parser, the information of required/inferred parameter
+		self.constraint_info = set()		# get from parser, containing the assignment/update statement (if exist) of arguments in query
+		self.constraint_obj = dict()		# containing the information of whole constraints, to be passed into Translator
+		self.parsing = False
+		self.current_constraint = None
+
+
+	def new_constraint(self, name):
+		tmp_constraint = dict()
+		tmp_constraint['name'] = name
+		tmp_constraint['parameter'] = set()
+		tmp_constraint['variable'] = dict()
+		tmp_constraint['constraint'] = dict()
+		tmp_constraint['target'] = None
+		return tmp_constraint
+
+	# def generate_config(self, node):
+	# 	print('generate_config',node.configurations)
+	# 	# pprint(vars(node.configurations))
+	# 	return super().generate_config(node)
+		
+
+	# def visit_Program(self, node):
+
+		# if hasattr(node, 'constraints'):
+		# 	# print('?????')
+		# 	imptquery = ImportFrom('da.query',[alias('query', None)],0)
+		# 	self.preambles.append(imptquery)
+		# 	self.transConstraint(node.constraints)
+		# if hasattr(node, 'constraint_info'):
+		# 	# print('???????????????????????')
+		# 	self.constraint_info |= node.constraint_info
+		# return super().visit_Program(node)
+
+	def _generate_constraint_obj(self):
+		target = pyName(CONSTRAINT_OBJECT_NAME, Store())
+		# pprint(self.constraint_options)
+		a = pyAssign([target],
+					  Dict([Str(key) for key in self.constraint_options],
+						   [Set([Str(v) for v in val['required_parameter']]) 
+						   	for _, val in self.constraint_options.items()]))
+		return a
 
 	def visit_Program(self, node):
-
-		if hasattr(node, 'constraints'):
-			# print('?????')
+		# if hasattr(node, 'constraint_info'):
+		# 	self.constraint_info |= node.constraint_info
+		if hasattr(node, 'constraint_options'):
+			self.constraint_options.update(node.constraint_options)
 			imptquery = ImportFrom('da.query',[alias('query', None)],0)
 			self.preambles.append(imptquery)
-			self.transConstraint(node.constraints)
-		if hasattr(node, 'constraint_info'):
-			# print('???????????????????????')
-			self.constraint_info |= node.constraint_info
-		return super().visit_Program(node)
+			self.preambles.append(self._generate_underscoreAssign())
+			self.preambles.append(self._generate_constraint_obj())
+		rt = super().visit_Program(node)
+		if self.constraint_obj:
+			# print('constraint_pygen: visit_Program')
+			# pprint(self.constraint_options)
+			# pprint(self.constraint_obj)
+			for name, val in self.constraint_obj.items():
+				Translator(name).visit(val)
+		return rt
 
-	# def visit_Process(self, node):
-	# 	if hasattr(node, 'constraints'):
-	# 		self.preambles.append(imptquery)
-	# 		self.transConstraint(node.constraints)
-	# 	if hasattr(node, 'constraint_info'):
-	# 		print('???????????????????????')
-	# 		self.constraint_info |= node.constraint_info
-	# 	return super().visit_Process(node)
+	def visit_Process(self, node):
+		if hasattr(node, 'constraint_options'):
+			self.constraint_options.update(node.constraint_options)
+		# if hasattr(node, 'constraint_info'):
+		# 	self.preambles.append(imptquery)
+		# 	self.constraint_info |= node.constraint_info
+		return super().visit_Process(node)
 
-	def transConstraint(self, constraints):
-		self.toMiniZinc(constraints)
+	def parse_parameters(self, node):
+		# print('constraint_pygen: visit_Function: parameter', node)
+		# pprint(vars(node))
+		for e in node.elts:
+			self.current_constraint['parameter'].add(e.id)
 
-	def toMiniZinc(self, constraints):
-		def trans_Domain(domain, var=False):
-			""" MiniZinc Type-inst AST subset
-			<ti-expr> ::= <base-ti-expr>
-			<base-ti-expr> ::= <var-par> <base-ti-expr-tail>
-			<var-par> ::= "var" | "par"
-			<base-type> ::= "bool"
-						  | "int"
-						  | "float"
-						  | "string"
-			base-ti-expr-tail> ::= <ident>
-								 | <base-type>
-								 | <set-ti-expr-tail>
-								 | <array-ti-expr-tail>
-								 | <num-expr> ".." <num-expr>
-			<set-ti-expr-tail> ::= "set" "of" <base-type>
-			<array-ti-expr-tail> ::= "array" [ <ti-expr> "," ... ] "of" <ti-expr>
-			"""
-			text = ''
-			if isinstance(domain, cast.DomainBasic):
-				if var:
-					text += 'var '
-				if not domain.range:
-					text += MZ_TYPE_DICT[domain.type]
-				elif domain.type == 'int':
-					text += '..'.join(domain.range)
+	def visit_Function(self, node):
+		if node.name == KW_CONSTRAINT:
+			args = self.visit(node.args)
+			for i in range(len(args.args)):
+				if args.args[i].arg == 'name':
+					cname = args.defaults[i].s
+					self.current_constraint = self.new_constraint(cname)
+					self.current_constraint['parameter'] = self.constraint_options[cname]['parameter']
+				elif args.args[i].arg == 'parameter':
+					pass
+					# self.parse_parameters(args.defaults[i])
+				elif args.args[i].arg == 'variable':
+					pass
 				else:
-					...
-					# ERROR, range 1..n must have type int
-				return text
-			if isinstance(domain, cast.DomainSet):
-				text = ''
-				if var:
-					text += 'var '
-				return text + 'set of '+MZ_TYPE_DICT[domain.domain.type]
-			if isinstance(domain, cast.DomainArray):
-				text = 'array['
-				if isinstance(domain.dimension, list):
-					tmptext = [trans_Domain(d) for d in domain.dimension]
-					text += ','.join(tmptext)
+					self.error("line %s: invalid argument." % node.lineno)
+			self.parsing = True
+			body = self.body(node.body)
+			self.parsing = False
+			self.constraint_obj[self.current_constraint['name']] = self.current_constraint
+			self.current_constraint = None
+			return []
+		elif self.parsing:
+			# constraint set, or definition of predicates
+			name = node.name
+			args = self.visit(node.args)
+			if len(args.args) == 0 or len(args.defaults) != 0:
+				# constraint, with relation = and/or
+				if len(args.args) == 0:
+					op = 'and'
 				else:
-					text += trans_Domain(domain.dimension)
-				text += '] of '
-				if var:
-					text += 'var '
-				text += trans_Domain(domain.domain)
-				return text
-
-		def trans_DomainSpec(node):
-			return '%s %s %s' % (node.name, MZ_COMP_OP[type(node.op)], trans_Domain(node.domain))
-
-		def trans_Constraint(constraint):
-			if isinstance(constraint, cast.ConstraintSet):
-				# print(vars(constraint))
-				body = [trans_Constraint(b) for b in constraint.body]
-				if isinstance(constraint.relation, And):
-					return '( '+' /\\ '.join(body)+' )'
-				if isinstance(constraint.relation, Or):
-					return '( '+' \\/ '.join(body)+' )'
-				else:
-					print('TODO: other constraint relation other than And/Or')
-					pprint(constraint.relation)
-					
-
-			elif isinstance(constraint, cast.QuantifiedConstraint):
-				text = ''
-				text += MZ_QUAN_DICT[constraint.quantifier] + '( '
-				tmptext = [trans_DomainSpec(d) for d in constraint.domain]
-				text += ','.join(tmptext)
-				text += ' )( '
-
-				p = [trans_Constraint(p) for p in constraint.predicate]
-				text += ','.join(p)
-				text += ' )'
-
-				return text
-
-			elif isinstance(constraint, cast.FunctionalConstraint):
-				text = ''
-				if constraint.func_name in MZ_GLOBALFUNCS:
-					text += MZ_GLOBALFUNCS[constraint.func_name]
-				else:
-					text += constraint.func_name
-				text += '( '
-				tmptext = [trans_DomainSpec(d) for d in constraint.domain_spec]
-				text += ','.join(tmptext)
-				text += ' )( '
-
-				if isinstance(constraint.target, dast.SubscriptExpr):
-					text += trans_SubscriptExpr(constraint.target)
-				else:
-					print('TODO: constraint_pygen: trans_Constraint -> not isinstance(constraint.target,SubscriptExpr)')
-
-				text += ' )'
-				return text
-
-			elif isinstance(constraint, dast.ComparisonExpr):
-				# print('dast.ComparisonExpr')
-				# pprint(vars(constraint))
-				left = constraint.subexprs[0]
-				op = MZ_COMP_OP[constraint.comparator]
-				target = constraint.subexprs[1]
-				return '%s %s %s' % (trans_SubExpr(left), op, trans_SubExpr(target))
-			elif isinstance(constraint, dast.ComprehensionExpr):
-				return trans_SubExpr(constraint)
+					op = 'or'
+				constraints = [b.expr for b in node.body]
+				self.current_constraint['constraint'][name] = cast.Constraint(name,constraints,op)
 			else:
-				print('TODO: constraint_pygen: trans_Constraint -> other kinds of constraints')
-				print(constraint)
-				pprint(vars(constraint))
-				return to_source(self.visit(constraint))
+				# predicate
+				pass
+			return []
+		else:
+			return super().visit_Function(node)
 
-		def trans_SubscriptExpr(node):
-			if isinstance(node, dast.SubscriptExpr):
-				text = ''
-				target = node.subexprs[0].name
-				text += target + '['
-				if isinstance(node.subexprs[1], dast.TupleExpr):
-					s = [i.id for i in self.visit_TupleExpr(node.subexprs[1]).elts]
-					text +=','.join(s)
-				elif isinstance(node.subexprs[1], dast.NameExpr):
-					name = self.visit(node.subexprs[1])
-					text += to_source(name)[:-1]
-				else:
-					print('TODO: constraint_pygen: trans_Constraint -> subscirpt non Tuple, non Name')
-					print(node.subexprs[1])
-					pprint(vars(node.subexprs[1]))
-				text += ']'
-				return text
-
-		def trans_Iter(node):
-			# pprint(vars(node))
-			target = node.target.id
-			iterator = ''
-			if isinstance(node.iter, Call):
-				if node.iter.func.id in {'ints', 'floats'}:
-					args = [to_source(a)[:-1] for a in node.iter.args]
-					iterator = args[0]+'..'+args[1]
-				else:
-					iterator = to_source(node.iter)[:-1]
+	def parse_domain(self, node):
+		if isinstance(node, Name):
+			# 1. int, str, bool, float, set
+			if node.id in {'int', 'str', 'bool', 'float'}:
+				return cast.DomainBasic(node.id)
+			elif node.id != 'set':
+				return node
 			else:
-				print('TODO: trans_Iter')
-				# pprint(vars(node.iter))
-			return '%s in %s' % (target, iterator)
-
-
-		def trans_SubExpr(node):
+				return cast.DomainSet(None)
+		elif isinstance(node, Call):
+			t = node.func.id
+			if t == 'ints' or t == 'floats':
+				# 2. ints(x,y[,z]), float(x,y)
+				if len(node.args) == 3:
+					if t == 'floats':
+						self.error("line %s: float type do not have step size." % node.lineno)
+						return None
+					step = node.args[2]
+				elif len(node.args) > 3 or len(node.args) < 2:
+					self.error("line %s: wrong number of arguments, expect 2 or 3, got %s." % (node.lineno, len(node.args)))
+					return None
+				else:
+					step = None
+				lb = node.args[0]
+				ub = node.args[1]
+				return cast.DomainBasic(t[:-1],lb,ub,step)
+			elif t == 'dict':
+				# 4. dict(key=domain, val=domain)
+				if len(node.keywords) != 2:
+					self.error("line %s: wrong number of argument for declaration of dict type! expect 2, got %s." % (node.lineno, len(node.keywords)))
+					return None
+				for k in node.keywords:
+					# {'arg': 'key', 'value': <_ast.Tuple object at 0x1107668d0>}
+					# {'arg': 'val', 'value': <_ast.Call object at 0x110766450>}
+					if k.arg == 'key':
+						key = self.parse_domain(k.value)
+					elif k.arg == 'val':
+						val = self.parse_domain(k.value)
+					else:
+						self.error("line %s: wrong argument for declaration of dict type! expect 'key' and 'val', got '%s'." % (node.lineno, k.arg))
+						return None
+				return cast.DomainMap(key, val)
+			elif t == 'Counter':
+				# 6. Counter(domain)
+				if(len(node.args) > 1):
+					self.error("line %s: wrong number of argument for declaration of Counter type! expect 1, got %s." % (node.lineno, len(node.keywords)))
+					return None
+				domain = self.parse_domain(node.args[0])
+				return cast.DomainMultiSet(domain)
+			else:
+				self.error("line %s: wrong type declaration" % node.lineno)
+		elif isinstance(node, Tuple):
+			# 3. tuple: (domain, domain, ...)
+			element = [self.parse_domain(e) for e in node.elts]
+			return cast.DomainTuple(element)
+		elif isinstance(node, Subscript):
+			# 5. set[domain]
 			# print(node)
 			# pprint(vars(node))
-			if isinstance(node, dast.ComprehensionExpr):
-				# pprint(vars(node))
-				target = trans_SubExpr(node.elem)
-				iterator = [trans_Iter(self.visit(s)) for s in node.subexprs]
-				return '%s([ %s | %s ])' % (MZ_CPRH_OP[type(node)], target, ','.join(iterator))
-			elif isinstance(node, dast.BinaryExpr):
-				left = trans_SubExpr(node.subexprs[0])
-				right = trans_SubExpr(node.subexprs[1])
-				op = MZ_BIN_OP[node.operator]
-				return left+op+right
-			elif isinstance(node, dast.SubscriptExpr):
-				return trans_SubscriptExpr(node)
+			if node.value.id != 'set':
+				self.error("line %s: wrong type declaration" % node.lineno)
+			domain = self.parse_domain(node.slice.value)
+			return cast.DomainSet(domain)
+		# elif isinstance(node, Index):
+		# 	print('parse_domain')
+		# 	print(node)
+		# 	pprint(vars(node))
+		else:
+			print('parse_domain: unknown domain',node)
+			pprint(vars(node))
+
+	def parse_variable(self, node):
+		# print('parse_variable', node)
+		# pprint(vars(node))
+		domain =  self.parse_domain(node._ast.annotation)
+		self.current_context = Store
+		targets = [self.visit(tgt) for tgt in node.targets]
+		self.current_context = Load
+
+		# print('parse_variable: node.value', node)
+		# pprint((node.value))
+
+		for t in targets:
+			domain.parameter = bool(t.id in self.current_constraint['parameter'])
+			self.current_constraint['variable'][t.id] = cast.Variable(t.id,domain,node.value)
+
+	def parse_constraint(self, node):
+		# print('parse_constraint', node)
+		# pprint(vars(node))
+		targets = [self.visit(tgt) for tgt in node.targets]
+		if len(targets) != 1:
+			self.error("line %s: definition of constraints can only have one target" % node.lineno)
+			return None
+		if isinstance(node.value, dast.BooleanExpr):	# default python boolean expr, no need to do
+			# print('todo: constraints: BooleanExpr, maybe nothing todo')
+			pass
+		elif isinstance(node.value, dast.CallExpr):		# global constraints, other invented operation
+			# print('todo: constraints: CallExpr')
+			pass
+		else:
+			print(node.value)
+			pprint(vars(node.value))
+			self.error("line %s: unsupported constraint type" % node.lineno)
+		self.current_constraint['constraint'][targets[0].id] = cast.Constraint(targets[0].id, [node.value])
+
+
+	# assignment statement under constraint parsing mode: 
+	# with annotation: variable
+	# without annotation: constraints
+	def visit_AssignmentStmt(self, node):
+		if self.parsing:
+			# pprint(vars(node))
+			# pprint(vars(node.targets[0]))
+			if isinstance(node._ast,AnnAssign):
+				# print('variable')
+				self.parse_variable(node)
 			else:
-				return to_source(self.visit(node))[:-1]
+				# print('constraint')
+				self.parse_constraint(node)
+			return []
+		else:
+			# u = []
+			# if node in self.constraint_info:
+			# 	u = [self._generate_underscoreAssign()]
+			# return u+super().visit_AssignmentStmt(node)
+			return super().visit_AssignmentStmt(node)
 
-		def trans_Objective(obj):
-			if obj.operation == 'satisfy':
-				return 'solve satisfy;'
+	def parse_target(self,node):
+		# must be setof, anyof
+		if not isinstance(node.value, dast.CallExpr):
+			self.error("line %s: the target must be setof or anyof" % node.lineno)
+		funcid = node.value.subexprs[0].subexprs[0].name
+		args = node.value.subexprs[1]
+
+		# the number of return solutions
+		if funcid == 'setof':
+			allFlag = True
+		elif funcid == 'anyof':
+			allFlag = False
+		else:
+			self.error("line %s: the target must be setof or anyof" % node.lineno)
+			return None
+		if len(args) == 0:
+			self.error("line %s: the target must be setof or anyof" % node.lineno)
+			return None
+		
+		# the first arguemnt of target are the target variables
+		var = args[0]
+		if isinstance(var, dast.TupleExpr):
+			variables = [v.subexprs[0].name if isinstance(v, dast.NameExpr) else v for v in var.subexprs]
+		else:
+			if isinstance(var, dast.NameExpr):
+				variables = [var.subexprs[0].name]
 			else:
-				return 'solve %s %s;' % (obj.operation, obj.target)
+				variables = [var]
+		
+		# for variables that is the target of the problem but decalred as parameter, set parameter flag as false
+		for v in variables:
+			if isinstance(v, str) and v in self.current_constraint['parameter']:
+				self.current_constraint['variable'][v].domain.parameter = False
 
-		############ separator between code and functions ############
-		for c in constraints:
-			filename = c['name']
-			# print(filename)
-			file = open(os.path.join(MZ_MODEL_HOME,filename+'.mzn'),'w')
-			file.write('include "globals.mzn";\n')
-			if 'variable' in c:
-				for vname, var in c['variable'].items():
-					if var:
-						domain = trans_Domain(var.domain, True)
-						file.write('%s: %s;\n' % (domain, vname))
+		# active constraints
+		constraints = []
+		objective = None
+		for c in args[1:]:
+			if isinstance(c, dast.NameExpr):	# the name of constraint
+				constraints.append(c.subexprs[0].name)
+			elif isinstance(c, dast.CallExpr):
+				# ['func', 'args', 'keywords', 'starargs', 'kwargs']
+				# print('parse_target')
+				# pprint(vars(c))
+				funcName = c.subexprs[0].subexprs[0].name
+				if funcName == 'to_min' or funcName == 'to_max':	# the optimization goal
+					if funcName == 'to_min':
+						op = 'min'
 					else:
-						...
-						# print('TODO: warning, variable not found')
-
-			if 'parameter' in c:
-				for vname, var in c['parameter'].items():
-					if var:
-						domain = trans_Domain(var.domain)
-						file.write('%s: %s;\n' % (domain, vname))
-						# print(domain)
+						op = 'max'
+					if len(c.subexprs[1]) != 1:
+						self.error("line %s: wrong number of argument. expect 1." % node.lineno)
+						return None
+					objexpr = c.subexprs[1][0]
+					if isinstance(objexpr, dast.NameExpr):
+						obj = objexpr.subexprs[0].name
 					else:
-						...
-						# print('TODO: warning, parameter found')
+						obj = objexpr
+					objective = cast.Objective(op,obj)
+				else:
+					constraints.append(c)	# global constraint or other self defined constraint
+			elif isinstance(c, dast.BooleanExpr):	# boolean constraint
+				constraints.append(c)
+			else:
+				self.error("line %s: invalid constraint" % node.lineno)
+				return None
 
-			obj = c['objective']
-			if obj.allFlag:
-				self.constraint_options[filename] = ['all_solutionss']
-			for constraint in obj.constraints:
-				text = 'constraint \n\t'
-				if constraint == obj.target:
-					text += '%s = ' % obj.target
-				text += trans_Constraint(c['constraint'][constraint].body)
-				file.write(text+';\n')
+		cset = {c for c in constraints if isinstance(c, str)}
+		# print(cset)
+		delset = []
+		for c in self.current_constraint['constraint']:
+			if c not in cset:
+				delset.append(c)
+		for c in delset:
+			del self.current_constraint['constraint'][c]
 
-			file.write(trans_Objective(obj))
+		self.current_constraint['target'] = cast.Target(variables,constraints,objective,allFlag)
 
-	# def _get_NameExpr(self, node):
+	def visit_ReturnStmt(self, node):
+		if self.parsing and not self.current_constraint['target']:
+			if node.value is not None:
+				self.parse_target(node)
+			else:
+				self.error("line %s: the target of the problem is undefined" % node.lineno)
+			return []
+		else:
+			return super().visit_ReturnStmt(node)
+
+	
 
 	def _generate_underscoreAssign(self):
 		return pyAssign([pyName('_', ctx=Store())], pyNone())
-
-	def visit_AssignmentStmt(self, node):
-		u = []
-		if node in self.constraint_info:
-			u = [self._generate_underscoreAssign()]
-		return u+super().visit_AssignmentStmt(node)
 
 	def visit_OpAssignmentStmt(self, node):
 		assignStmt = super().visit_OpAssignmentStmt(node)
@@ -352,4 +405,15 @@ class PythonGenerator(pygen.PythonGenerator):
 			target = pyAttr("self", 'query')
 			inferarg = []
 
-		return pyCall(target, args=inferarg, keywords=[(key, self.visit(value)) for key, value in node.keywords])
+		keywords = [(key, self.visit(value)) for key, value in node.keywords]
+		for key, val in keywords:
+			# print(key)
+			# print(val)
+			if key == 'constraint':
+				c = val.s
+				var = pyTuple([Str(v) for v in self.constraint_obj[c]['target'].variables])
+				keywords.append(('return_value',var))
+
+				# pprint(vars(self.constraint_obj[c]['target']['variables']))
+
+		return pyCall(target, args=inferarg, keywords=keywords)

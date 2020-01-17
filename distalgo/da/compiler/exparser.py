@@ -37,6 +37,7 @@ def daast_from_str(src, filename='<str>', args=None):
 			from .constraint.constraint_parser import Parser
 		else:
 			from .parser import Parser
+		# from .parser import Parser
 		dt = Parser(filename, args)
 		rawast = parse(src, filename)
 		dt.visit(rawast)
@@ -50,8 +51,9 @@ def daast_from_str(src, filename='<str>', args=None):
 	return None
 
 def Parser(filename, args):
-	if common.get_runtime_option('constraint', default=False):
-		from .constraint.constraint_parser import Parser
-	else:
-		from .parser import Parser
+	# if common.get_runtime_option('constraint', default=False):
+	# 	from .constraint.constraint_parser import Parser
+	# else:
+	# 	from .parser import Parser
+	from .parser import Parser
 	return Parser(filename, args)
