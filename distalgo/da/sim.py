@@ -36,24 +36,17 @@ import threading
 import collections
 import multiprocessing
 import os.path
-
-
+import re
 
 from . import common, pattern
-from .common import (write_file, read_answer, rule_path,
-                     builtin, internal, name_split_host, name_split_node,
+from .common import (builtin, internal, name_split_host, name_split_node,
                      ProcessId, get_runtime_option,
                      ObjectDumper, ObjectLoader)
 from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
     TransportException, AuthenticationException
 
-
-from pprint import pprint
-import subprocess
-
-import re
 from .rule import infer as ruleinfer
-from .query import query as constraint_query
+from .constraint import query as constraint_query
 
 logger = logging.getLogger(__name__)
 
@@ -89,15 +82,9 @@ class Command(enum.Enum):
     Restore    = 33
     Crash      = 34
     Recover    = 35
-    # CrashAck   = 34
-    # RecoverAck = 35
     Sentinel   = 40
-    
-
 
 _config_object = dict()
-
-UniqueLowerCasePrefix = 'p'
 
 class DistProcess():
     """Abstract base class for DistAlgo processes.
@@ -127,8 +114,6 @@ class DistProcess():
 
     """
     def __init__(self, procimpl, forwarder, **props):
-        # print('sldkjflsjdfs')
-        # print(self._rules_object)
         self.__procimpl = procimpl
         self.__id = procimpl.dapid
         self._log = logging.LoggerAdapter(
@@ -154,7 +139,6 @@ class DistProcess():
         self._events = []
 
         self.__crashed = False
-
 
     def setup(self, **rest):
         """Initialization routine for the DistAlgo process.
@@ -195,7 +179,6 @@ class DistProcess():
 
     @internal
     def _init_config(self):
-        # self.output('_init_config',self.__class__)
         if self.get_config('handling', default='one').casefold() == 'all':
             self.__do_label = self.__label_all
         else:
@@ -206,24 +189,16 @@ class DistProcess():
             self._keep_unmatched = False
         self.__default_flags = self.__get_channel_flags(
             self.get_config("channel", default=[]))
-        # print(self.__default_flags)
-        # self.output('sim._init_config._config_object: ',self._config_object)
         if self.get_config('clock', default='').casefold() == 'lamport':
             self._logical_clock = 0
         else:
             self._logical_clock = None
-        
-        self._enable_crash = self.get_config('enable_crash', default=False)
-        self._enable_backup = self.get_config('enable_backup', default=False)
 
-        # print('_init_config',self._config_object)
-
-
-
+        self._enable_crash = self.get_config('enable_crash', default=True)
+        self._enable_backup = self.get_config('enable_backup', default=True)
 
     AckCommands = [Command.NewAck, Command.EndAck, Command.StartAck,
-                   Command.SetupAck, Command.ResolveAck, Command.RPCReply]#,
-                   # Command.CrashAck, Command.RecoverAck]
+                   Command.SetupAck, Command.ResolveAck, Command.RPCReply]
     @internal
     def _init_dispatch_table(self):
         self.__command_dispatch_table = [None] * Command.Sentinel.value
@@ -244,7 +219,6 @@ class DistProcess():
                         getattr(self, handlername)
 
     def __get_channel_flags(self, props):
-        # print('__get_channel_flags',props)
         flags = 0
         if isinstance(props, str):
             if props == 'lossy':
@@ -267,7 +241,6 @@ class DistProcess():
         """Returns the configuration value for specified 'key'.
 
         """
-        # print('get_config',key,cls)
         cfgobj = get_runtime_option('config')
         if key in cfgobj:
             return cfgobj[key]
@@ -493,7 +466,7 @@ class DistProcess():
 
     @builtin
     def work(self):
-        """Waste   random amount of time.
+        """Waste some random amount of time.
 
         This suspends execution of the process for a period of 0-2 seconds.
 
@@ -529,14 +502,12 @@ class DistProcess():
         if isinstance(self._logical_clock, int):
             self._logical_clock += 1
 
-
     @internal
     def _delay_send(self,**params):
         self._log.info('delay sending for %r seconds', self._delay,)
         time.sleep(self._delay)
         self._send1(**params)
         self._log.info('delayed message sent')
-
 
     @builtin
     def send(self, message, to, channel=None, **rest):
@@ -595,50 +566,16 @@ class DistProcess():
     @builtin
     def query(self, constraint, **args):
         return constraint_query(self=self._state.__dict__, constraint=constraint, **args)
-        
-
-
-    # another option: crash and recover both by messages.
-    # @builtin
-    # def fakeCrash(self, duration):
-
-    #     """Block current process for timeout time
-
-    #     simulation crashing and bring back
-    #     if timeout == 0: crash completely and never bring back
-
-    #     """
-    #     if timeout > 0:
-    #         # print()
-    #         # print()
-    #         # for i in self.__messageq._q:
-    #         #     print (i)
-    #         tmpMessage = copy.deepcopy(self.__messageq._q)
-    #         # print('========= before crash =========',self._id,tmpMessage)
-    #         time.sleep(duration)
-    #         # print()
-    #         # print('========= after crash =========',self._id,tmpMessage,self.__messageq._q)
-    #         self.__messageq._q = copy.deepcopy(tmpMessage)
-    #         # print(self._id,self.__messageq._q)
-
-    #         # for i in self.__messageq._q:
-    #         #     print (i)
-    #     else:
-    #         hanged()
-
 
     @builtin
     def crash(self, procs):
         seqno = self._create_cmd_seqno()
         self._send1(Command.Crash, seqno, procs, flags=ChannelCaps.RELIABLEFIFO)
 
-
     @builtin
     def recover(self, procs):
         seqno = self._create_cmd_seqno()
         self._send1(Command.Recover, seqno, procs, flags=ChannelCaps.RELIABLEFIFO)
-
-
 
     @builtin
     def getEvent(self):
@@ -647,36 +584,23 @@ class DistProcess():
             if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
                 print(attr, getattr(self,attr))
 
-                
     @builtin
     def backup(self, *procs, name=None):
-        
-        # print('========== backupcalled ============', procs, name)
-
         seqno = self._create_cmd_seqno()
-
         if not procs:
             procs = (self._id,)
-
         #TODO: 
-
         # elif len(procs) > 1:
         #     self._log.error('More arguments than expected in backup, expecting 2, providing '+str(len(procs)+1))
-        
         self._send1(msgtype=Command.Backup,
                        message=(seqno, name),
                        to=procs,
                        flags=ChannelCaps.RELIABLEFIFO)
-        
-
 
     @builtin
     def restore(self, *procs, name=None, full=False):
-        # print('---------- restorecalled ------------', procs, name)
         if not procs:
             procs = (self._id,)
-        # elif len(procs) > 1:
-        #     self._log.error('More arguments than expected in restore, expecting 2, providing '+str(len(procs)+1))
         seqno = self._create_cmd_seqno()
         self._send1(msgtype=Command.Restore,
                        message=(seqno, name, full),
@@ -722,8 +646,6 @@ class DistProcess():
                 except (TypeError, pickle.PicklingError) as e:
                     self._log.error(e,':',attr)
                 file.close()
-                # pprint(attr)
-
 
     @internal
     def _cmd_Restore(self, src, args):
@@ -733,9 +655,7 @@ class DistProcess():
 
         self._log.info('<<<<<<<<< restoring <<<<<<<<<')
         seqno, name, full = args
-        # print('<<<<<<<<< restoring <<<<<<<<< seqno, name = args',seqno,name)
         procID = re.sub(r"[^0-9a-zA-Z_]",'_',str(self._id))
-        # pprint(dir(self))
 
         if full:
             if os.path.isdir(name):
@@ -748,44 +668,23 @@ class DistProcess():
                 dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d.startswith('backup_'+procID+'_')]
             else:
                 dirs = [d for d in os.listdir('.') if os.path.isdir(d) and d.startswith('backup_'+procID+'_'+name+'_')]
-            # print('checkpoint -1')
             
             if len(dirs) == 0:
                 self._log.warning('warning: no backup found!')
                 return
 
-            # print('dirs', dirs)
-
             entries = [(path[-19:], path) for path in dirs]
             entries = sorted(entries, reverse = True)
 
-            # print(entries)
             bak = entries[0][1]
-
-        # print('checkpoint 0')
-        
-        # print(bak)
-
-        # for attr in dir(self):
-        #     if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
-        #         # print(attr,type(attr))
-        #         try:
-        #             delattr(self, attr)
-        #         except:
-        #             e = sys.exc_info()[0]
-        #             self._log.error(e)
-
-        # print('checkpoint 1')
 
         for x in os.listdir(bak):
             if x.startswith('.'):
                 continue
-            # print(x)
             if x == '_state' and os.path.isdir(os.path.join(bak,x)):
                 for y in os.listdir(os.path.join(bak,x)):
                     if y.startswith('.'):
                         continue
-                    # print('\t'+y)
                     file = open(os.path.join(bak,x,y),'rb')
                     try:
                         setattr(self._state,y,pickle.load(file))
@@ -800,12 +699,6 @@ class DistProcess():
                     self._log.error(e,':',x)
                 file.close()
 
-        # print('checkpoint 2')
-                # pprint(x)
-        # print('restoredrestoredrestoredrestoredrestored')
-        # pprint(dir(self))
-        # # pass
-
     @internal
     def _cmd_Crash(self, src, seqno):
         if not self._enable_crash:
@@ -814,14 +707,6 @@ class DistProcess():
 
             self._log.info('xxxxxxxx CRASHED xxxxxxxx')
             self.__crashed = True
-        # for attr in dir(self):
-        #     if attr.find("SentEvent_") != -1 or attr.find("ReceivedEvent_") != -1:
-        #         # print(attr,type(attr))
-        #         try:
-        #             delattr(self, attr)
-        #         except:
-        #             e = sys.exc_info()[0]
-        #             self._log.error(e)
 
     @internal
     def _cmd_Recover(self, src, seqno):
@@ -831,14 +716,6 @@ class DistProcess():
 
         self._log.info('oooooooo RECOVERED oooooooo')
         self.__crashed = False
-
-
-   
-        
-        
-
-    
-
 
     @builtin
     def resolve(self, name):
@@ -904,7 +781,6 @@ class DistProcess():
             # 'to' must be an iterable of `ProcessId`s:
             target = to
         for dest in target:
-            self.output('sending to', dest)
             if isinstance(dest, str):
                 # This is a process name, try to resolve to an id
                 dest = self.resolve(dest)
@@ -1112,12 +988,10 @@ class DistProcess():
 
         try:
             message = self.__messageq.pop(block, timeout)
-            # print(self._id,message[1])
             if self.__crashed and not (isinstance(message[1],tuple) and (message[1][0] == Command.Restore or message[1][0] == Command.Recover)):
                 return True
             if self.__crashed:
                 self._log.info('><><><><>< crashing: received ><><><><>< %r', message[1][0])
-                
         except common.QueueEmpty:
             message = None
         except Exception as e:
@@ -2012,7 +1886,6 @@ class ProcessContainer:
             self.start_router()
             self._daobj = self._dacls(self, forwarder, **(self._properties))
             self._log.debug("Process object initialized.")
-
             return self._daobj._delayed_start()
 
         except DistProcessExit as e:

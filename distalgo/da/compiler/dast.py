@@ -976,6 +976,15 @@ class SliceExpr(Expression):
     def step(self, idx):
         self.subexprs[2] = idx
 
+class ExtSliceExpr(Expression):
+    @property
+    def dims(self):
+        return self.subexprs
+
+    @dims.setter
+    def dims(self, idx):
+        self.subexprs = idx
+
 
 class StarredExpr(SimpleExpr): pass
 class EllipsisExpr(SimpleExpr): pass
@@ -1475,12 +1484,14 @@ class MinCompExpr(ComprehensionExpr): pass
 class MaxCompExpr(ComprehensionExpr): pass
 class SumCompExpr(ComprehensionExpr): pass
 class LenCompExpr(ComprehensionExpr): pass
+class PrdCompExpr(ComprehensionExpr): pass
 
 class AggregateExpr(CallExpr, QueryExpr): pass
 class MaxExpr(AggregateExpr): pass
 class MinExpr(AggregateExpr): pass
 class SizeExpr(AggregateExpr): pass
 class SumExpr(AggregateExpr): pass
+class ProdExpr(AggregateExpr): pass
 
 class ComparisonOperator(DistNode): pass
 class EqOp(ComparisonOperator): pass
@@ -2492,12 +2503,6 @@ class EventHandler(Function):
             return super().name
         return "_%s_handler_%d" % (self.first_parent_of_type(Process).name,
                                    self.index)
-# class Rule(DistNode):
-#     def __init__(self):
-#         self.LhsVars = set()
-#         self.LhsAry = dict()
-#         self.RhsVars = set()
-#         self.Unbounded = set()
 
 class Process(CompoundStmt, ArgumentsContainer):
 
@@ -2524,10 +2529,6 @@ class Process(CompoundStmt, ArgumentsContainer):
         self.entry_point = None
         # List of event handlers:
         self.events = []
-
-        # Rule Related
-        self.currentRule = None
-        self.RuleConfig = dict()
 
     @property
     def methodnames(self):

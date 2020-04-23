@@ -1,5 +1,5 @@
-from ..parser import *
-from .. import parser
+from da.compiler.parser import *
+from da.compiler import parser
 from . import constraint_ast as cast
 
 from pprint import pprint

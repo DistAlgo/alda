@@ -80,20 +80,6 @@ internal_registry = dict()
 class InvalidStateException(RuntimeError): pass
 
 class ConfigurationError(RuntimeError): pass
-
-
-rule_path = os.path.join(os.path.dirname(__file__),'rules')
-if not os.path.exists(rule_path):
-    os.mkdir(rule_path)
-
-def write_file(filename, string):
-    # print('>>>>>>>>>>>>>>>>>>>>>>>>>> write_file',filename,os.getcwd())
-    file = open(os.path.join(rule_path,filename),'w')
-    file.write(string)
-    file.close()
-
-def read_answer(filename):
-    return open(os.path.join(rule_path,"{}.answers".format(filename)),"r").read()
     
 def get_runtime_option(key, default=None):
     """Returns the configured value of runtime option 'key', or 'default' if 'key'
@@ -189,7 +175,6 @@ def initialize_runtime_options(options=None):
         GlobalOptions = dict()
     if options:
         GlobalOptions.update(options)
-
     # Parse '--substitute-classes' and '--substitute-modules':
     GlobalOptions['substitute_classes'] = \
                             _parse_items(GlobalOptions.get('substitute_classes'))

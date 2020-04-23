@@ -30,11 +30,11 @@ from collections import abc
 
 from da import common
 from . import dast
-from . import ruleast
 from .utils import Namespace
 from .utils import CompilerMessagePrinter
 from .utils import MalformedStatementError
 from .utils import ResolverException
+from .utils import printe
 
 from pprint import pprint
 
@@ -61,6 +61,7 @@ KW_AGGREGATE_SIZE = "len"
 KW_AGGREGATE_MIN = "min"
 KW_AGGREGATE_MAX = "max"
 KW_AGGREGATE_SUM = "sum"
+KW_AGGREGATE_PROD = "prod"
 KW_COMP_SET = "setof"
 KW_COMP_TUPLE = "tupleof"
 KW_COMP_LIST = "listof"
@@ -70,6 +71,7 @@ KW_COMP_MAX = "maxof"
 KW_COMP_SUM = "sumof"
 KW_COMP_LEN = "lenof"
 KW_COMP_COUNT = "countof"
+KW_COMP_PROD = "prodof"
 KW_AWAIT = "await"
 KW_AWAIT_TIMEOUT = "timeout"
 KW_SEND = "send"
@@ -85,9 +87,18 @@ KW_SUCH_THAT = "has"
 KW_RESET = "reset"
 KW_INC_VERB = "_INC_"
 
-KW_RULES = "rules"
-KW_COND = "if_"
-KW_INFER = "infer"
+exprDict = {
+    KW_COMP_SET: dast.SetCompExpr,
+    KW_COMP_LIST: dast.ListCompExpr,
+    KW_COMP_DICT: dast.DictCompExpr,
+    KW_COMP_TUPLE: dast.TupleCompExpr,
+    KW_COMP_MIN: dast.MinCompExpr,
+    KW_COMP_MAX: dast.MaxCompExpr,
+    KW_COMP_SUM: dast.SumCompExpr,
+    KW_COMP_PROD: dast.PrdCompExpr,
+    KW_COMP_LEN: dast.LenCompExpr,
+    KW_COMP_COUNT: dast.LenCompExpr
+}
 
 ##########################
 # Helper functions:
@@ -280,10 +291,11 @@ AggregateMap = {
     KW_AGGREGATE_MAX  : dast.MaxExpr,
     KW_AGGREGATE_MIN  : dast.MinExpr,
     KW_AGGREGATE_SIZE : dast.SizeExpr,
-    KW_AGGREGATE_SUM  : dast.SumExpr
+    KW_AGGREGATE_SUM  : dast.SumExpr,
+    # KW_AGGREGATE_PROD  : dast.ProdExpr,
 }
 ComprehensionTypes = {KW_COMP_SET, KW_COMP_TUPLE, KW_COMP_DICT, KW_COMP_LIST, 
-                      KW_COMP_MAX, KW_COMP_MIN, KW_COMP_SUM, KW_COMP_LEN, KW_COMP_COUNT}
+                      KW_COMP_MAX, KW_COMP_MIN, KW_COMP_SUM, KW_COMP_LEN, KW_COMP_COUNT, KW_COMP_PROD}
 EventKeywords = {KW_EVENT_DESTINATION, KW_EVENT_SOURCE, KW_EVENT_LABEL,
                  KW_EVENT_TIMESTAMP}
 Quantifiers = {KW_UNIVERSAL_QUANT, KW_EXISTENTIAL_QUANT}
@@ -489,7 +501,7 @@ class Pattern2Constant(NodeVisitor):
     def visit_FreePattern(self, node):
         # This really shouldn't happen
         mesg = "Can not convert FreePattern to constant!"
-        print(mesg, node.lineno, node.col_offset)
+        printe(mesg, node.lineno, node.col_offset)
         return None
 
     def visit_TuplePattern(self, node):
@@ -543,7 +555,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         self.current_block = None
         self.current_context = None
         self.current_label = None
-        self.current_rule = None
         # Allows temporarily overriding `current_process`:
         self._dummy_process = None
         self.program = execution_context
@@ -971,171 +982,8 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
     def visit_AsyncFunctionDef(self, node):
         self.error('Python async functions are not supported!', node)
 
-
-    # Rules:
-    def create_assersion(self,node,lhs = False):
-        args = []
-        # pprint('============ create_assersion ============')
-        # pprint(node.func.id)
-        # pprint(vars(node))
-        # pprint(vars(node.func))
-        n = self.current_scope.find_name(node.func.id)
-        # pprint(n)
-        if n is not None:
-            if lhs:
-                self.current_rule['LhsVars'].add(n)
-                self.current_rule['LhsAry'][n] = len(node.args)
-            else:
-                self.current_rule['RhsVars'].add(n)
-        else:
-            if lhs:
-                 self.current_rule['Unboundedleft'].add(node.func.id)
-                 self.current_rule['UnboundedleftAry'][node.func.id] = len(node.args)
-            else:
-                 self.current_rule['Unboundedright'].add(node.func.id)
-
-
-        for a in node.args:
-            if isinstance(a,Call):
-                assers = self.create_assersion(a,lhs)
-                args.append(assers)
-            elif isinstance(a, Name):
-                args.append(ruleast.LogicVar(a.id))
-            elif isinstance(a, Num):
-                # pprint(vars(a))
-                args.append(ruleast.LogicVar(a.n))
-            elif isinstance(a, Str):
-                # pprint(vars(a))
-                args.append(ruleast.LogicVar("'"+a.s+"'"))
-            elif isinstance(a, UnaryOp):
-                if isinstance(a.op, USub):
-                    v = -1 * a.operand.n
-                elif isinstance(a.op, UAdd):
-                    v = a.operand.n
-                else:
-                    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                    pprint(a)
-                    pprint(vars(a))
-                args.append(ruleast.LogicVar(v))
-            else:
-                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                pprint(a)
-                pprint(vars(a))
-        a = ruleast.Assertion(ruleast.Constant(node.func.id),args)
-
-        return a
-
-
-    def create_condition(self,node):
-        if node.func.id == KW_COND:
-            assersions = []
-            for a in node.args:
-                assers = self.create_assersion(a)
-                assersions.append(assers)
-            return assersions
-        else:
-            self.error('Invalid Rule')
-        
-
-    def visit_Rule(self,node):
-        # pprint(vars(node))
-        r = None
-        if (isinstance(node, Tuple)):   # conclusion, condition
-            concl = self.create_assersion(node.elts[0],True)
-            conds = self.create_condition(node.elts[1])
-            r = ruleast.Rule(concl,conds)
-
-        elif (isinstance(node, Call)):  # only condition
-            conds = self.create_condition(node)
-            r = ruleast.Rule(None,conds)
-
-        # print(r)
-        # print(vars(r))
-        return r
-
-
-    def create_rules(self, rulecls, ast, decls, nopush=False):
-        # pprint(vars(self))
-        # if self.current_process is not None:
-        self.current_rule = dict()
-        self.current_rule['LhsVars'] = set()
-        self.current_rule['LhsAry'] = dict()
-        self.current_rule['RhsVars'] = set()
-        self.current_rule['Unboundedleft'] = set()
-        self.current_rule['UnboundedleftAry'] = dict()
-        self.current_rule['Unboundedright'] = set()
-        self.current_rule['Unbounded'] = set()
-        rules = []
-        for r in ast.body:
-            rules.append(self.visit_Rule(r.value))
-
-        self.current_rule['RhsVars'] -= self.current_rule['LhsVars']
-        self.current_rule['Unbounded'] = self.current_rule['Unboundedright'] - self.current_rule['Unboundedleft']
-        # print('============== create_rules ==============')
-        if len(self.current_rule['Unbounded']) == 0:
-            for rv in self.current_rule['RhsVars']:
-                rv.triggerInfer.add(decls)
-                # print('============== added to triggerInfer ==============')
-                # print(rv)
-
-        rulesobj = rulecls(decls, rules)
-        rulesobj.label = self.current_label
-        self.current_label = None
-
-        return rulesobj
-
-
-
     def visit_FunctionDef(self, node):
-        if (node.name == KW_RULES):
-            numArgs = len(node.args.args)
-            decl = ''
-            if numArgs > 0:
-                for i in range(numArgs):
-                    if node.args.args[i].arg == 'name':
-                        decl = node.args.defaults[i].s
-                        break
-            if not decl:
-                try:
-                    decl = str(self.state_stack[-1][0].name)
-                except:
-                    self.error("Empty rule name not allowed.")
-
-            # n = self.current_scope.add_name(node.name)
-            s = self.create_rules(ruleast.Rules, node, decl)
-            # pprint(node)
-            # pprint(vars(node))
-            # print('>>>>>>>>>>>>>>>>>> current_scope >>>>>>>>>>>>>>>>>>')
-            # pprint(self.current_scope)
-            # pprint(vars(self.current_scope))
-            # print('>>>>>>>>>>>>>>>>>> current_parent >>>>>>>>>>>>>>>>>>')
-            # pprint(self.current_parent)
-
-            if not hasattr(self.current_parent,'RuleConfig'):
-                self.current_parent.RuleConfig = dict()
-            self.current_parent.RuleConfig[decl] = self.current_rule
-
-            if hasattr(self.current_parent,'rules'):
-                self.current_parent.rules.append(s)
-            else:
-                self.current_parent.rules = [s]
-
-            # if isinstance(self.current_parent, dast.Process):
-            #     if hasattr(self.current_process,'rules'):
-            #         self.current_process.rules.append(s)
-            #     else:
-            #         self.current_process.rules = [s]
-            # elif isinstance(self.current_parent, dast.Program):
-            #     if hasattr(self.current_parent,'rules'):
-            #         self.current_parent.rules.append(s)
-            #     else:
-            #         self.current_parent.rules = [s]
-            # else:
-            #     self.error("Invalid context for '%s' statement." % KW_RULES, node)
-
-            self._dummy_process = None
-
-        elif (self.current_process is None or
+        if (self.current_process is None or
                 node.name not in {KW_SENT_EVENT, KW_RECV_EVENT}):
             # This is a normal method
             if self.current_parent is self.current_process:
@@ -1275,9 +1123,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
     # Since Python 3.6:
     def visit_AnnAssign(self, node):
-        # print("================= Annotation ==============")
-        # print(node)
-        # pprint(vars(node))
         stmtobj = self.create_stmt(dast.AssignmentStmt, node)
         self.current_context = Assignment(stmtobj,
                                           type=self.visit(node.annotation))
@@ -1373,9 +1218,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
             # Post-3.7 style await:
             elif isinstance(e, Await):
-                # print('visit_Expr')
-                # pprint(vars(e))
-                # pprint(vars(e.value))
                 stmtobj = self.create_stmt(dast.AwaitStmt, node)
                 self.current_context = Read(stmtobj)
                 # if await condition e.value is call to timeout with 1 argument
@@ -1724,13 +1566,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
     # constructed dast AST node
 
     def visit_Attribute(self, node):
-
-        # pprint('==================== visit_Attribute ====================')
-        # pprint(self)
-        # pprint(node)
-        # pprint(vars(node))
-        # pprint(vars(node.value))
-
         expr = self.create_expr(dast.AttributeExpr, node)
         oldctx = self.current_context
         if (isinstance(self.current_context, FunCall) and
@@ -1779,10 +1614,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                     n.add_update(oldctx.node, oldctx.type)
                 else:
                     n.add_read(expr)
-
-            # pprint('==================== visit_Attribute ====================')
-            # pprint(n)
-            # pprint(vars(n._indexes[0][1][0]))
             expr.value = n
             self.pop_state()
         return expr
@@ -1810,7 +1641,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             if (node.starargs is not None or node.kwargs is not None):
                 self.warn("extraneous arguments in event expression.", node)
         pattern = self.parse_pattern_expr(node.args[0], literal)
-        # print(node.args)
         if node.func.id == KW_RECV_QUERY:
             event = dast.Event(self.current_process,
                                event_type=dast.ReceivedEvent,
@@ -2017,23 +1847,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         return expr
 
     def parse_comprehension(self, node):
-        if node.func.id == KW_COMP_SET:
-            expr_type = dast.SetCompExpr
-        elif node.func.id == KW_COMP_LIST:
-            expr_type = dast.ListCompExpr
-        elif node.func.id == KW_COMP_DICT:
-            expr_type = dast.DictCompExpr
-        elif node.func.id == KW_COMP_TUPLE:
-            expr_type = dast.TupleCompExpr
-            
-        elif node.func.id == KW_COMP_MIN:
-            expr_type = dast.MinCompExpr
-        elif node.func.id == KW_COMP_MAX:
-            expr_type = dast.MaxCompExpr
-        elif node.func.id == KW_COMP_SUM:
-            expr_type = dast.SumCompExpr
-        elif node.func.id == KW_COMP_LEN or node.func.id == KW_COMP_COUNT:
-            expr_type = dast.LenCompExpr
+        expr_type = exprDict[node.func.id]
 
         expr = self.create_expr(expr_type, node)
         self.enter_query()
@@ -2096,14 +1910,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             self.error(msg, expr)
 
     def parse_aggregates(self, node):
-        if node.func.id == KW_AGGREGATE_SUM:
-            expr_type = dast.SumExpr
-        elif node.func.id == KW_AGGREGATE_SIZE:
-            expr_type = dast.SizeExpr
-        elif node.func.id == KW_AGGREGATE_MIN:
-            expr_type = dast.MinExpr
-        elif node.func.id == KW_AGGREGATE_MAX:
-            expr_type = dast.MaxExpr
+        expr_type = AggregateMap[node.func.id]
 
         expr = self.create_expr(expr_type, node)
         self.current_context = Read(expr)
@@ -2172,22 +1979,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                 res.append((key, value))
         return res
 
-
-    # infer
-    # def parse_infer(self,node):
-    #     # pprint(vars(node))
-    #     try:
-    #         stmtobj = self.create_expr(ruleast.InferStmt, node)
-    #         stmtobj.bindings = self.visit(node.args[0])
-    #         stmtobj.queries = self.visit(node.args[1])
-    #         stmtobj.rule = self.visit(node.args[2])
-    #         self.pop_state()
-    #         # pprint(vars(stmtobj))
-    #         return stmtobj
-    #     except MalformedStatementError as e:
-    #         self.error("malformed statement spec: " + e.reason, e.node)
-
-
     def visit_Call(self, node):
         try:
             if expr_check(Quantifiers, 1, None, node,
@@ -2196,9 +1987,6 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
             if expr_check(ComprehensionTypes, 2, None, node):
                 return self.parse_comprehension(node)
-
-            # if expr_check({KW_INFER}, 2, 3, node):
-            #     return self.parse_infer(node)
 
             if self.current_process is not None and \
                expr_check({KW_RECV_QUERY, KW_SENT_QUERY}, 1, 1, node,
@@ -2268,7 +2056,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             self.debug("Config expression. ", node)
             expr = self.create_expr(dast.ConfigExpr, node)
         elif expr_check(AggregateMap, 1, None, node,
-                        keywords={}, optional_keywords={}):
+                        keywords={}, optional_keywords={'default'}):
             self.debug("Aggregate: " + node.func.id, node)
             expr = self.create_expr(AggregateMap[node.func.id], node)
         else:
@@ -2456,47 +2244,61 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         return e
 
     def visit_Compare(self, node):
-        if len(node.ops) > 1:
-            self.error("Explicit parenthesis required in comparison expression",
-                       node)
-            return None
-        outer = None
-        # We make all negation explicit:
-        if type(node.ops[0]) in NegatedOperators:
-            outer = self.create_expr(dast.LogicalExpr, node)
-            outer.operator = dast.NotOp
+        result = []
 
-        expr = self.create_expr(dast.ComparisonExpr, node)
+        for i in range(len(node.ops)):
+            if i == 0:
+                left = node.left
+            else:
+                left = right
+            op = node.ops[i]
+            right = node.comparators[i]
 
-        if self.get_option('enable_membertest_pattern', default=False):
-            # DistAlgo: overload "in" to allow pattern matching
-            if isinstance(node.ops[0], In) or \
-                   isinstance(node.ops[0], NotIn):
-                # Backward compatibility: only assume pattern if containing free
-                # var
-                pf = PatternFinder()
-                pf.visit(node.left)
-                if pf.found:
-                    expr.left = self.parse_pattern_expr(node.left)
-        if expr.left is None:
-            expr.left = self.visit(node.left)
-        self.current_context = Read(expr.left)
-        expr.right = self.visit(node.comparators[0])
-        if (isinstance(expr.right, dast.HistoryExpr) and
-                expr.right.event is not None):
-            # Must replace short pattern format with full pattern here:
-            expr.left = self.pattern_from_event(expr.right.event)
+            outer = None
+            # We make all negation explicit:
+            if type(op) in NegatedOperators:
+                outer = self.create_expr(dast.LogicalExpr, node)
+                outer.operator = dast.NotOp
 
-        if outer is not None:
-            expr.comparator = NegatedOperators[type(node.ops[0])]
-            outer.subexprs.append(expr)
-            self.pop_state()
-            self.pop_state()
-            return outer
+            expr = self.create_expr(dast.ComparisonExpr, node)
+
+            if self.get_option('enable_membertest_pattern', default=False):
+                # DistAlgo: overload "in" to allow pattern matching
+                if isinstance(op, In) or \
+                       isinstance(op, NotIn):
+                    # Backward compatibility: only assume pattern if containing free
+                    # var
+                    pf = PatternFinder()
+                    pf.visit(left)
+                    if pf.found:
+                        expr.left = self.parse_pattern_expr(left)
+            if expr.left is None:
+                expr.left = self.visit(left)
+            self.current_context = Read(expr.left)
+            expr.right = self.visit(right)
+            if (isinstance(expr.right, dast.HistoryExpr) and
+                    expr.right.event is not None):
+                # Must replace short pattern format with full pattern here:
+                expr.left = self.pattern_from_event(expr.right.event)
+
+            if outer is not None:
+                expr.comparator = NegatedOperators[type(op)]
+                outer.subexprs.append(expr)
+                self.pop_state()
+                self.pop_state()
+                result.append(outer)
+            else:
+                expr.comparator = OperatorMap[type(op)]
+                self.pop_state()
+                result.append(expr)
+
+        if len(result) == 1:
+            return result[0]
         else:
-            expr.comparator = OperatorMap[type(node.ops[0])]
+            e = self.create_expr(dast.LogicalExpr, node, {"op": dast.AndOp})
+            e.subexprs = result
             self.pop_state()
-            return expr
+            return e
 
     def visit_UnaryOp(self, node):
         if type(node.op) is Not:
@@ -2538,7 +2340,11 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
     def visit_ExtSlice(self, node):
         # self.warn("ExtSlice in subscript not supported.", node)
-        return self.create_expr(dast.PythonExpr, node, nopush=True)
+        expr = self.create_expr(dast.ExtSliceExpr, node)
+        dims = [self.visit(d) for d in node.dims]
+        expr.dims = dims
+        self.pop_state()
+        return expr
 
     def visit_Yield(self, node):
         # Should not get here: 'yield' statements should have been handles by

@@ -1,29 +1,3 @@
-# Config
-
-## 1. crash and recover
-* set `config(enable_crash=True)` to enable the feature of crash and recover
-* call `crash(procs)` to set procs to crash, call `recover(procs)` to set procs to recover
-
-## 2 backup and restore
-* set `config(enable_backup=True)` to enable the feature of backup and restore
-* call `backup([procs,name])`  
-  to backup procs with name. the backup file will be in a folder named: `backup_<process_id>_<name>_<timestamp>`  
-  if procs is omitted, then backup self, if name is omitted then name = ""
-* call `restore([procs,name])`  
-  to restore procs from backup name  
-  if procs is ommited, restore self.  
-  if name is provided, restore from the latest backup with name  
-  if name is ommited, restore from the latest backup
-
-
-## 3 lossy channel
-* only works for local connections
-* config(channel=lossy [,loss_rate=N]): if not set the default loss_rate is 0.1
-
-
-
-
-
 # DistAlgo
 
   DistAlgo is a very high-level language for programming distributed
@@ -36,7 +10,7 @@
 
 ## Python
 
-   DistAlgo requires Python version 3.5 or higher, which can be obtained
+   DistAlgo requires Python version 3.5, 3.6, or 3.7, which can be obtained
    from http://www.python.org. This document assumes that your installation
    uses the default name `python` for the Python executable.
 

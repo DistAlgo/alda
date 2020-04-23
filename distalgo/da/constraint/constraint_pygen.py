@@ -1,5 +1,5 @@
-from ..pygen import *
-from .. import pygen
+from da.compiler.pygen import *
+from da.compiler import pygen
 from pprint import pprint
 from . import constraint_ast as cast
 import os,io
@@ -22,7 +22,7 @@ def to_source(tree):
 class PythonGenerator(pygen.PythonGenerator):
 	def __init__(self, filename="", options=None):
 		super().__init__(filename, options)
-		print('constraint_PythonGenerator')
+		# print('constraint_PythonGenerator')
 		self.constraint_options = dict()	# get from parser, the information of required/inferred parameter
 		self.constraint_info = set()		# get from parser, containing the assignment/update statement (if exist) of arguments in query
 		self.constraint_obj = dict()		# containing the information of whole constraints, to be passed into Translator
@@ -71,7 +71,7 @@ class PythonGenerator(pygen.PythonGenerator):
 		# 	self.constraint_info |= node.constraint_info
 		if hasattr(node, 'constraint_options'):
 			self.constraint_options.update(node.constraint_options)
-			imptquery = ImportFrom('da.query',[alias('query', None)],0)
+			imptquery = ImportFrom('da.constraint.query',[alias('query', None)],0)
 			self.preambles.append(imptquery)
 			self.preambles.append(self._generate_underscoreAssign())
 			self.preambles.append(self._generate_constraint_obj())
@@ -391,7 +391,7 @@ class PythonGenerator(pygen.PythonGenerator):
 	def _generate_query(self, node):
 		# for query called globally, replace the self with global()
 		parent_process = node
-		while not (isinstance(parent_process, dast.Process) or isinstance(parent_process, dast.Program)):
+		while parent_process and not (isinstance(parent_process, dast.Process) or isinstance(parent_process, dast.Program)):
 			# pprint(vars(parent_process))
 			if not hasattr(parent_process, 'process'):
 				parent_process = parent_process.parent
@@ -401,6 +401,9 @@ class PythonGenerator(pygen.PythonGenerator):
 		if isinstance(parent_process, dast.Program):
 			target = 'query'
 			inferarg = [pyCall(pyName('globals'))]
+		elif not parent_process:
+			target = 'query'
+			inferarg = [pyTuple([pyCall(pyName('globals')),pyCall(pyName('locals'))])]
 		else:
 			target = pyAttr("self", 'query')
 			inferarg = []

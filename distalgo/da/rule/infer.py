@@ -1,4 +1,4 @@
-from .common import write_file, read_answer, rule_path
+from .rule_io import write_file, read_answer, rule_path
 import sys, os, subprocess
 from pprint import pprint
 from ast import literal_eval
@@ -12,7 +12,7 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
     if not rule:
         print('Rule Name Unknown')
 
-    print('=================================== infer ===================================')
+    print('=================================== infering ===================================')
     # print(self)
     allBindings = set(b for b,_ in bindings)
 
@@ -64,16 +64,19 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
     write_file(rule+'.facts', xsb_facts)
 
     results = []
+    # utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     for q in queries:
         xsb_query = "extfilequery_nb:external_file_query('{}',{}).".format(os.path.join(rule_path,rule),UniqueLowerCasePrefix+q)
-        xsb_path = os.path.join(rule_path,'xsb')
+        xsb_path = os.path.join(rule_path,'..','xsb')
+        print(rule_path)
         subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query])
         answers = read_answer(rule)
         tuples = set(tuple(literal_eval(v) for v in a.split(',')) if len(a.split(',')) > 1 else literal_eval(a) for a in answers.split("\n")[:-1])
         # tuples = set(y if len(y := literal_eval(a)) > 1 else y[0] for a in answers.split("\n")[:-1])
         
         results.append(tuples)
-
+    # utime, stime, cutime, cstime, elapsed_time = os.times()
+    # return elapsed_time-elapsed_time1, utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1
     if len(results) == 0:
         return results
     if len(results) == 1:
