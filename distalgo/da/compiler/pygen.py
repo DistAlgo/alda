@@ -455,6 +455,18 @@ class PythonGenerator(NodeVisitor):
         fixup_locations_in_block(res)
         return res
 
+    def visit_IntsExpr(self, node):
+        args = []
+        if node.start:
+            args.append(self.visit(node.start))
+        else:
+            args.append(Num(1))
+        if node.end:
+            args.append(BinOp(self.visit(node.end), Add(), Num(1)))
+        if node.step:
+            args.append(BinOp(self.visit(node.step), Sub(), args[0]))
+        return pyCall(pyName('range'),args)
+
     def visit_Program(self, node):
         self.module_args = node._compiler_options
         mainbody = self.body(node.body)

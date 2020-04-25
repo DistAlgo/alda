@@ -2576,3 +2576,20 @@ class Process(CompoundStmt, ArgumentsContainer):
 
     def __repr__(self):
         return str(self)
+
+class IntsExpr(DistNode):
+    _fields = ['start', 'end', 'step']
+    def __init__(self, args, parent=None, ast=None):
+        super().__init__(parent, ast)
+        assert(1 <= len(args) <= 3)
+        for f in self._fields:
+            setattr(self, f, None)
+        if len(args) == 1:
+            self.end = args[0]
+        else:
+            self.start = args[0]
+            if len(args) == 2:
+                self.end = args[1]
+            else:
+                self.step = args[1]
+                self.end = args[2]

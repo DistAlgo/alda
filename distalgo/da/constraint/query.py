@@ -4,7 +4,16 @@ MZ_MODEL_HOME = os.path.join(os.path.dirname(__file__),'minizinc_model')
 
 from pprint import pprint
 
-SOVLER_DEFAULT = 'gecode'
+# gecode, chuffed, cbc, google.or.tools
+SOVLER_DEFAULT = 'cbc'
+
+def get_value(val):
+	if isinstance(val, (int, float, bool, str, set)):
+		return str(val)
+	elif isinstance(val,range):
+		return str(list(val))
+	else:
+		print('ERROR: da.constraint.query, function get_value, unsupported type', val)
 
 def flat_list(inputlist, dimension=1, current_len=[]):
 	if isinstance(inputlist,list) and len(inputlist) > 0 and isinstance(inputlist[0],list):
@@ -14,11 +23,12 @@ def flat_list(inputlist, dimension=1, current_len=[]):
 			output += l
 		return flat_list(output, dimension+1, current_len)
 	elif isinstance(inputlist,list):
-		tmplist = ['_' if (l is None) else str(l) for l in inputlist]
+		tmplist = ['_' if (l is None) else get_value(l) for l in inputlist]
 		tmplen = ','.join(['1..%s'%l for l in current_len])
 		return 'array%sd(%s,[%s])' % (dimension,tmplen,','.join(tmplist))
 	else:
-		print("TODO: should't get here")
+		# print("TODO: should't get here")
+		return get_value(inputlist)
 		
 def query(self, constraint, **args):
 	if isinstance(self, tuple):
@@ -31,7 +41,6 @@ def query(self, constraint, **args):
 	datafile = os.path.join(MZ_MODEL_HOME, constraint+'.dzn')
 	file = open(datafile,'w')
 	returnval = []
-
 	for key in _constraint_object[constraint]:
 		if key not in args:
 			if isinstance(self,tuple):
@@ -47,7 +56,7 @@ def query(self, constraint, **args):
 		if isinstance(val, list):
 			flatten_val = flat_list(val,current_len=[len(val)])
 		else:
-			flatten_val = str(val)
+			flatten_val = get_value(val)
 		file.write('%s = %s;\n' % (key,flatten_val))
 
 	for key, val in args.items():

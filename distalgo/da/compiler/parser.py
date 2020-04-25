@@ -86,6 +86,7 @@ KW_NULL = "None"
 KW_SUCH_THAT = "has"
 KW_RESET = "reset"
 KW_INC_VERB = "_INC_"
+KW_INTS = 'ints'
 
 exprDict = {
     KW_COMP_SET: dast.SetCompExpr,
@@ -2059,6 +2060,9 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                         keywords={}, optional_keywords={'default'}):
             self.debug("Aggregate: " + node.func.id, node)
             expr = self.create_expr(AggregateMap[node.func.id], node)
+        elif expr_check(KW_INTS, 1, 3, node):
+            expr = dast.IntsExpr([self.visit(a) for a in node.args], self.current_parent, node)
+            self.push_state(expr)
         else:
             if isinstance(node.func, Name):
                 self.debug("Method call: " + str(node.func.id), node)

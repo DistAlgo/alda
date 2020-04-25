@@ -353,7 +353,7 @@ class Translator(NodeVisitor):
 			domain = self.visit(node.domain)
 			return '%s: %s;\n' % (domain, name)
 		else:
-			if isinstance(node.value, dast.ComprehensionExpr):
+			if isinstance(node.value, (dast.SetCompExpr, dast.ListCompExpr)):#dast.ComprehensionExpr
 				node.domain.opt = True
 			domain = self.visit(node.domain)
 			value = self.visit(node.value)
