@@ -26,4 +26,6 @@ slots = set(ints(19))#set(range(1,20))#ints(1,19)
 prefs = [[1 if random() < 0.4 else 0 for t in slots] for s in students]	#prefs = {(s,t) for s in students for t in slots if random()<0.04}
 # pprint(prefs)
 assignment = query(constraint='schedule')
-pprint(assignment)
+assign = assignment['assign']
+pprint([(s,t) for s in students for t in slots if assign[s-1][t-1] == 1])
+# pprint(assignment)
