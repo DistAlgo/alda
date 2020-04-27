@@ -52,22 +52,21 @@
 					boolean_expr_1
 					boolean_expr_2
 			```
-
 			By defualt, the statements inside the block of a constraint definition are of `and` relation, so that compared to the first way, the definition of constraints can be simplified by omitting the `and` operator. By assigning the logic parameter to `or`, the logic relation between the statements are set to `or`.
 		- Theoretically the `boolean_expr` can be any expression that returns boolean value. But currently only `some`, `each`, comparison, `alldiff` are supported. Boolean operators (`and`, `or`, `not`) can be used to connect the previous expressions.
 		- Note: `alldiff` is a builtin function with one argument that takes a `dict` variable, or a generator, and returns `True` if each element in the sequence takes pairwisely different value, otherwise `False`.
 	3. Target. Usually there are two types of constraint solving problems: constraint satisfaction problem (CSP) and constraint optimization problem (COP). The target of a CSP is to finding assignments to decision variables such that all the constraints are satified. For COPs, in addition to the constraints of CSP, there is also an optimization goal, usually is some expression of decision variables that needs to be minimized or maximized. The target is defined by a `return` statement of target function: 
 		```python
-			return anyof(some_decision_variable, c_1, c_2, to_max(target))```
-
+			return anyof(some_decision_variable, c_1, c_2, to_max(target))
+		```
 		- There are two target functions: `anyof` and `setof`. `anyof` returns one of the assignments to decision variables and `setof` returns all the valid assignments. Currently only `anyof` is implemented.
 		- The first argument of the target function indicates the decision variable or tuple of decision variables you want to get from solving the problem.
 		- If the last argument of the function is a calling of `to_max` or `to_min`, it is the optimization target for a COP, solving maximize or minimize respectively. If the last argument is not a calling of `to_max` or `to_min`, then the problem is treated as a CSP.
 		- The other arguments are name of constraints that you want to apply to the problem.
 - Solving the problem. After defining the problem, call 
 	```python
-		query(constraint='name_of_problem',parameter_1=value_1,parameter_2=value_2,...)``` 
-
+		query(constraint='name_of_problem',parameter_1=value_1,parameter_2=value_2,...)
+	``` 
 	to solve the problem.
 	- parameters are passed in as keyword arguments.
 	- Values or variables can be passed in as parameters. 
