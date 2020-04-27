@@ -11,7 +11,7 @@
 
 ### How to write and solve a constraint solving problem
 - A constriant solving problem can be written as easy as defining a function. 
-```python
+  ```python
 	def constraint(name='name_of_problem',parameters={set,of,parameters}):
 		# Variables
 		name_of_variable_1: domain_of_variable_1
@@ -26,7 +26,7 @@
 		return anyof(some_decision_variable, c_1, c_2, to_max(target))
 
 	result = query(constraint='name_of_problem',parameter_1=value_1,parameter_2=value_2,...)
-```
+  ```
 - The function must be named by `constraint`, with two argument `name` and `parameters`. 
 	- `name` is the unique identifier of the problem, 
 	- `parameters` is a set containing the parameters whose values need to be passed in.
@@ -73,12 +73,50 @@
 	- When passing in a variable, if a variable is in the same scope as calling `query` or is a global variable,  and of the same name as the target parameter in the defined problem, the passing in of that parameter can be omitted.
 	- The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first element of the target function of the problem. If the problem is COP, an additional `objective` item will also be returned. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explaination of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
 
-### Running the Constaint Examsple
+### Running the Constaint Examples
 1. USAGE: `python3 -m da --constraint <filename>`
 2. some working examples are inside `examples/constraints` folder.
 
-### How to write with rules
-1. TODO
+### How to programming with rules
+- A set of Datalog rules can be written as easy as a Python function
+  ```python
+	def rules(name='name_of_rule'):
+		conclusion_1, if_(condition_1, condition_2, ...)
+		conclusion_2, if_(conclusion_1, condition_3, ...)
+
+	result = infer(rule='name_of_rule', 
+                       bindings=[('condition_1',variable_1),('condition_2',variable_2)],
+                       queries=['conclusion_2'])
+  ```
+- The function must be named by `rules`, with an argument `name` indicating the unique identifier of the rule set.
+- Inside the function block, Datalog rules of form `conclusion :- condition_1, condition_2, ....` can be written as `conclusion_1, if_(condition_1, condition_2, ...)`. Each conclusion and condition are predicates of the form `predicate(var_1, var_2, ...)`
+- Datalog rules can be used to easily write database alike queries and recursion. For example, the following rule set can be used to computing the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of a graph:
+	```python
+	def rules(name='transitive_closure'):
+		path(x,y), if_(edge(x,y))
+		path(x,y), if_(edge(x,z), path(z,y))
+	```
+- Understanding rules with Python thinking
+	- Each predicate on the right hand side of the rule set can be seen as a membership check of set. For example, `edge(x,y)` returns `True` if tuple `(x,y)` is in the set `edge`. 
+	- Between different conditions on the right hand side of a rule is logic `and` relation. 
+	- And each predicate on the left hand side can be seen as a set add operation that for the rule `path(x,y), if_(edge(x,y))`, if there is tuple `(x,y)` in `edge`, then add `(x,y)` to set `path`. 
+	- The rules in a rule set will be executed repeatedly until no changes can be made.
+	- Although this is not exactly how Datalog engine works, the idea is the most equivalent correspondence in Python.
+- Infer with rules:
+	```python
+	result_1, result_2 = infer(rule='name_of_rule', 
+                               bindings=[('condition_1',variable_1),('condition_2',variable_2)],
+                               queries=['conclution_1','conclusion_2'])
+	```
+
+	call function `infer` with 
+	- parameter `rule` specifies the name of rule you want to use,
+	- parameter `bindings` is a list of tuples that binds predicate with a variable of set type in Python program.
+		- the first element is the name of a predicate in the rule set
+		- the second element is the name of a variable in Python program
+		- when a variable is defined in the same scope as calling of the `infer` function or is a global variable, and the name of the variable is the same as the predicate it is to be bound, the binding of this pair of predicate and variable can be omitted.
+	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
+	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
 
 ### Running the Rule Examples
 #### Trans

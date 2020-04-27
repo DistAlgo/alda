@@ -38,14 +38,14 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
     if len(queries) == 0:
         for v in _rules_object[rule]['UnboundedLeft']|_rules_object[rule]['LhsVars']:
             qstr = v[0]+'(' + ','.join('_'*v[1]) + ')'
-            queries.append(qstr)
+            queries.append(([os.path.join(rule_path,v[0]),"'"+UniqueLowerCasePrefix+qstr+"'"]))
     else:
         for (i, item) in enumerate(queries):
             if item.find('(') < 0:
                 for v,a in _rules_object[rule]['UnboundedLeft']|_rules_object[rule]['LhsVars']:
                     if v == item:
                         qstr = v+'(' + ','.join('_'*a) + ')'
-                        queries[i] = qstr
+                        queries[i] = [os.path.join(rule_path,v), "'"+UniqueLowerCasePrefix+qstr+"'"]
 
     xsb_facts = ""
     for b in bindings:
@@ -65,15 +65,14 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
 
     results = []
     # utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-    for q in queries:
-        xsb_query = "extfilequery_nb:external_file_query('{}',{}).".format(os.path.join(rule_path,rule),UniqueLowerCasePrefix+q)
-        xsb_path = os.path.join(rule_path,'..','xsb')
-        print(rule_path)
-        subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query])
-        answers = read_answer(rule)
-        tuples = set(tuple(literal_eval(v) for v in a.split(',')) if len(a.split(',')) > 1 else literal_eval(a) for a in answers.split("\n")[:-1])
-        # tuples = set(y if len(y := literal_eval(a)) > 1 else y[0] for a in answers.split("\n")[:-1])
-        
+    xsb_query = "extfilequery_nb_ty:external_file_query('{}',{}).".format(os.path.join(rule_path,rule),queries)
+    xsb_path = os.path.join(rule_path,'..','xsb')
+    print(rule_path)
+    subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query])
+    for r,_ in queries:
+        rname = os.path.basename(r)
+        answers = read_answer(rname)
+        tuples = [tuple(literal_eval(v) for v in a.split(',')) if len(a.split(',')) > 1 else literal_eval(a) for a in answers.split("\n")[:-1]]
         results.append(tuples)
     # utime, stime, cutime, cstime, elapsed_time = os.times()
     # return elapsed_time-elapsed_time1, utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1
