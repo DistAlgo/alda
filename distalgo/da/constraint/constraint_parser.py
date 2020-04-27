@@ -7,6 +7,7 @@ import json
 
 
 KW_CONSTRAINT = 'constraint'
+KW_QUERY = 'query'
 
 def gensym(prefix):
 	i = 0
@@ -74,10 +75,9 @@ class Parser(parser.Parser):
 			return rt
 		else:
 			return super().visit_FunctionDef(node)
-		
 
 	def visit_Call(self,node): 
-		if isinstance(node.func, Name) and node.func.id == 'query':
+		if isinstance(node.func, Name) and node.func.id == KW_QUERY:
 			if not hasattr(self.program, 'constraint_info'):
 				self.program.constraint_info = set()
 			for k in node.keywords:

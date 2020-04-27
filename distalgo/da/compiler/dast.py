@@ -2577,7 +2577,7 @@ class Process(CompoundStmt, ArgumentsContainer):
     def __repr__(self):
         return str(self)
 
-class IntsExpr(DistNode):
+class IntsExpr(Expression):
     _fields = ['start', 'end', 'step']
     def __init__(self, args, parent=None, ast=None):
         super().__init__(parent, ast)

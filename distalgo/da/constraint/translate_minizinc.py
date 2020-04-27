@@ -295,6 +295,9 @@ class Translator(NodeVisitor):
 			# should be error
 			print('TODO, trans_alldiff: seems not possible, raise error')
 
+	def visit_IntsExpr(self,node):
+		return '%s..%s' % (self.visit(node.start), self.visit(node.end))
+
 	def visit_CallExpr(self, node):
 		# _fields = ['func', 'args', 'keywords', 'starargs', 'kwargs']
 		func = self.visit(node.func)
