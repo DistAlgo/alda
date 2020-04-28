@@ -1,0 +1,5 @@
+1. extfilequery.P: output a list
+2. returnset.P: output a set
+3. stdout.P: output to stdout
+4. extfilequery_nb.P: write each answer on a new line in the result file
+5. latest version: support return multiple queries at one time
