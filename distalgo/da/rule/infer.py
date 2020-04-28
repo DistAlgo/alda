@@ -65,7 +65,7 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
 
     results = []
     # utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-    xsb_query = "extfilequery_nb_ty:external_file_query('{}',{}).".format(os.path.join(rule_path,rule),queries)
+    xsb_query = "extfilequery:external_file_query('{}',{}).".format(os.path.join(rule_path,rule),queries)
     xsb_path = os.path.join(rule_path,'..','xsb')
     print(rule_path)
     subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query])
