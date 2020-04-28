@@ -21,7 +21,7 @@ def constraint(name= 'min_cost_flow', parameter={s,t,vertex,capacity,cost,sd}):
 
   # Target:
   # find a flow of maximum amount for the entire network
-  obj: int = sumof(cost[u,v]*flow[u,v], (u, v) in vertex)
+  obj: int = sumof(cost[u,v]*flow[u,v], u in vertex, v in vertex)
   return anyof(flow, c, f, to_min(obj))
 
 

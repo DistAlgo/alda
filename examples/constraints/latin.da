@@ -9,7 +9,7 @@ def constraint(name='latinsquare', parameter= {n,x}):
 		# all the cells in each row pair-wisely different
 		each(i in ints(1,n), has=alldiff(x[i,j], j in ints(1,n)))
 		# all the cells in each column pair-wisely different
-		each(j in ints(1,n), has=alldiff(x[i,j] for i in ints(1,n)))
+		each(j in ints(1,n), has=alldiff(x[i,j], i in ints(1,n)))
 	
 	# Target:
 	# return an assignment of the square satisfies the constraint

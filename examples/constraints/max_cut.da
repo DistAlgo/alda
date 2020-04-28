@@ -6,7 +6,7 @@ def constraint(name= 'max_cut', parameter={vertex, edge}):
 
   # Target:
   # maximize the total weight of edges between vertices inside S and outside S.
-  obj: int = sumof(edge[i,j]*S[i]*(1-S[j]), (i,j) in vertex)
+  obj: int = sumof(edge[i,j]*S[i]*(1-S[j]), i in vertex, j in vertex)
   return anyof(S, to_max(obj))
 
 

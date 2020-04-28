@@ -14,7 +14,7 @@ def constraint(name= 'clique', parameter={vertex, edge}):
 	# maximum clique problem
 	# return anyof(clique, c, to_max(sum(clique)))
 	# maximum weight clique problem
-	obj: int = sumof(edge[i,j]*clique[i]*clique[j], (i,j) in vertex)
+	obj: int = sumof(edge[i,j]*clique[i]*clique[j], i in vertex, j in vertex)
 	return anyof((clique, obj), c, to_max(obj))
 
 
