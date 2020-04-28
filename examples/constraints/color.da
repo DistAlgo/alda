@@ -7,7 +7,7 @@ def constraint(name= 'color', parameter={vertex, color, edge}):
     
     # Constraints:
     # no adjacent vertices have the same color
-    c = each((i,j) in vertex, has= 
+    c = each(i in vertex, j in vertex, has= 
              i == j or edge[i,j] == 0 or coloring[i] != coloring[j])
     
     # Target:

@@ -11,7 +11,7 @@ def constraint(name= 'min_cost_flow', parameter={s,t,vertex,capacity,cost,sd}):
   
   # Constraints
   # the flow on each arc must not exceed the capacity
-  c = each((u, v) in vertex, has= flow[u,v] <= capacity[u,v])
+  c = each(u in vertex, v in vertex, has= flow[u,v] <= capacity[u,v])
   # the total flow of all arcs leading into a node equals the total flow out of it
   def f():
     each(v in vertex, has= v == s or v == t or 

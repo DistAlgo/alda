@@ -7,7 +7,7 @@ def constraint(name= 'clique', parameter={vertex, edge}):
 	
 	# Constraints:
 	# the vertices in a clique are fully connected
-	c = each((i,j) in vertex, has=
+	c = each(i in vertex, j in vertex, has=
 	         i == j or clique[i] == 0 or clique[j] == 0 or edge[i,j] > 0)
 	
 	# Target:

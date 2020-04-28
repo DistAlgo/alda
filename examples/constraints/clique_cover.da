@@ -9,7 +9,7 @@ def constraint(name= 'clique_cover', parameter={vertex, edge, k}):
 	# Constraints:
 	# the elements in cliques are clique
 	clique = each(i in ints(1,k), has= 
-	         each((j,k) in vertex, has= j == k or 
+	         each(j in vertex, k in vertex, has= j == k or 
 	              cliques[i,j] == 0 or cliques[i,k] == 0 or edge[j,k] == 1))
 	# the cliques cover all the vertices
 	cover = each(j in vertex, has= 
