@@ -134,6 +134,8 @@ setup(name = "pyDistAlgo",
       packages = [
           'da',
           'da.compiler',
+          'da.constraint',
+          'da.rule',
           'da.examples',
           'da.importer',
           'da.lib',
