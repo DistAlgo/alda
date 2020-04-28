@@ -144,7 +144,8 @@ setup(name = "pyDistAlgo",
       ],
       include_package_data = True,
       package_data = {
-        'da.examples' : ['**/*.da']
+        'da.examples' : ['**/*.da'],
+        'da.rule': ['**/*.P']
       },
 
       cmdclass = {

@@ -19,6 +19,8 @@ external_file_query(FileBase,Query) :-
     call_iter(Query),
     halt(0).
 
+% call queries iteratively,
+% write the answers of each query to a separate file named by name of query
 call_iter([]).
 call_iter([E|L]) :-
     [A,B] = E,
@@ -36,7 +38,7 @@ call_iter([E|L]) :-
     told,
     call_iter(L).
     
-
+% write each answer of a query on a new line in the file
 write_list([]) :- nl.
 write_list([E|L]) :-
     writeq(E),
