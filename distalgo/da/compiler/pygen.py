@@ -957,14 +957,17 @@ class PythonGenerator(NodeVisitor):
                         ast = ListComp(elem, generators)
                     elif isinstance(node, dast.LenCompExpr):
                         ast = pyCall("len", args=[ListComp(elem, generators)])
+                        ast = propagate_attributes(generators,ast)
                     elif type(node) in GenCompMap:
                         ast = pyCall(GenCompMap[type(node)], args=[GeneratorExp(elem, generators)])
+                        ast = propagate_attributes(generators,ast)
                     elif isinstance(node, dast.PrdCompExpr):
                         #1. functools.reduce(operator.mul,lis)
                         #2. eval('*'.join(str(item) for item in list))
                         self.importSet.add(('functools',))
                         self.importSet.add(('operator',))
                         ast = pyCall(func=pyAttr("functools", "reduce"), args=[pyAttr("operator","mul"), ListComp(elem, generators)])
+                        ast = propagate_attributes(generators,ast)
                     elif isinstance(node, dast.GeneratorExpr):
                         ast = GeneratorExp(elem, generators)
                     else:

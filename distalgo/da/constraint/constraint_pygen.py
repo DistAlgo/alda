@@ -6,13 +6,9 @@ import os,io
 from da.tools.unparse import Unparser
 from .translate_minizinc import Translator
 
-
 KW_CONSTRAINT = 'constraint'
-
 SOLVER = 'MiniZinc'	# default solver
-
 CONSTRAINT_OBJECT_NAME = "_constraint_object"
-
 
 def to_source(tree):
 	textbuf = io.StringIO(newline='')
@@ -22,13 +18,11 @@ def to_source(tree):
 class PythonGenerator(pygen.PythonGenerator):
 	def __init__(self, filename="", options=None):
 		super().__init__(filename, options)
-		# print('constraint_PythonGenerator')
 		self.constraint_options = dict()	# get from parser, the information of required/inferred parameter
 		self.constraint_info = set()		# get from parser, containing the assignment/update statement (if exist) of arguments in query
 		self.constraint_obj = dict()		# containing the information of whole constraints, to be passed into Translator
 		self.parsing = False
 		self.current_constraint = None
-
 
 	def new_constraint(self, name):
 		tmp_constraint = dict()
@@ -39,27 +33,8 @@ class PythonGenerator(pygen.PythonGenerator):
 		tmp_constraint['target'] = None
 		return tmp_constraint
 
-	# def generate_config(self, node):
-	# 	print('generate_config',node.configurations)
-	# 	# pprint(vars(node.configurations))
-	# 	return super().generate_config(node)
-		
-
-	# def visit_Program(self, node):
-
-		# if hasattr(node, 'constraints'):
-		# 	# print('?????')
-		# 	imptquery = ImportFrom('da.query',[alias('query', None)],0)
-		# 	self.preambles.append(imptquery)
-		# 	self.transConstraint(node.constraints)
-		# if hasattr(node, 'constraint_info'):
-		# 	# print('???????????????????????')
-		# 	self.constraint_info |= node.constraint_info
-		# return super().visit_Program(node)
-
 	def _generate_constraint_obj(self):
 		target = pyName(CONSTRAINT_OBJECT_NAME, Store())
-		# pprint(self.constraint_options)
 		a = pyAssign([target],
 					  Dict([Str(key) for key in self.constraint_options],
 						   [Set([Str(v) for v in val['required_parameter']]) 
@@ -77,9 +52,6 @@ class PythonGenerator(pygen.PythonGenerator):
 			self.preambles.append(self._generate_constraint_obj())
 		rt = super().visit_Program(node)
 		if self.constraint_obj:
-			# print('constraint_pygen: visit_Program')
-			# pprint(self.constraint_options)
-			# pprint(self.constraint_obj)
 			for name, val in self.constraint_obj.items():
 				Translator(name).visit(val)
 		return rt
@@ -93,8 +65,6 @@ class PythonGenerator(pygen.PythonGenerator):
 		return super().visit_Process(node)
 
 	def parse_parameters(self, node):
-		# print('constraint_pygen: visit_Function: parameter', node)
-		# pprint(vars(node))
 		for e in node.elts:
 			self.current_constraint['parameter'].add(e.id)
 
@@ -170,8 +140,6 @@ class PythonGenerator(pygen.PythonGenerator):
 					self.error("line %s: wrong number of argument for declaration of dict type! expect 2, got %s." % (node.lineno, len(node.keywords)))
 					return None
 				for k in node.keywords:
-					# {'arg': 'key', 'value': <_ast.Tuple object at 0x1107668d0>}
-					# {'arg': 'val', 'value': <_ast.Call object at 0x110766450>}
 					if k.arg == 'key':
 						key = self.parse_domain(k.value)
 					elif k.arg == 'val':
@@ -195,38 +163,25 @@ class PythonGenerator(pygen.PythonGenerator):
 			return cast.DomainTuple(element)
 		elif isinstance(node, Subscript):
 			# 5. set[domain]
-			# print(node)
-			# pprint(vars(node))
 			if node.value.id != 'set':
 				self.error("line %s: wrong type declaration" % node.lineno)
 			domain = self.parse_domain(node.slice.value)
 			return cast.DomainSet(domain)
 		# elif isinstance(node, Index):
-		# 	print('parse_domain')
-		# 	print(node)
-		# 	pprint(vars(node))
 		else:
 			print('parse_domain: unknown domain',node)
 			pprint(vars(node))
 
 	def parse_variable(self, node):
-		# print('parse_variable', node)
-		# pprint(vars(node))
 		domain =  self.parse_domain(node._ast.annotation)
 		self.current_context = Store
 		targets = [self.visit(tgt) for tgt in node.targets]
 		self.current_context = Load
-
-		# print('parse_variable: node.value', node)
-		# pprint((node.value))
-
 		for t in targets:
 			domain.parameter = bool(t.id in self.current_constraint['parameter'])
 			self.current_constraint['variable'][t.id] = cast.Variable(t.id,domain,node.value)
 
 	def parse_constraint(self, node):
-		# print('parse_constraint', node)
-		# pprint(vars(node))
 		targets = [self.visit(tgt) for tgt in node.targets]
 		if len(targets) != 1:
 			self.error("line %s: definition of constraints can only have one target" % node.lineno)
@@ -249,13 +204,9 @@ class PythonGenerator(pygen.PythonGenerator):
 	# without annotation: constraints
 	def visit_AssignmentStmt(self, node):
 		if self.parsing:
-			# pprint(vars(node))
-			# pprint(vars(node.targets[0]))
 			if isinstance(node._ast,AnnAssign):
-				# print('variable')
 				self.parse_variable(node)
 			else:
-				# print('constraint')
 				self.parse_constraint(node)
 			return []
 		else:
@@ -307,8 +258,6 @@ class PythonGenerator(pygen.PythonGenerator):
 				constraints.append(c.subexprs[0].name)
 			elif isinstance(c, dast.CallExpr):
 				# ['func', 'args', 'keywords', 'starargs', 'kwargs']
-				# print('parse_target')
-				# pprint(vars(c))
 				funcName = c.subexprs[0].subexprs[0].name
 				if funcName == 'to_min' or funcName == 'to_max':	# the optimization goal
 					if funcName == 'to_min':
@@ -333,7 +282,6 @@ class PythonGenerator(pygen.PythonGenerator):
 				return None
 
 		cset = {c for c in constraints if isinstance(c, str)}
-		# print(cset)
 		delset = []
 		for c in self.current_constraint['constraint']:
 			if c not in cset:
@@ -353,8 +301,6 @@ class PythonGenerator(pygen.PythonGenerator):
 		else:
 			return super().visit_ReturnStmt(node)
 
-	
-
 	def _generate_underscoreAssign(self):
 		return pyAssign([pyName('_', ctx=Store())], pyNone())
 
@@ -372,7 +318,6 @@ class PythonGenerator(pygen.PythonGenerator):
 			u = [self._generate_underscoreAssign()]
 		return u+assignStmt
 
-
 	def visit_BuiltinCallExpr(self,node):
 		if node.func == 'query':
 			return self._generate_query(node)
@@ -380,8 +325,6 @@ class PythonGenerator(pygen.PythonGenerator):
 			return super().visit_BuiltinCallExpr(node)
 
 	def visit_CallExpr(self, node):
-		# pprint(vars(node))
-		# func_name = node.subexprs[0].name
 		if isinstance(node.subexprs[0], dast.NameExpr) and node.subexprs[0].name == 'query':
 			return self._generate_query(node)
 		else:
@@ -392,7 +335,6 @@ class PythonGenerator(pygen.PythonGenerator):
 		# for query called globally, replace the self with global()
 		parent_process = node
 		while parent_process and not (isinstance(parent_process, dast.Process) or isinstance(parent_process, dast.Program)):
-			# pprint(vars(parent_process))
 			if not hasattr(parent_process, 'process'):
 				parent_process = parent_process.parent
 			else:
@@ -410,13 +352,8 @@ class PythonGenerator(pygen.PythonGenerator):
 
 		keywords = [(key, self.visit(value)) for key, value in node.keywords]
 		for key, val in keywords:
-			# print(key)
-			# print(val)
 			if key == 'constraint':
 				c = val.s
 				var = pyTuple([Str(v) for v in self.constraint_obj[c]['target'].variables])
 				keywords.append(('return_value',var))
-
-				# pprint(vars(self.constraint_obj[c]['target']['variables']))
-
 		return pyCall(target, args=inferarg, keywords=keywords)

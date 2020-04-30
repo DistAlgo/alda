@@ -1,8 +1,11 @@
 from ast import *
 from da.compiler import dast
+import logging
 from . import constraint_ast as cast
 import os, sys
 from pprint import pprint
+
+logger = logging.getLogger(__name__)
 
 MZ_MODEL_HOME = os.path.join(os.path.dirname(__file__),'minizinc_model')
 if not os.path.exists(MZ_MODEL_HOME):
@@ -121,7 +124,11 @@ class Translator(NodeVisitor):
 		elif isinstance(node, str):
 			return node
 		else:
-			return super().visit(node)
+			res = super().visit(node)
+			if not isinstance(res, str):
+				raise TypeError(
+					'Unsupported syntax type: %s, line %s' % (node.__class__.__name__, node.lineno))
+			return res			
 
 	def visit_Constraint(self, node):
 		# {'constraints': [<da.compiler.dast.QuantifiedExpr object at 0x107470bd0>,
@@ -149,9 +156,9 @@ class Translator(NodeVisitor):
 	def visit_NamedVar(self, node):
 		return node.name
 
-	def visit_TuplePattern(self,node):
-		value = [self.visit(e) for e in node.value]
-		return ', '.join(value)
+	# def visit_TuplePattern(self,node):
+	# 	value = [self.visit(e) for e in node.value]
+	# 	return ', '.join(value)
 		# maybe not the best way of doing this. 
 
 	def visit_FreePattern(self, node):
