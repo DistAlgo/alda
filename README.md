@@ -90,7 +90,7 @@
 			2. Existential quantification: returns `True` if some of the memebership clauses `vk in sexpk` and condition `bexp` are `True`
 				- `some(v1 in sexp1, ..., vk in sexpk, has= bexp)`,
 			3. comparison expression with operator: `==`, `!=`, `<`, `<=`, `>`, `>=`, 
-			4. global function call `alldiff`. `alldiff` is a builtin aggregation function of form
+			4. global constraint function call `alldiff`. `alldiff` is a builtin constraint function of the form
 				- `alldiff(sexp)`,
 				- `alldiff(exp, v1 in sexp1, ... vk in sexpk, bexp)`, 
 				 
@@ -107,8 +107,8 @@
 		1. CSP target function: `anyof(variables, c_1, ..., c_k)`
 		2. COP target function: `anyof(variables, c_1, ..., c_k, agg(opt_goal))`
 		- The first argument of both target functions is the return value of the constraint problem. It can be a single decision variable or tuple of decision variables.
-		- The last argument of COP target function is the calling of aggregation function `agg` on the optimization goal `opt_goal`. The aggregation function can be one of `to_max` or `to_min` doing maximize or minimize respectively. The `opt_goal` is usual some expression of decision variables.
-		- The other arguments are names of constraints that must be satisfied to the problem.
+		- The last argument of COP target function is the calling of aggregation function `agg` on the optimization goal `opt_goal`. The aggregation function can be one of `to_max` or `to_min` doing maximize or minimize respectively. The `opt_goal` is usually some expression of decision variables.
+		- The other arguments are names of constraints that must be satisfied.
 - Solving the problem. After defining the problem, call 
 	```python
 	query(constraint, **kwargs)
@@ -117,12 +117,12 @@
 	- `constraint` parameter should be set to the name of a constraint solving problem
 	- `kwargs` are keyword arguments used to pass in the parameters of a constraint solving problem. The keys are name of parameters
 	- When passing in a keyword arguments, if the passing variable is 
-		- in the same scope as calling `query` or 
-		- is an instance variable in a class or
+		- in the same scope as calling `query`, or 
+		- is an instance variable in a class, or
 		- is a global variable,
 
-	  and of the same name as the target parameter, the passing in of that parameter can be omitted. For example, in the vertex cover example, the pass in of parameter `edge` is omitted.
-	- The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first argument of the target function. If the problem is COP, an additional `objective` item will also be returned. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explaination of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
+	  and of the same name as the target parameter, the passing in of that parameter can be omitted. In the vertex cover example, the pass in of parameter `edge` is omitted.
+	- The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first argument of the target function. If the problem is COP, an additional `objective` item will also be returned, which is the optimal value of the optimization goal. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explaination of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
 
 - Running the program: `python3 -m da --constraint <filename>`
 
