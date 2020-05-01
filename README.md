@@ -5,7 +5,7 @@
 2. Install MiniZinc from https://www.minizinc.org/software.html.
 3. Add the path of container folder of minizinc binary/executable to your `PATH` environment variable.
 4. Install MiniZinc Python interface with `pip install minizinc`.
-5. Install DistAlgo: add path of `distalgo` folder to your `PATH` environment variable.
+5. Install DistAlgo following the 2nd or 3rd option in [this](https://github.com/DistAlgo/da-rules/tree/master/distalgo) instruction.
 
 ## Instruction
 
