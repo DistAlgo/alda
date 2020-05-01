@@ -10,72 +10,144 @@
 ## Instruction
 
 ### How to write and solve a constraint solving problem
-- A constriant solving problem can be written as easy as defining a function. 
-  ```python
-	def constraint(name='name_of_problem',parameters={set,of,parameters}):
+<table style="width:100%">
+  <tr>
+	<td><img src="https://user-images.githubusercontent.com/2973457/80774269-82595000-8b2a-11ea-84de-99c5ac8b963c.png" width="750px"/></td>
+	<td>Consider the graph shown on the left. The red vertices form a minimum <a href="https://en.wikipedia.org/wiki/Vertex_cover">vertex cover</a> of the graph. A vertex cover of a graph is a subset of vertices that each edge of the graph is attached to at least one of the vertices from the set. The minimum vertex cover problem is to find a vertex cover with minimum possible size. The problem can be defined as a constraint solving problem as shown in the program below.</td>
+  </tr>
+</table>
+
+```python
+	def constraint(name= 'vertex_cover', parameter={vertex, edge}):
 		# Variables
-		name_of_variable_1: domain_of_variable_1
-		name_of_variable_2: domain_of_variable_2
+		vertex: set[int]                                  # set of vertices
+		edge: dict(key= (vertex, vertex), val= ints(0,1)) # set of edges
+		# a set of vertices formulating a vertex cover
+		mvc: dict(key= vertex, val= ints(0,1))
+		
 		# Constraints
-		c_1 = boolean_expr
-		def c_2():
-			boolean_expr_1
-			boolean_expr_2
+		# at least one vertex of each edge is in the vertex cover
+		cover = each(i in vertex, j in vertex, has=
+		             edge[i,j] == 0 or mvc[i] == 1 or mvc[j] == 1)
 		# Target
-		target: domain_of_target = usually_some_aggregation
-		return anyof(some_decision_variable, c_1, c_2, to_max(target))
+		# minimum the size of vertex cover
+		return anyof(mvc, cover, to_min(sum(mvc)))
 
-	result = query(constraint='name_of_problem',parameter_1=value_1,parameter_2=value_2,...)
-  ```
-- The function must be named by `constraint`, with two argument `name` and `parameters`. 
-	- `name` is the unique identifier of the problem, 
-	- `parameters` is a set containing the parameters whose values need to be passed in.
-- Three components are required to define a constraint solving problem: variables, constraints and the target.
+	v = set(range(1,7))
+	edge = [[0,1,1,0,0,0],
+	        [1,0,1,1,1,1],
+	        [1,1,0,0,0,0],
+	        [0,1,0,0,0,0],
+	        [0,1,0,0,0,0],
+	        [0,1,0,0,0,0]]
+	result = query(constraint='mvc', vertex=v)
+	from pprint import pprint
+	pprint(result)
+```
+
+- A constraint solving problem is the problem of finding assignments to decision variables while several constraints must be satisfied. In the vertex cover example, 
+	- the decision variable is `mvc` which is a map from `vertex` to `0` or `1`. 
+	  For vertex `v`, `mvc[v] == 1` means that `v` is inside the vertex cover, and `mvc[v] == 0` means `v` not inside.
+	- the constraint `cover` defines the vertex cover condition.
+	
+	Depending on the target of a problem, there are two kinds of constraint solving problems: Constraint Satisfaction Problem (CSP) and Constraint Optimization Problem (COP). 
+	1. The target of a CSP is to find an assignment of all decision variables while satisfying all the constraints,
+	2. The target of a COP is that of a CSP with an additional optimization goal to be maximized or minimized.
+		- The vertex cover example is a COP whose optimization goal is to minimize the size of vertex cover
+- A constriant solving problem can be defined as easy as defining a function. 
+  The function must be named `constraint`, with two argument `name` and `parameter`. 
+	- `name` is the name of the problem, which is `'vertex_cover'` in the example.
+	  The name is served as the unique identifier of a model and its naming convention is the same as python identifiers.
+	- `parameter` is a set containing the parameters whose values need to be passed in. In the problem `vertex` and `edge` are the parameters.
+- Inside the body of the constraint function, 3 kinds of information need to be defined: variables, constraints and the target.
 	1. Variables. There are two types of variables: parameters and decision variables.
-		1. Parameters are variables that must be passed in when the problem is instantiated. Parameters must be explictly declared in the `parameters` argument of a constraint problem.
-		2. Decision variables are computed during solving the problem. For some problems such as Sudoku, the partial filled playboard is passed in as a parameter, whose empty cells are indicated by `_` and will be computed as the solution of the problem. Parameters with empty cells are also treated as decision variables.
-
-		Variables are defined in the form of type annotation, the value of which is optional:
-
-		- `var_name: var_domain = value`
-
-	 	The domain of a variable can be a type or other variables with the same domain. Applicable types are `int, ints, float, str, bool, dict, set`.
-		- `ints(lb,ub)` presents a list of `int` with lowerbound `lb` and upperbound `ub`. The value of `ints(lb,ub)` is equivalent to `range(lb,ub+1)`.
-		- Variables of `ints` type can be used inplace of `ints` in other variable definition.
-		- The `dict(key=type, val=type)` type can be seen as an array, that `key` presents the dimensions. The domian of `key` must be of `ints` type or tuple of `ints` type. Currently the `value` of a `dict` can only be of `int` or `float` type.
-		- The elements inside a `set` must of the same type. A `set` type variable can be defined more precicely by `set[type]`. Currently the elements of a `set` can only be of `int` or `float` type.
+		1. Parameters are variables that must be passed in when the problem is instantiated. Parameters must be explictly specified in the `parameter` argument of the constraint function.
+		2. Decision variables are variables whose values are to be decided during solving the problem. 
+		   For some problems such as Sudoku, a partial filled playboard is passed in as parameter. The empty cells are indicated by `_` and will be computed when solving the problem. Parameters with empty cells are also treated as decision variables.
+		- Variables needs to be explictly declared with domain informations. The syntax of variable definition is in the form of type annotation, the value of which is optional:
+			- `variable_name: variable_domain = optional_value`
+	 	- The domain of a variable can be
+	 	 	1. basic domains: `int, float, str, bool`,
+	 	 	2. `ints(lb,ub)`: preciser `int` domain
+				- `ints(lb,ub)` presents the `int` domain taking value from lowerbound `lb` to upperbound `ub` (included),
+				- `lb` and `ub` are of `int/ints` domain,
+			3. map domain: `dict(key=domain, val=domain)`. The map domain can be viewed as array. `key` defines domain of the dimension and must be of `int/ints` domain or tuple of `int/ints` for multidimentional array. `value` must be of `int/ints` or `float` domain,
+			4. `set`: A `set` can be defined precicely by `set[domain]` where `domain` can be of `int/ints` or `float` domain,
+			5. variables can be used as domains presenting the domains of themselves.
 	2. Constraints. Constraints are the conditions must be satified when assigning values to decition variables. There are two ways of defining a constraints:
-		1. as an assignment statement: `c_1 = boolean_expr`. 
+		1. as an assignment statement: `c_1 = bexp`, so that the name of the constraint is named by the target name of assignment
 		2. as a function: 
 			```python
-				def c_2(logic=and):
-					boolean_expr_1
-					boolean_expr_2
+				def c_2():
+					bexp1
+					bexp2
+					...
 			```
-			By defualt, the statements inside the block of a constraint definition are of `and` relation, so that compared to the first way, the definition of constraints can be simplified by omitting the `and` operator. By assigning the logic parameter to `or`, the logic relation between the statements are set to `or`.
-		- Theoretically the `boolean_expr` can be any expression that returns boolean value. But currently only `some`, `each`, comparison, `alldiff` are supported. Boolean operators (`and`, `or`, `not`) can be used to connect the previous expressions.
-		- Note: `alldiff` is a builtin function with one argument that takes a `dict` variable, or a generator, and returns `True` if each element in the sequence takes pairwisely different value, otherwise `False`.
-	3. Target. Usually there are two types of constraint solving problems: constraint satisfaction problem (CSP) and constraint optimization problem (COP). The target of a CSP is to finding assignments to decision variables such that all the constraints are satified. For COPs, in addition to the constraints of CSP, there is also an optimization goal, usually is some expression of decision variables that needs to be minimized or maximized. The target is defined by a `return` statement of target function: 
-		```python
-			return anyof(some_decision_variable, c_1, c_2, to_max(target))
-		```
-		- There are two target functions: `anyof` and `setof`. `anyof` returns one of the assignments to decision variables and `setof` returns all the valid assignments. Currently only `anyof` is implemented.
-		- The first argument of the target function indicates the decision variable or tuple of decision variables you want to get from solving the problem.
-		- If the last argument of the function is a calling of `to_max` or `to_min`, it is the optimization target for a COP, solving maximize or minimize respectively. If the last argument is not a calling of `to_max` or `to_min`, then the problem is treated as a CSP.
-		- The other arguments are name of constraints that you want to apply to the problem.
+			The expressions inside the body of function are of `and` relation, so that compared to the first way, defining of constraints can be simplified by omitting the `and` operator if mutiple constraints are of conjunction relation. All constraints inside the body together are named as the function name.
+		- Theoretically, `bexp` can be any expression that returns boolean value. But currently only 
+			1. Universal quantification: returns `True` if all of the memebership clauses `vk in sexpk` and condition `bexp` are `True`
+				- `each(v1 in sexp1, ..., vk in sexpk, has= bexp)`,
+			2. Existential quantification: returns `True` if some of the memebership clauses `vk in sexpk` and condition `bexp` are `True`
+				- `some(v1 in sexp1, ..., vk in sexpk, has= bexp)`,
+			3. comparison expression with operator: `==`, `!=`, `<`, `<=`, `>`, `>=`, 
+			4. global function call `alldiff`. `alldiff` is a builtin aggregation function of form
+				- `alldiff(sexp)`,
+				- `alldiff(exp, v1 in sexp1, ... vk in sexpk, bexp)`, 
+				 
+			   that returns `True` if 
+			   - all items in `sexp` for the first case
+			   - all `exp` that satisfies all membership clause `vk in sexpk` and condition `bexp` for the second case
+
+			   take pairwisely different values, otherwise returns `False`.
+			5. boolean operators (`and`, `or`, `not`) connected `bexp`'s
+
+		  are allowed.
+			
+	3. Target. The target is defined by a `return` statement of target function. As described above, there are CSPs and COPs with different target functions:
+		1. CSP target function: `anyof(variables, c_1, ..., c_k)`
+		2. COP target function: `anyof(variables, c_1, ..., c_k, agg(opt_goal))`
+		- The first argument of both target functions is the return value of the constraint problem. It can be a single decision variable or tuple of decision variables.
+		- The last argument of COP target function is the calling of aggregation function `agg` on the optimization goal `opt_goal`. The aggregation function can be one of `to_max` or `to_min` doing maximize or minimize respectively. The `opt_goal` is usual some expression of decision variables.
+		- The other arguments are names of constraints that must be satisfied to the problem.
 - Solving the problem. After defining the problem, call 
 	```python
-		query(constraint='name_of_problem',parameter_1=value_1,parameter_2=value_2,...)
+	query(constraint, **kwargs)
 	``` 
 	to solve the problem.
-	- parameters are passed in as keyword arguments.
-	- Values or variables can be passed in as parameters. 
-	- When passing in a variable, if a variable is in the same scope as calling `query` or is a global variable,  and of the same name as the target parameter in the defined problem, the passing in of that parameter can be omitted.
-	- The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first element of the target function of the problem. If the problem is COP, an additional `objective` item will also be returned. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explaination of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
+	- `constraint` parameter should be set to the name of a constraint solving problem
+	- `kwargs` are keyword arguments used to pass in the parameters of a constraint solving problem. The keys are name of parameters
+	- When passing in a keyword arguments, if the passing variable is 
+		- in the same scope as calling `query` or 
+		- is an instance variable in a class or
+		- is a global variable,
 
-### Running the Constaint Examples
+	  and of the same name as the target parameter, the passing in of that parameter can be omitted. For example, in the vertex cover example, the pass in of parameter `edge` is omitted.
+	- The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first argument of the target function. If the problem is COP, an additional `objective` item will also be returned. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explaination of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
+
+- Running the program: `python3 -m da --constraint <filename>`
+
+	save the example program to a file named `vertex_cover.da`, then running following command can get the output:
+
+	`>>> python3 -m da --constraint vertex_cover.da`
+  ```python
+	{'mvc': [0, 1, 1, 0, 0, 0],
+	 'objective': 2,
+	 'statistics': {'evaluatedHalfReifiedConstraints': 6,
+	                'flatIntConstraints': 13,
+	                'flatIntVars': 13,
+	                'flatTime': datetime.timedelta(microseconds=74739),
+	                'method': 'minimize',
+	                'nodes': 0,
+	                'objective': 2,
+	                'objectiveBound': 2,
+	                'openNodes': -1,
+	                'paths': 0,
+	                'solveTime': datetime.timedelta(microseconds=29700),
+	                'time': datetime.timedelta(microseconds=120000)}}
+  ```
+<!-- ### Running the Constaint Examples
 1. USAGE: `python3 -m da --constraint <filename>`
-2. some working examples are inside `examples/constraints` folder.
+2. some working examples are inside `examples/constraints` folder. -->
 
 ### How to programming with rules
 - A set of Datalog rules can be written as easy as a Python function
