@@ -18,31 +18,31 @@
 </table>
 
 ```python
-	def constraint(name= 'vertex_cover', parameter={vertex, edge}):
-		# Variables
-		vertex: set[int]                                  # set of vertices
-		edge: dict(key= (vertex, vertex), val= ints(0,1)) # set of edges
-		# a set of vertices formulating a vertex cover
-		mvc: dict(key= vertex, val= ints(0,1))
-		
-		# Constraints
-		# at least one vertex of each edge is in the vertex cover
-		cover = each(i in vertex, j in vertex, has=
-		             edge[i,j] == 0 or mvc[i] == 1 or mvc[j] == 1)
-		# Target
-		# minimum the size of vertex cover
-		return anyof(mvc, cover, to_min(sum(mvc)))
+def constraint(name= 'vertex_cover', parameter={vertex, edge}):
+	# Variables
+	vertex: set[int]                                  # set of vertices
+	edge: dict(key= (vertex, vertex), val= ints(0,1)) # edges by adjacency matrix
+	# a set of vertices formulating a vertex cover
+	mvc: dict(key= vertex, val= ints(0,1))
+	
+	# Constraints
+	# at least one vertex of each edge is in the vertex cover
+	cover = each(i in vertex, j in vertex, has=
+	             edge[i,j] == 0 or mvc[i] == 1 or mvc[j] == 1)
+	# Target
+	# minimum the size of vertex cover
+	return anyof(mvc, cover, to_min(sum(mvc)))
 
-	v = set(range(1,7))
-	edge = [[0,1,1,0,0,0],
-	        [1,0,1,1,1,1],
-	        [1,1,0,0,0,0],
-	        [0,1,0,0,0,0],
-	        [0,1,0,0,0,0],
-	        [0,1,0,0,0,0]]
-	result = query(constraint='mvc', vertex=v)
-	from pprint import pprint
-	pprint(result)
+v = set(range(1,7))
+edge = [[0,1,1,0,0,0],
+        [1,0,1,1,1,1],
+        [1,1,0,0,0,0],
+        [0,1,0,0,0,0],
+        [0,1,0,0,0,0],
+        [0,1,0,0,0,0]]
+result = query(constraint='mvc', vertex=v)
+from pprint import pprint
+pprint(result)
 ```
 
 - A constraint solving problem is the problem of finding assignments to decision variables while several constraints must be satisfied. In the vertex cover example, 
