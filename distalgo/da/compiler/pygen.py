@@ -68,15 +68,17 @@ AggregateMap = {
     dast.MaxExpr : "max",
     dast.MinExpr : "min",
     dast.SizeExpr : "len",
-    dast.SumExpr : "sum"
+    dast.SumExpr : "sum",
+    dast.ProdExpr: "prod"
 }
 
 
 GenCompMap = {
     dast.TupleCompExpr: "tuple",
-    dast.MinCompExpr: "min",
-    dast.MaxCompExpr: "max",
-    dast.SumCompExpr: "sum"
+    dast.MinCompExpr: "minof",
+    dast.MaxCompExpr: "maxof",
+    dast.SumCompExpr: "sumof",
+    dast.PrdCompExpr: "prodof"
 }
 
 CONFIG_OBJECT_NAME = "_config_object"
@@ -482,6 +484,7 @@ class PythonGenerator(NodeVisitor):
             body.extend(nodeproc)
         body.extend(self.postambles)
 
+        self.fromImportSet.add(("da.dabuiltins", "*"))
         importList = [Import([alias(t[0], t[1] if len(t)>1 else None)]) for t in self.importSet]
         fromImportList = [ImportFrom(t[0], [alias(t[1], t[2] if len(t)>2 else None)], 0) for t in self.fromImportSet]
         # print(importList,fromImportList)
@@ -788,18 +791,8 @@ class PythonGenerator(NodeVisitor):
     visit_MaxExpr = visit_AggregateExpr
     visit_MinExpr = visit_AggregateExpr
     visit_SumExpr = visit_AggregateExpr
+    visit_ProdExpr = visit_AggregateExpr
     visit_SizeExpr = visit_AggregateExpr
-
-    def visit_ProdExpr(self, node):
-        #1. functools.reduce(operator.mul,lis)
-        #2. eval('*'.join(str(item) for item in list))
-        self.importSet.add(('functools',))
-        self.importSet.add(('operator',))
-        prod = pyCall(func=pyAttr("functools", "reduce"), args=[pyAttr("operator","mul"), self.visit(node.args[0])])
-        if len(node.args) > 1:
-            return propagate_fields(BinOp(self.visit(node.args[1]), Mult(), prod))
-        else:
-            return prod
 
     def visit_LogicalExpr(self, node):
         if node.operator is dast.NotOp:
@@ -956,18 +949,9 @@ class PythonGenerator(NodeVisitor):
                     elif isinstance(node, dast.ListCompExpr):
                         ast = ListComp(elem, generators)
                     elif isinstance(node, dast.LenCompExpr):
-                        ast = pyCall("len", args=[ListComp(elem, generators)])
-                        ast = propagate_attributes(generators,ast)
-                    elif type(node) in GenCompMap:
-                        ast = pyCall(GenCompMap[type(node)], args=[GeneratorExp(elem, generators)])
-                        ast = propagate_attributes(generators,ast)
-                    elif isinstance(node, dast.PrdCompExpr):
-                        #1. functools.reduce(operator.mul,lis)
-                        #2. eval('*'.join(str(item) for item in list))
-                        self.importSet.add(('functools',))
-                        self.importSet.add(('operator',))
-                        ast = pyCall(func=pyAttr("functools", "reduce"), args=[pyAttr("operator","mul"), ListComp(elem, generators)])
-                        ast = propagate_attributes(generators,ast)
+                        ast = pyCall("lenof", args=[propagate_fields(ListComp(elem, generators))])
+                    elif isinstance(node, tuple(GenCompMap.keys())):
+                        ast = pyCall(GenCompMap[type(node)], args=[propagate_fields(GeneratorExp(elem, generators))])
                     elif isinstance(node, dast.GeneratorExpr):
                         ast = GeneratorExp(elem, generators)
                     else:

@@ -291,10 +291,21 @@ NodeProcName = "Node_"
 AggregateMap = {
     KW_AGGREGATE_MAX  : dast.MaxExpr,
     KW_AGGREGATE_MIN  : dast.MinExpr,
-    KW_AGGREGATE_SIZE : dast.SizeExpr,
     KW_AGGREGATE_SUM  : dast.SumExpr,
-    # KW_AGGREGATE_PROD  : dast.ProdExpr,
+    KW_AGGREGATE_PROD  : dast.ProdExpr,
+    KW_AGGREGATE_SIZE : dast.SizeExpr,
 }
+
+AggregateMapDefault = {
+    KW_AGGREGATE_MAX  : dast.MaxExpr,
+    KW_AGGREGATE_MIN  : dast.MinExpr,
+}
+
+AggregateMapStart = {
+    KW_AGGREGATE_SUM  : dast.SumExpr,
+    KW_AGGREGATE_PROD  : dast.ProdExpr,
+}
+
 ComprehensionTypes = {KW_COMP_SET, KW_COMP_TUPLE, KW_COMP_DICT, KW_COMP_LIST, 
                       KW_COMP_MAX, KW_COMP_MIN, KW_COMP_SUM, KW_COMP_LEN, KW_COMP_COUNT, KW_COMP_PROD}
 EventKeywords = {KW_EVENT_DESTINATION, KW_EVENT_SOURCE, KW_EVENT_LABEL,
@@ -2056,9 +2067,17 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
                         keywords=None, optional_keywords=None):
             self.debug("Config expression. ", node)
             expr = self.create_expr(dast.ConfigExpr, node)
-        elif expr_check(AggregateMap, 1, None, node,
+        elif expr_check(AggregateMapDefault, 1, None, node,
                         keywords={}, optional_keywords={'default'}):
-            self.debug("Aggregate: " + node.func.id, node)
+            self.debug("Aggregate Min/Max: " + node.func.id, node)
+            expr = self.create_expr(AggregateMap[node.func.id], node)
+        elif expr_check(AggregateMapStart, 1, 2, node,
+                        keywords={}, optional_keywords={}):
+            self.debug("Aggregate Sum/Prod: " + node.func.id, node)
+            expr = self.create_expr(AggregateMap[node.func.id], node)
+        elif expr_check(AggregateMap, 1, None, node,
+                        keywords={}, optional_keywords={}):
+            self.debug("Aggregate Len: " + node.func.id, node)
             expr = self.create_expr(AggregateMap[node.func.id], node)
         elif expr_check(KW_INTS, 1, 3, node):
             expr = dast.IntsExpr([self.visit(a) for a in node.args], self.current_parent, node)
