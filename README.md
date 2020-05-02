@@ -40,7 +40,7 @@ edge = [[0,1,1,0,0,0],
         [0,1,0,0,0,0],
         [0,1,0,0,0,0],
         [0,1,0,0,0,0]]
-result = query(constraint='mvc', vertex=v)
+result = query(constraint='vertex_cover', vertex=v)
 from pprint import pprint
 pprint(result)
 ```
