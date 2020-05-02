@@ -1,53 +1,56 @@
 # README
 
+DA-rules is an extension of DistAlgo with rules and constraints.  This implementation requires Python 3.7.
+
 ## Installation
-1. Install XSB from http://xsb.sourceforge.net/.
-2. Install MiniZinc from https://www.minizinc.org/software.html.
-3. Add the path of container folder of minizinc binary/executable to your `PATH` environment variable.
-4. Install MiniZinc Python interface with `pip install minizinc`.
-5. Install DistAlgo following the 2nd or 3rd option in [this](https://github.com/DistAlgo/da-rules/tree/master/distalgo) instruction.
+1. Install DA-rules by (1) copying or extracting the DA-rules files to a path, designated as `<DArulesROOT>`, in the local file system, and (2) adding `<DArulesROOT>/distalgo` to the front of the `PYTHONPATH` environment variable so that Python can load the `da` module.
+2. To use the extension with rules, install XSB from http://xsb.sourceforge.net/.
+3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
 ## Instruction
 
-### How to write and solve a constraint solving problem
+### An example program that uses constraints
 <table style="width:100%">
   <tr>
 	<td><img src="https://user-images.githubusercontent.com/2973457/80774269-82595000-8b2a-11ea-84de-99c5ac8b963c.png" width="750px"/></td>
-	<td>Consider the graph shown on the left. The red vertices form a minimum <a href="https://en.wikipedia.org/wiki/Vertex_cover">vertex cover</a> of the graph. A vertex cover of a graph is a subset of vertices that each edge of the graph is attached to at least one of the vertices from the set. The minimum vertex cover problem is to find a vertex cover with minimum possible size. The problem can be defined as a constraint solving problem as shown in the program below.</td>
+	<td>Consider the graph shown on the left. The red vertices form a minimum <a href="https://en.wikipedia.org/wiki/Vertex_cover">vertex cover</a> of the graph. A vertex cover of a graph is a set of vertices in the graph such that each edge of the graph is attached to at least one vertex in the set. The minimum vertex cover problem is to find a vertex cover with the minimum number of vertices. The problem can be specified as a constraint solving problem in DA-rules as shown below.</td>
   </tr>
 </table>
 
 ```python
-def constraint(name= 'vertex_cover', parameter={vertex, edge}):
-	# Variables
-	vertex: set[int]                                  # set of vertices
-	edge: dict(key= (vertex, vertex), val= ints(0,1)) # edges by adjacency matrix
-	# a set of vertices formulating a vertex cover
-	mvc: dict(key= vertex, val= ints(0,1))
-	
-	# Constraints
-	# at least one vertex of each edge is in the vertex cover
-	cover = each(i in vertex, j in vertex, has=
-	             edge[i,j] == 0 or mvc[i] == 1 or mvc[j] == 1)
-	# Target
-	# minimum the size of vertex cover
-	return anyof(mvc, cover, to_min(sum(mvc)))
+def constraint(name= 'vertex_cover', pars={vertex, edge}):
+  # Parameters: 
+  vertex: set[int]  # vertices as a set of integers
+  edge: dict(key=(vertex,vertex), val=ints(0,1))  # edges as an adj matrix
+  
+  # Decision variables: 
+  vc: dict(key=vertex, val=ints(0,1))  # vertex cover as a dict too
+  num_vertex: int = sum(vc)  # number of vertices and objective function
 
-v = set(range(1,7))
-edge = [[0,1,1,0,0,0],
-        [1,0,1,1,1,1],
-        [1,1,0,0,0,0],
-        [0,1,0,0,0,0],
-        [0,1,0,0,0,0],
-        [0,1,0,0,0,0]]
-result = query(constraint='vertex_cover', vertex=v)
-from pprint import pprint
-pprint(result)
+  # Constraints: each edge has at least one end in the vertex cover
+  cover = each(i in vertex, j in vertex, has=
+               edge[i,j] == 0 or vc[i] == 1 or vc[j] == 1)
+  
+  # Return: any vertex cover with the minimum number of vertices
+  return anyof((vc, num_vertex), cover, to_min(num_vertex))
+    
+v = set(ints(1,6))
+e = [[0,1,1,0,0,0],
+     [1,0,1,1,1,1],
+     [1,1,0,0,0,0],
+     [0,1,0,0,0,0],
+     [0,1,0,0,0,0],
+     [0,1,0,0,0,0]]
+
+result = query(constraint='vertex_cover', vertex=v, edge=e)
+
+print(result['vc'])  # value of decision variable vc in solution
+print(result['num_vertex'])  # value of decision variable num_vertex
 ```
 
-- A constraint solving problem is the problem of finding assignments to decision variables while several constraints must be satisfied. In the vertex cover example, 
-	- the decision variable is `mvc` which is a map from `vertex` to `0` or `1`. 
-	  For vertex `v`, `mvc[v] == 1` means that `v` is inside the vertex cover, and `mvc[v] == 0` means `v` not inside.
+- A constraint solving problem is the problem of finding assignments to decision variables while given constraints must be satisfied. In the vertex cover example,
+	- the decision variable is `vc` which is a map from `vertex` to `0` or `1`. 
+	  For vertex `v`, `vc[v] == 1` means that `v` is inside the vertex cover, and `vc[v] == 0` means `v` not inside.
 	- the constraint `cover` defines the vertex cover condition.
 	
 	Depending on the target of a problem, there are two kinds of constraint solving problems: Constraint Satisfaction Problem (CSP) and Constraint Optimization Problem (COP). 
@@ -130,7 +133,7 @@ pprint(result)
 
 	`>>> python3 -m da --constraint vertex_cover.da`
   ```python
-	{'mvc': [0, 1, 1, 0, 0, 0],
+	{'vc': [0, 1, 1, 0, 0, 0],
 	 'objective': 2,
 	 'statistics': {'evaluatedHalfReifiedConstraints': 6,
 	                'flatIntConstraints': 13,
@@ -149,7 +152,7 @@ pprint(result)
 1. USAGE: `python3 -m da --constraint <filename>`
 2. some working examples are inside `examples/constraints` folder. -->
 
-### How to programming with rules
+### Using the extension with rules
 - A set of Datalog rules can be written as easy as a Python function
   ```python
 	def rules(name='name_of_rule'):
