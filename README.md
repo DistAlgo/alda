@@ -19,22 +19,21 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 
 ```python
 def constraint(name= 'vertex_cover', pars={vertex, edge}):
+  # Parameters: 
+  vertex: set[int]  # vertices as a set of integers
+  edge: dict(key=(vertex,vertex), val=ints(0,1))  # edges as an adj matrix
+  
+  # Decision variables: 
+  vc: dict(key=vertex, val=ints(0,1))  # vertex cover as a dict too
+  num_vertex: int = sum(vc)  # number of vertices and objective function
 
- 	# Parameters: vertices as a set of integers; edges as an adjacency matrix
-	vertex: set[int]
-	edge: dict(key= (vertex, vertex), val= ints(0,1))
-	
-	# Decision variables: a vertex cover as a dictionary too; number of vertices
-	vc: dict(key= vertex, val= ints(0,1))
-	num_vertex: int = sum(vs)
-
-	# Constraints: each edge has at least one of its ends in the vertex cover
-	cover = each(i in vertex, j in vertex, has=
-	             edge[i,j] == 0 or vc[i] == 1 or vc[j] == 1)
-	
-	# Return: any vertex cover with the minimum number of vertices
-	return anyof((vc, num_vertex), cover, to_min(num_vertex))
-	
+  # Constraints: each edge has at least one end in the vertex cover
+  cover = each(i in vertex, j in vertex, has=
+               edge[i,j] == 0 or vc[i] == 1 or vc[j] == 1)
+  
+  # Return: any vertex cover with the minimum number of vertices
+  return anyof((vc, num_vertex), cover, to_min(num_vertex))
+    
 v = set(ints(1,6))
 e = [[0,1,1,0,0,0],
      [1,0,1,1,1,1],
@@ -42,14 +41,16 @@ e = [[0,1,1,0,0,0],
      [0,1,0,0,0,0],
      [0,1,0,0,0,0],
      [0,1,0,0,0,0]]
+
 result = query(constraint='vertex_cover', vertex=v, edge=e)
-print(result['vc'])
-print(result['num_vertex'])
+
+print(result['vc'])  # value of decision variable vc in solution
+print(result['num_vertex'])  # value of decision variable num_vertex
 ```
 
-- A constraint solving problem is the problem of finding assignments to decision variables while several constraints must be satisfied. In the vertex cover example, 
-	- the decision variable is `mvc` which is a map from `vertex` to `0` or `1`. 
-	  For vertex `v`, `mvc[v] == 1` means that `v` is inside the vertex cover, and `mvc[v] == 0` means `v` not inside.
+- A constraint solving problem is the problem of finding assignments to decision variables while given constraints must be satisfied. In the vertex cover example,
+	- the decision variable is `vc` which is a map from `vertex` to `0` or `1`. 
+	  For vertex `v`, `vc[v] == 1` means that `v` is inside the vertex cover, and `vc[v] == 0` means `v` not inside.
 	- the constraint `cover` defines the vertex cover condition.
 	
 	Depending on the target of a problem, there are two kinds of constraint solving problems: Constraint Satisfaction Problem (CSP) and Constraint Optimization Problem (COP). 
@@ -132,7 +133,7 @@ print(result['num_vertex'])
 
 	`>>> python3 -m da --constraint vertex_cover.da`
   ```python
-	{'mvc': [0, 1, 1, 0, 0, 0],
+	{'vc': [0, 1, 1, 0, 0, 0],
 	 'objective': 2,
 	 'statistics': {'evaluatedHalfReifiedConstraints': 6,
 	                'flatIntConstraints': 13,
