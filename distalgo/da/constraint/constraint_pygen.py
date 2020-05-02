@@ -9,6 +9,7 @@ from .translate_minizinc import Translator
 KW_CONSTRAINT = 'constraint'
 SOLVER = 'MiniZinc'	# default solver
 CONSTRAINT_OBJECT_NAME = "_constraint_object"
+KW_PARAMETER = 'pars'
 
 def to_source(tree):
 	textbuf = io.StringIO(newline='')
@@ -76,7 +77,7 @@ class PythonGenerator(pygen.PythonGenerator):
 					cname = args.defaults[i].s
 					self.current_constraint = self.new_constraint(cname)
 					self.current_constraint['parameter'] = self.constraint_options[cname]['parameter']
-				elif args.args[i].arg == 'parameter':
+				elif args.args[i].arg == KW_PARAMETER:
 					pass
 					# self.parse_parameters(args.defaults[i])
 				elif args.args[i].arg == 'variable':

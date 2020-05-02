@@ -1,0 +1,39 @@
+def constraint(name='cuttingstock', pars={L,N,i_length,i_demand}):
+	# Variables:
+	L: int                                      # standard size of stock material
+	N: int                                      # number of demandings
+	K: int = sum(i_demand)                      # maximum of needed stocks
+	i_length: dict(key=ints(1,N), val=int)      # required length
+	i_demand: dict(key=ints(1,N), val=int)      # corresponding demands of i_length
+	pattern: dict(key=(ints(1,K), ints(1,N)), val=ints(0,L))   # cutting patterns
+	pieces: dict(key=ints(1,K), val=ints(0,K))  # needed numbers of each patterns
+	
+	# Constraints:
+	# the cuts in each pattern must >= 0
+	valid = each(k in ints(1,K), i in ints(1,N), has= pattern[k,i] >= 0)
+	# the demand must be satisfied
+	demand = each(i in ints(1,N), has= 
+	              sumof(pattern[k, i] * pieces[k], k in ints(1,K)) >= i_demand[i])
+	# the total length cuts in each pattern must not exceed the length of the stock
+	length = each(k in ints(1,K), has= 
+	                sumof(pattern[k, i] * i_length[i], i in ints(1,N)) <= L)
+	
+	# Target:
+	# the optimizing object, total pieces of stocks needed
+	obj: int = sumof(pieces[k], k in ints(1,K))
+	# find a solution of minimum number of needed stocks
+	return anyof((pattern,pieces), valid, demand, length, to_min(obj))
+
+
+
+from pprint import pprint
+# from data.cuttingStock.type01.TEST1 import *
+
+# data from https://www.researchgate.net/publication/257451021_A_software_for_the_one-dimensional_cutting_stock_problem/figures?lo=1
+L = 12
+N = 4
+i_length = [8,6,4,3]
+i_demand = [1,1,4,2]
+
+result = query(constraint = 'cuttingstock')
+pprint(result)

@@ -7,6 +7,7 @@ import json
 
 
 KW_CONSTRAINT = 'constraint'
+KW_PARAMETER = 'pars'
 KW_QUERY = 'query'
 
 def gensym(prefix):
@@ -63,7 +64,7 @@ class Parser(parser.Parser):
 			for i in range(len(node.args.args)):
 				if node.args.args[i].arg == 'name':
 					cname = node.args.defaults[i].s
-				if node.args.args[i].arg == 'parameter':
+				if node.args.args[i].arg == KW_PARAMETER:
 					self.current_constraint['parameter'] = {e.id for e in node.args.defaults[i].elts}
 					self.current_constraint['required_parameter'] = {e for e in self.current_constraint['parameter']}
 				

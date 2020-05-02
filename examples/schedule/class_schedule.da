@@ -1,0 +1,48 @@
+def constraint(name='schedule', pars={students, slots, prefs}):  #studdents, slots, (student, slot) pairs
+    
+    # Parameters
+    students: set[int]    # students as a set of integers
+    slots: set[int]        # slots as a set of integers
+    # a map from (student, slot) to 0 and 1, indicating if the student prefers the slot
+    prefs: dict(key=(students, slots), val=ints(0,1))  
+
+    # Decision Variables
+    # a map from (student, slot) to 0 and 1, indicating if the student is assigned to the slot
+    assign: dict(key=(students, slots), val=ints(0,1))
+    # the number of students whose assignments meet their preferences
+    numpref: int = sumof(1, s in students, each(t in slots, has= assign[s,t]==0 or prefs[s,t]==1))
+    # numpref: int = sumof(prefs[s,t]*assign[s,t], s in students, t in slots)
+    
+    # Constraints
+    # each studten is assigned to exactly one slot
+    c1 = each(s in students, has= sumof(assign[s,t], t in slots) == 1)
+    # each slot is assigned no more than 6 students
+    c2 = each(t in slots, has= sumof(assign[s,t], s in students) <=6)
+    
+    # Return: any assignment with the maximum number of preference met
+    return anyof(assign, c1, c2, to_max(numpref))
+
+import sys, csv
+if (len(sys.argv) < 2):
+    inputfile = 'input.csv'
+else:
+    inputfile = sys.argv[1]
+
+with open(inputfile) as csvfile:
+    readCSV = list(csv.reader(csvfile, delimiter=','))
+    students = set(ints(len(readCSV)-2))
+    slots = set(ints(len(readCSV[0]) - 5))
+    slotDict = {i:s for i,s in enumerate(readCSV[1][3:-2])} 
+    dictStudents = {i: row[0:3] for i,row in enumerate(readCSV[2:])}
+    prefs = [[1 if col else 0 for col in row[3:-2]]for row in readCSV[2:]]
+
+assign = query(constraint='schedule')['assign']
+    
+with open('result.csv','w') as outfile:
+    for t in range(len(slots)):
+        outfile.write('%s: %s'% (t,slotDict[t]) + ',')
+        for s in range(len(students)):
+            if assign[s][t]:
+                outfile.write(' '.join(dictStudents[s]) + ',')
+        outfile.write('\n')
+

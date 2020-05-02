@@ -1,0 +1,31 @@
+def constraint(name= 'job_sequencing', pars={n, duration, deadline, penalty}):
+	# Variables:
+	n: int                          # number of jobs
+	duration: dict(key=int,val=int) # execution time of each job
+	deadline: dict(key=int,val=int) # deadline of each job
+	penalty: dict(key=int,val=int)  # penalty of not finished before deadline
+	sequencing: dict(key=ints(1,n),val=ints(1,n))   # sequence of jobs
+
+	# Constraints:
+	# a sequence of job with no repeating
+	c = alldiff(sequencing[i], i in ints(1,n))
+	
+	# Target:
+	# find a sequencing of jobs of minimum penalty
+	obj: int = sumof((0 if sumof(duration[sequencing[i]], i in ints(1,j)) 
+	                    <= deadline[sequencing[j]]
+	                  else penalty[sequencing[j]]), j in ints(1,n))
+	return anyof((sequencing,obj), c, to_min(obj))
+
+
+
+from pprint import pprint
+
+# data adapted from https://www.dyclassroom.com/greedy-algorithm/job-sequencing-problem-with-deadline
+n = 5;
+duration = [1,1,1,1,1];
+deadline = [2,1,3,2,1];
+penalty = [40,0,80,60,80];
+
+result = query(constraint = 'job_sequencing')
+pprint(result)

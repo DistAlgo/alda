@@ -1,0 +1,36 @@
+def constraint(name= 'set_cover', pars={X,subsets,S}):
+	# Variables
+	X: set[int]  		# the universe
+	subsets: set[int]	# id of subsets in S
+	# S[i,j]: the ith subset in S contains the jth element in X
+	S: dict(key= (subsets, X), val= ints(0,1))
+	# indicate which subset in S is included in solution
+	T: dict(key= subsets, val= ints(0,1))
+	
+	# Constraints
+	# each element in X is at least covered once by sets in S
+	cover = each(i in X, has= sumof(T[j]*S[j,i], j in subsets) >= 1)
+	
+	# Target
+	# find the minimum number of sets to cover X
+	return anyof(T, cover, to_min(sum(T)))
+
+
+
+from pprint import pprint
+
+X = {1,2,3,4,5}
+subsets = {1,2,3}
+S = [[1,0,1,1,0],
+	 [0,1,0,0,1],
+	 [1,1,1,1,0]]
+
+# example from
+# https://www.geeksforgeeks.org/set-cover-problem-set-1-greedy-approximate-algorithm/	 
+# S = {S1,S2,S3}   
+   # S1 = {4,1,3},    Cost(S1) = 5
+   # S2 = {2,5},      Cost(S2) = 10
+   # S3 = {1,4,3,2},  Cost(S3) = 3
+
+result = query(constraint= 'set_cover')
+pprint(result)

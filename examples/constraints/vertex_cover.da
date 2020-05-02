@@ -1,0 +1,28 @@
+def constraint(name= 'vertex_cover', pars={vertex, edge}):
+  # Parameters: 
+  vertex: set[int]  # vertices as a set of integers
+  edge: dict(key=(vertex,vertex), val=ints(0,1))  # edges as an adj matrix
+  
+  # Decision variables: 
+  vc: dict(key=vertex, val=ints(0,1))  # vertex cover as a dict too
+  num_vertex: int = sum(vc)  # number of vertices and objective function
+
+  # Constraints: each edge has at least one end in the vertex cover
+  cover = each(i in vertex, j in vertex, has=
+               edge[i,j] == 0 or vc[i] == 1 or vc[j] == 1)
+  
+  # Return: any vertex cover with the minimum number of vertices
+  return anyof((vc, num_vertex), cover, to_min(num_vertex))
+    
+v = set(ints(1,6))
+e = [[0,1,1,0,0,0],
+     [1,0,1,1,1,1],
+     [1,1,0,0,0,0],
+     [0,1,0,0,0,0],
+     [0,1,0,0,0,0],
+     [0,1,0,0,0,0]]
+
+result = query(constraint='vertex_cover', vertex=v, edge=e)
+
+print(result['vc'])  # value of decision variable vc in solution
+print(result['num_vertex'])  # value of decision variable num_vertex
