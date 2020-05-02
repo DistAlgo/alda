@@ -89,10 +89,10 @@ Constraints are the conditions that must be satisfied when assigning values to d
 1. as an assignment statement: `c_1 = bexp`, so that the name of the constraint is named by the target name of assignment, in this case `c_1`,
 2. as a function: 
 	```python
-		def c_2():
-			bexp1
-			bexp2
-			...
+	def c_2():
+		bexp1
+		bexp2
+		...
 	```
 	The expressions inside the body of the function are of `and` relation, so that compared to the first way, defining constraints can be simplified by omitting the `and` operator if multiple constraints are of conjunction relation. All constraints inside the body together are named as the function name, in this case `c_2`.
 - Theoretically, `bexp` can be any expression that returns boolean value. But currently only expressions of the following forms are allowed:
