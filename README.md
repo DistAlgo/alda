@@ -66,7 +66,7 @@ The function must be named `constraint`, with two parameters `name` and `pars`.
 The name serves as the unique identifier of a model and shares the same naming convention as python identifiers.
 - `pars` is a set containing the parameters whose values need to be given when instantiating the problem. In the problem `vertex` and `edge` are parameters.
 
-Inside the body of the constraint function, 3 kinds of information need to be defined: variables, constraints and the target.
+Inside the body of the constraint function, 3 kinds of information need to be defined: variables, constraints and the return value.
 ##### Variables
 There are two types of variables: parameters and decision variables.
 1. Parameters are variables that must have known when the problem is instantiated. Parameters must be explicitly specified when defining the problem, 
