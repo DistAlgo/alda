@@ -6,7 +6,6 @@ def constraint(name='schedule', pars={students, slots, prefs}):
     prefs: dict(key=(students,slots), val=ints(0,1))  # preferences as a map,
     # mapping (student,slot) to 1 if the student prefers the slot, and 0 o.w.
 
-
     # Decision variables:
     # mapping (student,slot) to 1 if the student is assigned the slot; 0 o.w.
     assign: dict(key=(students,slots), val=ints(0,1))
@@ -24,27 +23,43 @@ def constraint(name='schedule', pars={students, slots, prefs}):
     # Return: any assignment with the maximum number of preference met
     return anyof((assign,npref), c1, c2, to_max(npref))
 
+# reading data from input file, the file you have written before Midterm 2:
 import sys, csv
 infile = sys.argv[1] if len(sys.argv) > 1 else 'input.csv'
 with open(infile) as csvfile:
     data = list(csv.reader(csvfile, delimiter=','))
 
+# prepare parameter values for our constraint optimization problem:
 students = set(ints(len(data) - 2))
-slots = set(ints(len(data[0]) - 5))
-prefs = [[1 if col else 0 for col in row[3:-2]] for row in data[2:]]
+slots = set(ints(len(data[0]) - 4))
+prefs = [[1 if col else 0 for col in row[2:-2]] for row in data[2:]]
 print(len(students), len(slots), len(prefs))
 
-results = query(constraint='schedule')
-print(results['npref'])
+# obtain result from solving the constraint optimization problem:
+result = query(constraint='schedule')
 
-assign = results['assign']
-slotDict = {i:s for i,s in enumerate(data[1][3:-2])}
-dictStudents = {i: row[0:3] for i,row in enumerate(data[2:])}
+# print number of students who are assigned a slot they prefer:
+print(result['npref']) 
+
+# prepare and print the assignment of students to each slot:
+assign = result['assign']
+student_dict = {i : row[1]+' '+row[0] for i,row in enumerate(data[2:])}
+slot_dict = {j : s[0]+' '+s[1] 
+             for j,s in enumerate(list(zip(data[0],data[1]))[2:-2])}
+output='\n'.join(str(j) +','+ slot_dict[j-1] +','+ 
+                 ','.join(student_dict[i-1] for i in students 
+                          if assign[i-1][j-1])
+                 for j in slots)
+
+#assign_list = listof((j, slot_dict[j-1],
+#                      listof(student_dict[i-1], i in students,
+#                             assign[i-1][j-1])), 
+#                     j in slots)
+#
+#output='\n'.join(str(slot[0])+','+slot[1]+','+
+#                 ','.join(str(s) for s in slot[2]) for slot in assign_list)
+
+#print(output)
 
 with open('result.csv','w') as outfile:
-    for t in range(len(slots)):
-        outfile.write('%s: %s'% (t,slotDict[t]) + ',')
-        for s in range(len(students)):
-            if assign[s][t]:
-                outfile.write(' '.join(dictStudents[s]) + ',')
-        outfile.write('\n')
+    outfile.write(output)
