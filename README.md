@@ -7,7 +7,7 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 2. To use the extension with rules, install XSB from http://xsb.sourceforge.net/.
 3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
-## Instruction
+## Using the extension with constraints
 
 ### An example program that uses constraints
 <table style="width:100%">
@@ -19,20 +19,21 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 
 ```python
 def constraint(name= 'vertex_cover', pars={vertex, edge}):
+
   # Parameters: 
   vertex: set[int]  # vertices as a set of integers
   edge: dict(key=(vertex,vertex), val=ints(0,1))  # edges as an adj matrix
   
   # Decision variables: 
   vc: dict(key=vertex, val=ints(0,1))  # vertex cover as a dict too
-  num_vertex: int = sum(vc)  # number of vertices and objective function
+  nvertex: int = sum(vc)  # number of vertices, and objective function
 
   # Constraints: each edge has at least one end in the vertex cover
   cover = each(i in vertex, j in vertex, has=
                edge[i,j] == 0 or vc[i] == 1 or vc[j] == 1)
   
   # Return: any vertex cover with the minimum number of vertices
-  return anyof((vc, num_vertex), cover, to_min(num_vertex))
+  return anyof((vc, nvertex), cover, to_min(nvertex))
     
 v = set(ints(1,6))
 e = [[0,1,1,0,0,0],
@@ -43,13 +44,13 @@ e = [[0,1,1,0,0,0],
      [0,1,0,0,0,0]]
 
 result = query(constraint='vertex_cover', vertex=v, edge=e)
-
 print(result['vc'])  # value of decision variable vc in solution
-print(result['num_vertex'])  # value of decision variable num_vertex
+print(result['nvertex'])  # value of decision variable nvertex
 ```
 
-#### Constraint Solving Problem
-Constraint solving problem is the problem of finding assignments to decision variables while given constraints must be satisfied. In the vertex cover example,
+### Constraint satisfaction problems
+
+Constraint satisfaction problems are problems specified as finding values of decision variables that satisfy given constraints. In the vertex cover example,
   - the decision variable is `vc` which is a map from `vertex` to `0` or `1`. 
 	  For vertex `v`, `vc[v] == 1` means that `v` is inside the vertex cover, and `vc[v] == 0` means `v` not inside.
   - the constraint `cover` defines the vertex cover condition.
@@ -59,7 +60,7 @@ Depending on the target of a problem, there are two kinds of constraint solving 
   2. The target of a COP is that of a CSP with an additional optimization goal to be maximized or minimized.
   	 - The vertex cover example is a COP whose optimization goal is to minimize the size of vertex cover
 
-#### Specification
+### Specifying the problem
 A constraint solving problem can be specified as easy as a function.
 The function must be named `constraint`, with two parameters `name` and `pars`. 
 - `name` is the name of the problem, which is `'vertex_cover'` in the example.
@@ -67,7 +68,8 @@ The name serves as the unique identifier of a model and shares the same naming c
 - `pars` is a set containing the parameters whose values need to be given when instantiating the problem. In the problem `vertex` and `edge` are parameters.
 
 Inside the body of the constraint function, 3 kinds of information need to be defined: variables, constraints and the return value.
-##### Variables
+
+#### Variables
 There are two types of variables: parameters and decision variables.
 1. Parameters are variables that must have known when the problem is instantiated. Parameters must be explicitly specified when defining the problem, 
 2. Decision variables are variables whose values are to be decided during solving the problem. 
@@ -84,7 +86,7 @@ There are two types of variables: parameters and decision variables.
 	4. `set`: A `set` can be defined precisely by `set[domain]` where `domain` can be of `int/ints` or `float` domain,
 	5. variables can be used as domains presenting the domains of themselves.
 
-##### Constraints
+#### Constraints
 Constraints are the conditions that must be satisfied when assigning values to decision variables. There are two ways of defining a constraints:
 1. as an assignment statement: `c_1 = bexp`, so that the name of the constraint is named by the target name of assignment, in this case `c_1`,
 2. as a function: 
@@ -112,7 +114,7 @@ Constraints are the conditions that must be satisfied when assigning values to d
 	   take pairwisely different values, otherwise returns `False`.
 	5. boolean operators (`and`, `or`, `not`) connected `bexp`'s
 			
-##### Return
+#### Return
 The return value of a constraint problem is defined by a `return` statement of target function. As described above, there are CSPs and COPs with different target functions:
 1. CSP target function: `anyof(variables, c_1, ..., c_k)`
 2. COP target function: `anyof(variables, c_1, ..., c_k, agg(opt_goal))`
@@ -120,7 +122,7 @@ The return value of a constraint problem is defined by a `return` statement of t
 - The last argument of COP target function is the calling of aggregation function `agg` on the optimization goal `opt_goal`. The aggregation function can be one of `to_max` or `to_min` doing maximize or minimize respectively. The `opt_goal` is usually a decision variable defined by an expression of other decision variables.
 - The other arguments are names of constraints that must be satisfied.
 
-#### Solve the problem
+### Solving the problem
 After specifying the problem, call the following function to solve the problem:
 ```python
 query(constraint, **kwargs)
@@ -135,7 +137,7 @@ query(constraint, **kwargs)
   and of the same name as the target parameter, the passing in of that argument can be omitted.
 - The return value of `query` function is a dictionary, whose keys are names of decision variables appearing in the first argument of the target function. If the problem is COP, an additional `objective` item will also be returned if not already been specified in the first argument, which is the optimal value of the optimization goal. Besides, the statistics of solving the problem are also returned under key `statistics`. The detailed explanation of all the items in statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
 
-#### Run the program
+### Running the program
 Usage: `python3 -m da --constraint <filename>`
 
 save the example program to a file named `vertex_cover.da`, then running following command can get the output:
@@ -149,7 +151,7 @@ save the example program to a file named `vertex_cover.da`, then running followi
 1. USAGE: `python3 -m da --constraint <filename>`
 2. some working examples are inside `examples/constraints` folder. -->
 
-### Using the extension with rules
+## Using the extension with rules
 - A set of Datalog rules can be written as easy as a Python function
   ```python
 	def rules(name='name_of_rule'):
@@ -190,8 +192,10 @@ save the example program to a file named `vertex_cover.da`, then running followi
 	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
 	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
 
-### Running the Rule Examples
-#### Trans
+## Example programs that use rules
+
+### Trans
+This problem computes the transitive closure of a graph
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_trans.sh`.  
 	to run a single round of trans, call  
@@ -202,7 +206,8 @@ save the example program to a file named `vertex_cover.da`, then running followi
 3. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
 
-#### Hrbac
+### Hrbac
+This example is about hierachical role-based access control.
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_hrbac.sh`.  
 	to run a single round of hrbac, call  
@@ -220,7 +225,8 @@ save the example program to a file named `vertex_cover.da`, then running followi
 3. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
 
-#### pyAnalysis
+### pyAnalysis
+This example is about analysis of Python programs.
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_pyanalysis.sh`.  
 	to run a single analysis, call  
