@@ -2,13 +2,13 @@
 
 DA-rules is an extension of DistAlgo with rules and constraints.  This implementation requires Python 3.7.
 
-## Installation
+## 1. Installation
 1. Install DA-rules by (1) copying or extracting the DA-rules files to a path, designated as `<DArulesROOT>`, in the local file system, and (2) adding `<DArulesROOT>/distalgo` to the front of the `PYTHONPATH` environment variable so that Python can load the `da` module.
 2. To use the extension with rules, install XSB from http://xsb.sourceforge.net/.
 3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
 
-## Using the extension with rules
+## 2. Using the extension with rules
 - A set of Datalog rules can be written as easy as a Python function
   ```python
 	def rules(name='name_of_rule'):
@@ -97,7 +97,7 @@ This example is about analysis of Python programs.
 	generated data will be in `./data` folder.
 
 
-## Using the extension with constraints
+## 3. Using the extension with constraints
 
 ### An example program that uses constraints
 <table style="width:100%">
