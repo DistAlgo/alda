@@ -1,43 +1,46 @@
-def constraint(name='schedule', pars={students, slots, prefs}):  #studdents, slots, (student, slot) pairs
+def constraint(name='schedule', pars={students, slots, prefs}):
     
-    # Parameters
-    students: set[int]    # students as a set of integers
-    slots: set[int]        # slots as a set of integers
-    # a map from (student, slot) to 0 and 1, indicating if the student prefers the slot
-    prefs: dict(key=(students, slots), val=ints(0,1))  
+    # Parameters:
+    students: set[int]  # students as a set of integers
+    slots: set[int]     # slots as a set of integers
+    prefs: dict(key=(students,slots), val=ints(0,1))  # preferences as a map,
+    # mapping (student,slot) to 1 if the student prefers the slot, and 0 o.w.
 
-    # Decision Variables
-    # a map from (student, slot) to 0 and 1, indicating if the student is assigned to the slot
-    assign: dict(key=(students, slots), val=ints(0,1))
-    # the number of students whose assignments meet their preferences
-    numpref: int = sumof(1, s in students, each(t in slots, has= assign[s,t]==0 or prefs[s,t]==1))
-    # numpref: int = sumof(prefs[s,t]*assign[s,t], s in students, t in slots)
+
+    # Decision variables:
+    # mapping (student,slot) to 1 if the student is assigned the slot; 0 o.w.
+    assign: dict(key=(students,slots), val=ints(0,1))
+    # number of students whose assignment meet their preferences
+    npref: int = sumof(1, s in students, 
+                       some(t in slots, has= assign[s,t]==1 and prefs[s,t]==1))
+    # npref: int = sumof(prefs[s,t]*assign[s,t], s in students, t in slots)
     
-    # Constraints
+    # Constraints:
     # each studten is assigned to exactly one slot
     c1 = each(s in students, has= sumof(assign[s,t], t in slots) == 1)
-    # each slot is assigned no more than 6 students
+    # each slot is assigned at most 6 students
     c2 = each(t in slots, has= sumof(assign[s,t], s in students) <=6)
     
     # Return: any assignment with the maximum number of preference met
-    return anyof(assign, c1, c2, to_max(numpref))
+    return anyof((assign,npref), c1, c2, to_max(npref))
 
 import sys, csv
-if (len(sys.argv) < 2):
-    inputfile = 'input.csv'
-else:
-    inputfile = sys.argv[1]
+infile = sys.argv[1] if len(sys.argv) > 1 else 'input.csv'
+with open(infile) as csvfile:
+    data = list(csv.reader(csvfile, delimiter=','))
 
-with open(inputfile) as csvfile:
-    readCSV = list(csv.reader(csvfile, delimiter=','))
-    students = set(ints(len(readCSV)-2))
-    slots = set(ints(len(readCSV[0]) - 5))
-    slotDict = {i:s for i,s in enumerate(readCSV[1][3:-2])} 
-    dictStudents = {i: row[0:3] for i,row in enumerate(readCSV[2:])}
-    prefs = [[1 if col else 0 for col in row[3:-2]]for row in readCSV[2:]]
+students = set(ints(len(data) - 2))
+slots = set(ints(len(data[0]) - 5))
+prefs = [[1 if col else 0 for col in row[3:-2]] for row in data[2:]]
+print(len(students), len(slots), len(prefs))
 
-assign = query(constraint='schedule')['assign']
-    
+results = query(constraint='schedule')
+print(results['npref'])
+
+assign = results['assign']
+slotDict = {i:s for i,s in enumerate(data[1][3:-2])}
+dictStudents = {i: row[0:3] for i,row in enumerate(data[2:])}
+
 with open('result.csv','w') as outfile:
     for t in range(len(slots)):
         outfile.write('%s: %s'% (t,slotDict[t]) + ',')
@@ -45,4 +48,3 @@ with open('result.csv','w') as outfile:
             if assign[s][t]:
                 outfile.write(' '.join(dictStudents[s]) + ',')
         outfile.write('\n')
-
