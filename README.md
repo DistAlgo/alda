@@ -7,6 +7,96 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 2. To use the extension with rules, install XSB from http://xsb.sourceforge.net/.
 3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
+
+## Using the extension with rules
+- A set of Datalog rules can be written as easy as a Python function
+  ```python
+	def rules(name='name_of_rule'):
+		conclusion_1, if_(condition_1, condition_2, ...)
+		conclusion_2, if_(conclusion_1, condition_3, ...)
+
+	result = infer(rule='name_of_rule', 
+                       bindings=[('condition_1',variable_1),('condition_2',variable_2)],
+                       queries=['conclusion_2'])
+  ```
+- The function must be named by `rules`, with an argument `name` indicating the unique identifier of the rule set.
+- Inside the function block, Datalog rules of form `conclusion :- condition_1, condition_2, ....` can be written as `conclusion_1, if_(condition_1, condition_2, ...)`. Each conclusion and condition are predicates of the form `predicate(var_1, var_2, ...)`
+- Datalog rules can be used to easily write database alike queries and recursion. For example, the following rule set can be used to computing the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of a graph:
+	```python
+	def rules(name='transitive_closure'):
+		path(x,y), if_(edge(x,y))
+		path(x,y), if_(edge(x,z), path(z,y))
+	```
+- Understanding rules with Python thinking
+	- Each predicate on the right hand side of the rule set can be seen as a membership check of set. For example, `edge(x,y)` returns `True` if tuple `(x,y)` is in the set `edge`. 
+	- Between different conditions on the right hand side of a rule is logic `and` relation. 
+	- And each predicate on the left hand side can be seen as a set add operation that for the rule `path(x,y), if_(edge(x,y))`, if there is tuple `(x,y)` in `edge`, then add `(x,y)` to set `path`. 
+	- The rules in a rule set will be executed repeatedly until no changes can be made.
+	- Although this is not exactly how Datalog engine works, the idea is the most equivalent correspondence in Python.
+- Infer with rules:
+	```python
+	result_1, result_2 = infer(rule='name_of_rule', 
+                               bindings=[('condition_1',variable_1),('condition_2',variable_2)],
+                               queries=['conclution_1','conclusion_2'])
+	```
+
+	call function `infer` with 
+	- parameter `rule` specifies the name of rule you want to use,
+	- parameter `bindings` is a list of tuples that binds predicate with a variable of set type in Python program.
+		- the first element is the name of a predicate in the rule set
+		- the second element is the name of a variable in Python program
+		- when a variable is defined in the same scope as calling of the `infer` function or is a global variable, and the name of the variable is the same as the predicate it is to be bound, the binding of this pair of predicate and variable can be omitted.
+	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
+	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
+
+## Example programs that use rules
+
+### Trans
+This problem computes the transitive closure of a graph
+1. USAGE:  
+	to get all the statistics in the graph, run `./test_trans.sh`.  
+	to run a single round of trans, call  
+	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`  
+	where `NUMEDGE` is the number of edges of input data, and  
+	`MODE` can take value from: `'rule'`, `'rev_rule'`, `'distalgo'` and `'python'`.
+2. the data provided in the `input` folder is those used when generating the graphs in the paper
+3. to generate your own input data  
+	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
+
+### Hrbac
+This example is about hierachical role-based access control.
+1. USAGE:  
+	to get all the statistics in the graph, run `./test_hrbac.sh`.  
+	to run a single round of hrbac, call  
+	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`  
+	where `NUMROLE` is the number of roles,  
+	`NUMOP` is the basic number of operations that: 
+	* adding/deleting user (each `NUMOP` times), 
+	* adding/deleting role (each `NUMOP/10'` times), 
+	* adding/deleting UR pair (each `NUMOP*1.1` times), 
+	* adding/deleting RH pair (each `NUMOP/10` times)
+
+	`NUMQUERY` is the number of `AuthorizedUsers` query, and  
+	`MODE` can take value from: `'rule'`, `'rolerule'`, `'transRH'`, `'python'`, and `'distalgo'`.
+2. the data provided in the `input` folder is those used when generating the graphs in the paper
+3. to generate your own input data  
+	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
+
+### pyAnalysis
+This example is about analysis of Python programs.
+1. USAGE:  
+	to get all the statistics in the graph, run `./test_pyanalysis.sh`.  
+	to run a single analysis, call  
+	`python3 -m da ast_analysis_rule.da DATASET MODE QUERY`  
+	where `DATASET` is the name of the package you want to analyasis,  
+	`MODE` can take value from: `rule`, `python`, `distalgo` and `combine`, and  
+	`QUERY` can take value from: `subclass`, and `class`   
+	the output of the analysis will be in the `output` folder
+2. to generate input data  
+	run `python3 -m da prepare_data.da PACKAGE_FOLDER`.  
+	generated data will be in `./data` folder.
+
+
 ## Using the extension with constraints
 
 ### An example program that uses constraints
@@ -150,91 +240,3 @@ save the example program to a file named `vertex_cover.da`, then running followi
 <!-- ### Running the Constaint Examples
 1. USAGE: `python3 -m da --constraint <filename>`
 2. some working examples are inside `examples/constraints` folder. -->
-
-## Using the extension with rules
-- A set of Datalog rules can be written as easy as a Python function
-  ```python
-	def rules(name='name_of_rule'):
-		conclusion_1, if_(condition_1, condition_2, ...)
-		conclusion_2, if_(conclusion_1, condition_3, ...)
-
-	result = infer(rule='name_of_rule', 
-                       bindings=[('condition_1',variable_1),('condition_2',variable_2)],
-                       queries=['conclusion_2'])
-  ```
-- The function must be named by `rules`, with an argument `name` indicating the unique identifier of the rule set.
-- Inside the function block, Datalog rules of form `conclusion :- condition_1, condition_2, ....` can be written as `conclusion_1, if_(condition_1, condition_2, ...)`. Each conclusion and condition are predicates of the form `predicate(var_1, var_2, ...)`
-- Datalog rules can be used to easily write database alike queries and recursion. For example, the following rule set can be used to computing the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of a graph:
-	```python
-	def rules(name='transitive_closure'):
-		path(x,y), if_(edge(x,y))
-		path(x,y), if_(edge(x,z), path(z,y))
-	```
-- Understanding rules with Python thinking
-	- Each predicate on the right hand side of the rule set can be seen as a membership check of set. For example, `edge(x,y)` returns `True` if tuple `(x,y)` is in the set `edge`. 
-	- Between different conditions on the right hand side of a rule is logic `and` relation. 
-	- And each predicate on the left hand side can be seen as a set add operation that for the rule `path(x,y), if_(edge(x,y))`, if there is tuple `(x,y)` in `edge`, then add `(x,y)` to set `path`. 
-	- The rules in a rule set will be executed repeatedly until no changes can be made.
-	- Although this is not exactly how Datalog engine works, the idea is the most equivalent correspondence in Python.
-- Infer with rules:
-	```python
-	result_1, result_2 = infer(rule='name_of_rule', 
-                               bindings=[('condition_1',variable_1),('condition_2',variable_2)],
-                               queries=['conclution_1','conclusion_2'])
-	```
-
-	call function `infer` with 
-	- parameter `rule` specifies the name of rule you want to use,
-	- parameter `bindings` is a list of tuples that binds predicate with a variable of set type in Python program.
-		- the first element is the name of a predicate in the rule set
-		- the second element is the name of a variable in Python program
-		- when a variable is defined in the same scope as calling of the `infer` function or is a global variable, and the name of the variable is the same as the predicate it is to be bound, the binding of this pair of predicate and variable can be omitted.
-	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
-	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
-
-## Example programs that use rules
-
-### Trans
-This problem computes the transitive closure of a graph
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_trans.sh`.  
-	to run a single round of trans, call  
-	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`  
-	where `NUMEDGE` is the number of edges of input data, and  
-	`MODE` can take value from: `'rule'`, `'rev_rule'`, `'distalgo'` and `'python'`.
-2. the data provided in the `input` folder is those used when generating the graphs in the paper
-3. to generate your own input data  
-	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
-
-### Hrbac
-This example is about hierachical role-based access control.
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_hrbac.sh`.  
-	to run a single round of hrbac, call  
-	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`  
-	where `NUMROLE` is the number of roles,  
-	`NUMOP` is the basic number of operations that: 
-	* adding/deleting user (each `NUMOP` times), 
-	* adding/deleting role (each `NUMOP/10'` times), 
-	* adding/deleting UR pair (each `NUMOP*1.1` times), 
-	* adding/deleting RH pair (each `NUMOP/10` times)
-
-	`NUMQUERY` is the number of `AuthorizedUsers` query, and  
-	`MODE` can take value from: `'rule'`, `'rolerule'`, `'transRH'`, `'python'`, and `'distalgo'`.
-2. the data provided in the `input` folder is those used when generating the graphs in the paper
-3. to generate your own input data  
-	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
-
-### pyAnalysis
-This example is about analysis of Python programs.
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_pyanalysis.sh`.  
-	to run a single analysis, call  
-	`python3 -m da ast_analysis_rule.da DATASET MODE QUERY`  
-	where `DATASET` is the name of the package you want to analyasis,  
-	`MODE` can take value from: `rule`, `python`, `distalgo` and `combine`, and  
-	`QUERY` can take value from: `subclass`, and `class`   
-	the output of the analysis will be in the `output` folder
-2. to generate input data  
-	run `python3 -m da prepare_data.da PACKAGE_FOLDER`.  
-	generated data will be in `./data` folder.
