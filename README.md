@@ -49,9 +49,9 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
 	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
 
-## Example programs that use rules
+### Example programs that use rules
 
-### Trans
+#### Trans
 This problem computes the transitive closure of a graph
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_trans.sh`.  
@@ -63,7 +63,7 @@ This problem computes the transitive closure of a graph
 3. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
 
-### Hrbac
+#### Hrbac
 This example is about hierachical role-based access control.
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_hrbac.sh`.  
@@ -82,7 +82,7 @@ This example is about hierachical role-based access control.
 3. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
 
-### pyAnalysis
+#### pyAnalysis
 This example is about analysis of Python programs.
 1. USAGE:  
 	to get all the statistics in the graph, run `./test_pyanalysis.sh`.  
