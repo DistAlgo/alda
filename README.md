@@ -142,9 +142,10 @@ print(result['nvertex'])  # value of decision variable nvertex
 
 A Constraint Satisfaction Problem (CSP) is defined by a triple `<X,D,C>` where `X` is a set of variables, `D` is a set of domains respective to the variables and `C` is a set of constraints. Variables can be further subdivided into parameters and decision variables where parameters are variables whose values are known before solving the problem while decision variables are those whose values are to be decided.
 The goal of solving a CSP is to find a solution, which is an assigment to all variables with values in their respective domains, such that all the constraints are satisfied.
-Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a variable whose value is given by an expression of some other variables. The goal of solving a COP is to find an optimal solution, which is an assignment of variables such that the objective is minimized or maximized depending on the setting of problem while all the constraints are satisfied.
 
-The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` is the objective, and constraint `cover`. The goal of the problem is to find an optimal solution that the objective `nvertex` is minimized.
+Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a function of some variables. The goal of solving a COP is to find an optimal solution, which is an assignment of variables such that the objective is minimized or maximized depending on the setting of problem while all the constraints are satisfied.
+
+The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` takes value from the objective function, and constraint `cover`. The goal of the problem is to find an optimal solution that the objective is minimized.
 
 ### Specifying the problem
 A constraint satisfaction problem can be specified as easily as a function.
