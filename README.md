@@ -163,7 +163,7 @@ There are two types of variables: parameters and decision variables.
 1. Parameters are variables whose values must be known when the problem is instantiated.
 2. Decision variables are variables whose values are to be decided. 
 	
-	For some problems such as Sudoku, a partially filled playboard can be passed in as a parameter. Its empty cells are indicated by `_` and will be assigned values when he problem is solved. Parameters with empty cells are also treated as decision variables.
+	For some problems such as Sudoku, a partially filled playboard can be passed in as a parameter. Its empty cells are indicated by `_` and will be assigned values when the problem is solved. Parameters with empty cells are also treated as decision variables.
 - Variables need to be explicitly declared with domain information. The syntax for specifying the domain of a variable is of the following form, where `= value` is optional:
 	```python
 	variable: domain = value
