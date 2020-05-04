@@ -142,9 +142,10 @@ print(result['nvertex'])  # value of decision variable nvertex
 
 A Constraint Satisfaction Problem (CSP) is defined by a triple `<X,D,C>` where `X` is a set of variables, `D` is a set of domains respective to the variables, and `C` is a set of constraints. Variables can be subdivided into parameters and decision variables, where parameters are variables whose values are given, and decision variables are those whose values are to be decided.
 Solving a CSP is to find a solution, which is an assigment to decisions variables with values in their respective domains, such that all the constraints are satisfied.
-Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a variable whose value is given by a function of some other variables. Solving a COP is to find an optimal solution, which is an assignment of values to decision variables such that the value of the objective is minimized or maximized as required by the problem and all the constraints are satisfied.
 
-The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` is the objective, and constraint `cover`. The goal of the problem is to find an optimal solution that minimizes the value of `nvertex`.
+Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a function of some variables. Solving a COP is to find an optimal solution, which is an assignment of values to decision variables such that the evaluation of objective is minimized or maximized as required by the problem and all the constraints are satisfied.
+
+The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` takes the value the objective function evaluates, and constraint `cover`. The goal of the problem is to find an optimal solution that minimizes the objective.
 
 ### Specifying the problem
 A CSP can be specified easily using the syntax of a Python function:
@@ -174,7 +175,7 @@ There are two types of variables: parameters and decision variables.
 		- `ints(lb,ub)` represents an `int` domain taking values from lowerbound `lb` to upperbound `ub` (inclusive),
 		- `lb` and `ub` are of `int` or bounded int domain.
 	3. map domain: `dict(key=domain, val=domain)`. A map domain can be viewed as a multi-dimensional array. `key` specifies the domain of each dimension, which must be of `int` or bounded int domain. `value` must be of `int`, bounded int, or `float` domain.
-	4. set domain: `set[domain]`.  `domain` can be of `int`, bouned int, or `float` domain. Set variables can only be parameters.
+	4. set domain: `set[domain]`.  `domain` can be of `int`, bounded int, or `float` domain. Set variables can only be parameters.
 	5. variable: A variable name can be used as domains representing the domain of itself.
 
 #### Constraints
@@ -203,15 +204,15 @@ Constraints are the conditions that must be satisfied when assigning values to d
 		- all items in the set of values of `exp` for all combinations of values of variables that satisfy all membership clauses `vi in sexpi` and condition `bexp`, for the second case
 
 	   take pairwisely different values.
-	5. loical operators (`and`, `or`, `not`) applied `bexp`'s
+	5. logical operators (`and`, `or`, `not`) applied `bexp`'s
 
 #### Return
 The return value of a constraint problem is specified in the form of a `return` statement.  As described above, CSPs and COPs are different so their returns are in different forms:
 1. CSP: `anyof(variables, c_1, ..., c_k)`
 2. COP: `anyof(variables, c_1, ..., c_k, opt(objective))`
-- `variables` are a decision variable or a tuple of decision variables whose values are to be returned from the constraint problem.
-- `c_1, ..., c_k)` are names of constraints to be satisfied.
-- `opt(objective)` specify the desired optimization of the objective variable `objective`, where `opt` can be `to_max` or `to_min`, denoting maximization or minimization, respectively.
+- `variables` is a decision variable or a tuple of decision variables whose values are to be returned from the constraint problem.
+- `c_1, ..., c_k` are names of constraints to be satisfied.
+- `opt(objective)` specifies the desired optimization of the objective value `objective`, where `opt` can be `to_max` or `to_min`, denoting maximization or minimization, respectively.
 
 
 ### Solving the problem
