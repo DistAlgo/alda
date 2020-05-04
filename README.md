@@ -145,7 +145,7 @@ Solving a CSP is to find a solution, which is an assigment to decisions variable
 
 Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a function of some variables. Solving a COP is to find an optimal solution, which is an assignment of values to decision variables such that the value of the objective is minimized or maximized as required by the problem and all the constraints are satisfied.
 
-The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` holds the value the objective function, and constraint `cover`. The problem is to find a value of `vc` that minimizes the value of `nvertex` and satisfies `cover`.
+The vertex cover problem is a COP with parameters `vertex` and `edge`, decision variables `vc` and `nvertex` where `nvertex` holds the value of the objective function, and constraint `cover`. The problem is to find a value of `vc` that minimizes the value of `nvertex` and satisfies `cover`.
 
 ### Specifying the problem
 A CSP can be specified easily using the syntax of a Python function:
