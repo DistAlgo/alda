@@ -97,7 +97,10 @@ class PythonGenerator(pygen.PythonGenerator):
         return [Module(importList+fromImportList+body)]
 
     # generate rule object containing information of rules defined in current scope
-    # self._rules_object
+    # self._rules_object = {'allbody': {'LhsVars': set(), 
+    #                                   'RhsVars': {'Member', 'With', 'Try', 'If', 'ExceptHandler', 'For'}, 
+    #                                   'Unbounded': set(), 
+    #                                   'UnboundedLeft': {('Body', 2), ('Loops', 2)}}}
     def _generate_rules(self,node,globalRule=False):
         if globalRule:
             target = pyName(RULES_OBJECT_NAME, Store())
@@ -106,9 +109,11 @@ class PythonGenerator(pygen.PythonGenerator):
 
         a = pyAssign(  [target], 
                         Dict([Str(key) for key, _ in node.RuleConfig.items()],
-                             [Dict( [Str('LhsVars'),Str('RhsVars'),Str('Unbounded'),Str('UnboundedLeft')],
+                             [Dict( [Str('LhsVars'),Str('RhsVars'),Str('RhsAry'),Str('Unbounded'),Str('UnboundedLeft')],
                                     [Set([pyTuple([Str(v.name), Num(val['LhsAry'][v])]) for v in val['LhsVars']]),
                                      Set([Str(v.name) for v in val['RhsVars']]),
+                                     Dict([Str(key.name) for key,_ in val['RhsAry'].items()],
+                                          [Num(val) for _,val in val['RhsAry'].items()]),
                                      Set([Str(v) for v in val['Unbounded']]),
                                      Set([pyTuple([Str(v), Num(val['UnboundedleftAry'][v])]) for v in val['Unboundedleft']])
                                      ])
@@ -369,7 +374,7 @@ class PythonGenerator(pygen.PythonGenerator):
                 parent = node.parent
                 while not (isinstance(parent, dast.Process) or isinstance(parent, dast.Program)):
                     parent = parent.parent
-                if len(parent.RuleConfig) > 0:
+                if hasattr(parent,'RuleConfig') and len(parent.RuleConfig) > 0:
                     fire_rules = set()
                     for r in parent.RuleConfig:
                         rhs = set(v.name for v in parent.RuleConfig[r]['RhsVars'])

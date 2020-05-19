@@ -219,8 +219,9 @@ class PythonGenerator(pygen.PythonGenerator):
 
 	def parse_target(self,node):
 		# must be setof, anyof
+		print('TODO: constraint_pygen, line 222, add support for setof')
 		if not isinstance(node.value, dast.CallExpr):
-			self.error("line %s: the target must be setof or anyof" % node.lineno)
+			self.error("line %s: the target must be anyof" % node.lineno)
 		funcid = node.value.subexprs[0].subexprs[0].name
 		args = node.value.subexprs[1]
 

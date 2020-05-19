@@ -26,6 +26,7 @@ class Parser(parser.Parser):
                 self.current_rule['LhsAry'][n] = len(node.args)
             else:
                 self.current_rule['RhsVars'].add(n)
+                self.current_rule['RhsAry'][n] = len(node.args)
         else:
             if lhs:
                  self.current_rule['Unboundedleft'].add(node.func.id)
@@ -45,21 +46,25 @@ class Parser(parser.Parser):
                 args.append(ruleast.LogicVar(a.n))
             elif isinstance(a, Str):
                 # pprint(vars(a))
-                args.append(ruleast.LogicVar("'"+a.s+"'"))
+                args.append(ruleast.LogicVar("'%s'" % a.s))
             elif isinstance(a, UnaryOp):
                 if isinstance(a.op, USub):
                     v = -1 * a.operand.n
                 elif isinstance(a.op, UAdd):
                     v = a.operand.n
                 else:
-                    print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                    print('create_assersion: isinstance(a, UnaryOp) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                     pprint(a)
                     pprint(vars(a))
+                    raise NotImplementedError
                 args.append(ruleast.LogicVar(v))
+            elif isinstance(a, NameConstant):   # None, True, False
+                args.append(ruleast.LogicVar("'%s'" % str(a.value)))
             else:
-                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print('create_assersion: else !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 pprint(a)
                 pprint(vars(a))
+                raise NotImplementedError
         a = ruleast.Assertion(ruleast.Constant(node.func.id),args)
 
         return a
@@ -94,6 +99,7 @@ class Parser(parser.Parser):
         self.current_rule['LhsVars'] = set()
         self.current_rule['LhsAry'] = dict()
         self.current_rule['RhsVars'] = set()
+        self.current_rule['RhsAry'] = dict()
         self.current_rule['Unboundedleft'] = set()
         self.current_rule['UnboundedleftAry'] = dict()
         self.current_rule['Unboundedright'] = set()

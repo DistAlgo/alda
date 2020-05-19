@@ -558,9 +558,17 @@ class DistProcess():
 
 
     @builtin
-    def infer(self, bindings=[], queries=[], rule=None):
-        if not rule:
-            rule = self.__class__.__name__
+    def infer(self, rule, **args):
+        if 'bindings' in args:
+            bindings = args['bindings']
+        else:
+            bindings = []
+        if 'queries' in args:
+            queries = args['queries']
+        else:
+            queries = []
+        # if not rule:
+        #     rule = self.__class__.__name__
         return ruleinfer(self._state.__dict__, bindings, queries, rule, self._rules_object)
 
     @builtin
