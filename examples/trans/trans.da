@@ -1,39 +1,21 @@
 from pprint import pprint
 import subprocess
-import os
+import os, sys
 import argparse
-
+import time
 import gc
 gc.disable()
 
-# import cProfile
-import time
-
 class Trans(process):
-  def setup(E,mode,inputfile): 
-    pass
-
+  def setup(E): pass
   def trans(E): pass
-
   def run():
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-    # cp = cProfile.Profile()
-    # cp.enable()
     trans(E)
-    # cp.disable()
-    # cp.print_stats()
-    utime, stime, cutime, cstime, elapsed_time = os.times()
-
-    if not os.path.exists('timing'):
-      os.mkdir('timing')
-    fout = open('./timing/timing_trans'+'_'+mode+'_'+inputfile+'.txt','a')
-    fout.write(str(elapsed_time-elapsed_time1)+','+str(utime + stime + cutime + cstime)+'\n')
-    fout.close()
-    print(elapsed_time-elapsed_time1, ',',utime-utime1 + stime-stime1 + cutime-cutime1 + cstime-cstime1)
-
+    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    print(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1)
 
 class Trans_py(Trans, process):  # using Python but no arg self in def
-
   def trans(E):
     T = E
     W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
@@ -42,62 +24,50 @@ class Trans_py(Trans, process):  # using Python but no arg self in def
       W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
     return T
 
-
 class Trans_set(Trans, process):  # using DistAlgo set queries
-
   def trans(E):
     T = E
     while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
       T.add((x,z))
     return T
 
-# could change first lines in trans above to:
-#   T = {}
-#   while some((x,z) in E | setof((x,z), (x,y) in T, (y,z) in E),
-#              has= (x,z) not in T):
-
-
 class Trans_rules(Trans, process):
-
-  def rules():# (name='trans_rules', edge=['certain',(int,int)],path='certain'):
-    path(x,y), if_(edge(x,y))
-    path(x,y), if_(edge(x,z), path(z,y))
-
-  def trans(E): 
-    return infer([('edge',E)] ,['path'], 'Trans_rules')
-
-class Trans_left_rec_rules(Trans, process):
-
   def rules():
     path(x,y), if_(edge(x,y))
-    path(x,y), if_(path(z,y), edge(x,z))
-
+    path(x,y), if_(edge(x,z), path(z,y))
   def trans(E): 
-    return infer([('edge',E)] ,['path'], 'Trans_left_rec_rules')
+    return infer(rule='Trans_rules', bindings=[('edge',E)], queries=['path'])
 
+class Trans_left_rec_rules(Trans, process):
+  def rules():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(path(x,z), edge(z,y))
+  def trans(E): 
+    return infer(rule='Trans_left_rec_rules', bindings=[('edge',E)], queries=['path'])
 
+HandlerRoute = {
+  'python': Trans_py,
+  'distalgo': Trans_set,
+  'rule': Trans_rules,
+  'rev_rule': Trans_left_rec_rules
+}
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--nume', type= int, default= 200)  # number of roles (graph size)
+  parser.add_argument('--nume', type= int, default= 20)  # number of roles (graph size)
   parser.add_argument('--mode', type= str, default= 'python')
-
   args=parser.parse_args()
-
   v = int(args.nume/2)
   inputfile = 'v{V}e{E}.py'.format(V=v,E=args.nume)
-
   data = eval(open('./input/'+inputfile).read())
-
-  if args.mode == 'python':
-    o1 = new(Trans_py, [data,args.mode,inputfile])
-    start(o1)
-  elif args.mode == 'distalgo':
-    o2 = new(Trans_set, [data,args.mode,inputfile])
-    start(o2)
-  elif args.mode == 'rule':
-    o3 = new(Trans_rules, [data,args.mode,inputfile])
-    start(o3)
-  elif args.mode == 'rev_rule':
-    o4 = new(Trans_left_rec_rules, [data,args.mode,inputfile])
-    start(o4)
+  
+  if not args.mode in HandlerRoute:
+    print('no such mode')
+    sys.exit()
+  
+  if not os.path.exists('timing'):
+      os.mkdir('timing')
+  sys.stdout = open('./timing/timing_trans_%s_%s.txt' % (args.mode, inputfile), 'a')
+  
+  o = new(HandlerRoute[args.mode], [data])
+  start(o)
 
