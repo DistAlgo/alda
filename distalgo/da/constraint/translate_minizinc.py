@@ -212,6 +212,14 @@ class Translator(NodeVisitor):
 		return '(%s %s %s)' % (left, op ,right)
 
 
+	# comprehension
+	# <array-comp> ::= "[" <expr> "|" <comp-tail> "]"
+	# <set-comp> ::= "{" <expr> "|" <comp-tail> "}"
+	# <comp-tail> ::= <generator> [ "where" <expr> ] "," ...
+
+	# quantification
+	# <gen-call-expr> ::= <ident-or-quoted-op> "(" <comp-tail> ")" "(" <expr> ")"
+	# The identifier must be the name of a unary predicate or function that takes an array argument
 	def visit_ComprehensionExpr(self, node):
 		elem = self.visit(node.elem)
 		domainspec = []
@@ -230,6 +238,8 @@ class Translator(NodeVisitor):
 
 		if node.__class__ in MZ_CPRH_OP:	# aggregation
 			agg_op = MZ_CPRH_OP[node.__class__]
+			if agg_op == "length" and conditions:
+				return 'sum ( %s )( %s )' % (', '.join(domainspec), ' /\\ '.join(conditions))
 			return '%s ( %s )( %s )' % (agg_op, ', '.join(domainspec)+txt, elem)
 
 		txt = '%s | %s' % (elem, ', '.join(domainspec)) + txt
@@ -363,7 +373,6 @@ class Translator(NodeVisitor):
 			value = self.visit(node.value)
 			return '%s: %s = %s;\n' % (domain, name, value)
 
-		
 
 # DomainTuple:
 #	 elements: a list of domains
