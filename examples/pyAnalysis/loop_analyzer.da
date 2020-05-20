@@ -1,0 +1,197 @@
+from pprint import pprint
+import sys, os
+from declare import VariableDeclare
+import ast
+from ast import NodeTransformer
+from da.compiler.utils import to_source
+import shutil
+
+class LoopTansformer(NodeTransformer):
+	
+	def __init__(self,transDict):
+		super().__init__()
+		self.transDict = transDict
+
+	def visit_For(self,node):
+		if node in self.transDict:
+			return self.transDict[node]
+		else:
+			return self.generic_visit(node)
+
+class Analysis_rule(process,VariableDeclare):
+
+	def setup(filename, pkgInfo=None, mode='rule', query='subclass'):
+		super().setup(filename, pkgInfo)
+		self.Loop = set()
+
+	def run():
+		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+		eval('self.query_%s_%s' %(query,mode))()
+		utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+		print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+
+	def getDepth(loopid):
+		# input: loopid
+		# output: level of the loop
+		subids = setof(subid, (_loopid, body) in Loop, (body, subid, _, _) in Member, (subid,_) in Loop)
+		return max([getDepth(s) for s in subids], default=0) + 1
+
+	def query_loopdepth_rule():
+		Loop = infer(rule='allbody',queries=['Loops'])
+		looplevel = [(forid, fileid, getDepth(forid)) for (forid, _,_,_,_,fileid) in For]
+		countLevelAll = {level:listof(forid, (forid, _, _level) in looplevel) for _,_,level in looplevel}
+		print('depth, count')
+		for key, val in countLevelAll.items():
+			print('%s, %s' % (key, len(val)))
+		
+	def query_candidate_rule():
+		candidate = infer(rule='compCandidate', queries=['compCandidate'])
+		print(len(candidate))
+
+	def flattenTuple(node):
+		if isinstance(node, ast.Name):
+			return [node.id]
+		if isinstance(node, ast.Tuple):
+			return sum([flattenTuple(t) for t in node.elts],[])
+
+	def query_forToCompSimple_rule():
+		candidate = infer(rule='simplestComp', queries=['compFor'])
+		iterNameDict = {c[0]:flattenTuple(ValueDict[c[1]]) for c in candidate}
+		transDict = dict()
+		# to comprehension: result = operator(elt for target in iterable)
+		for forid, target, itr, result, elt, operator, fileid in candidate:
+			if ValueDict[result].id in iterNameDict[forid]:
+				continue
+			op = ValueDict[operator]
+			forast = ValueDict[forid]
+			if isinstance(op,str):
+				if op == 'append':
+					comp = ast.ListComp
+					augop = ast.Add()
+				elif op == 'add':
+					comp = ast.SetComp
+					augop = ast.BitOr()
+				else:
+					continue
+				compAst = ast.AugAssign([ValueDict[result]], augop,
+									 comp(ValueDict[elt], 
+									 	  [ast.comprehension(ValueDict[target], ValueDict[itr], [], 0)]))
+				if fileid not in transDict:
+					transDict[fileid] = dict()
+				transDict[fileid][forast] = compAst
+		write_transformed(transDict)
+
+	def write_transformed(transDict):
+		outFolder = 'output'
+		basename = os.path.basename(filename)
+		outroot = os.path.join(outFolder,basename)
+		if os.path.exists(outroot):
+			shutil.rmtree(outroot)
+		for m in Module:
+			file = ValueDict[m[-1]]
+			file = file.split('.')
+			outFolder = 'output'
+			for fdir in file[:-1]:
+				outFolder = os.path.join(outFolder,fdir)
+				if not os.path.exists(outFolder):
+					os.mkdir(outFolder)
+			outfile = os.path.join(outFolder,file[-1]+'.py')
+			if m[-1] in transDict:
+				cr = LoopTansformer(transDict[m[-1]]).visit(ValueDict[m[0]])
+				txt = to_source(cr)
+			else:
+				txt = to_source(ValueDict[m[0]])
+			f = open(outfile,'w')
+			f.write(txt)
+			f.close()
+
+	def rules(name='allbody'):
+		# get body and orelse from If stmt:
+		Body(id, body),if_(If(id,_,body,_,_))         # if test: <body> 
+		Body(id, orelse),if_(If(id,_,_,orelse,_))     # else: <orelse>
+		# get body, orelse, fbody from Try stmt:
+		Body(id, body), if_(Try(id,body,_,_,_,_))     # try:  <body>
+		Body(id, body), if_(Try(id,_,handlers,_,_,_), #[except: <handler>]*
+			Member(handlers, hid,_,_), ExceptHandler(hid,_,_,body,_)) 
+		Body(id, orelse), if_(Try(id,_,_,orelse,_,_)) # else: <orelse>
+		Body(id, fbody), if_(Try(id,_,_,_,fbody,_))   # finally: <fbody>
+		# get the body from With statement
+		Body(id, body), if_(With(id,_,body,_,))       # with items: <body>
+
+		# flatten all the bodies
+		Body(id,body),if_(
+			Body(id, spbody), Member(spbody, bid,_,_), Body(bid, body))
+
+		# link all above bodies directly to their parent for-loops
+		Loops(id, body), if_(For(id,_,_,body,_,_))
+		Loops(id, body), if_(
+			Loops(id, spbody), Member(spbody, bid,_,_), Body(bid, body))
+
+	def rules(name='compCandidate'):
+		# 1. r.append(y), r.add(y)
+		IncPattern(exprid),if_(Expr(exprid, bodyval,_),
+			Call(bodyval,funcid,argid,_,_), Attribute(funcid,_,_,_,_),
+			ListLen(argid,1,_))
+		# 2. augAssign: r += y, r -= y
+		IncPattern(aaid),if_(AugAssign(aaid,_,_,_,_))
+		# 3. index assign: r[x] = y
+		IncPattern(aid), if_(Assign(aid, resultid,_,_), 
+			Subscript(resultid,_,keyid,_,_), Index(keyid,_,_))
+		# 4.1 if-else expr with IncPattern body and orbody
+		IncPattern(ifid), if_(
+			If(ifid,_, bodyid, orbodyid,_),
+			ListLen(bodyid,1,_), 
+			Member(bodyid,body,_,_), IncPattern(body),
+			ListLen(orbodyid,1,_), 
+			Member(orbodyid,orbody,_,_), IncPattern(orbody))
+		# 4.2 if expr with IncPattern body
+		IncPattern(ifid), if_(
+			If(ifid,_, bodyid, orbody,_),
+			ListLen(bodyid,1,_), 
+			Member(bodyid, body,_,_), IncPattern(body),
+			ListLen(orbody,0,_))
+		# 5. for-loops with IncPattern body
+		IncPattern(forid), if_(
+			For(forid,_,_, bodyid,_,_),
+			ListLen(bodyid,1,_), 
+			Member(bodyid, body,_,_), IncPattern(body))
+
+		compCandidate(id), if_(For(id,_,_,_,_,_), IncPattern(id))
+
+	def rules(name='simplestComp'):
+		# r.append(x), r.add(x)
+		ListSetAdd(exprid, result, elt, operator),if_(
+			Expr(exprid, bodyvalue,_), Call(bodyvalue, funcid, argid,_,_),
+			Attribute(funcid, result, operator, _, _), Name(result,_,_,_),
+			Member(argid, elt,_,_), ListLen(argid,1,_))
+
+		compFor(forid, target, itr, result, elt, operator, fileid), if_(
+			For(forid, target, itr, bodyid, _, fileid),
+			ListLen(bodyid, 1, _), Member(bodyid, body, _, _), 
+			ListSetAdd(body,result, elt, operator))
+
+
+DEFAULT_FILE = 'madpy' # madpy, hylaa, AeroBenchVVPython,  numpy, scikit-learn, sklearn, pytorch, pandas, scipy, matplotlib, sympy, django
+DEFAULT_MODE = 'rule'
+DEFAULT_QUERY = 'forToCompSimple'	# loopdepth, candidate, forToCompSimple
+
+def main():
+	pprint(sys.argv)
+	if len(sys.argv) < 2:
+		filename = './data/%s' % DEFAULT_FILE
+		pkgInfo = './data/%s/astFacts/pkginfo_%s.py' %(DEFAULT_FILE,DEFAULT_FILE)
+	else:
+		filename = os.path.join('./data',sys.argv[1])
+		pkgInfo = os.path.join('./data',sys.argv[1],'astFacts/pkginfo_'+sys.argv[1]+'.py')
+	
+	mode = DEFAULT_MODE if len(sys.argv) < 3 else sys.argv[2]
+	query = DEFAULT_QUERY if len(sys.argv) < 4 else sys.argv[3]
+
+	# if not os.path.exists('timing'):
+	# 	os.mkdir('timing')
+	# sys.stdout = open('./timing/%s_%s.tsv' % (os.path.basename(filename), query), 'a')
+
+	config(enable_backup=True)
+	
+	o = new(Analysis_rule,[filename,pkgInfo,mode,query])
+	start(o)
