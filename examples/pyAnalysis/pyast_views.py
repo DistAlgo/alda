@@ -87,7 +87,7 @@ def viewDast(node, package=None):
 def list_viewDast(ast_list, package=None):
     elem_views = set()
     elems = None
-    elem_views.add(('Collection' ,getid(ast_list),len(ast_list),package))
+    elem_views.add(('ListLen' ,getid(ast_list),len(ast_list),package))
     count = 0
 
     for c in ast_list:

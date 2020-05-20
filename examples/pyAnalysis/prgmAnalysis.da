@@ -1,0 +1,100 @@
+from pprint import pprint
+import sys, os
+from declare import VariableDeclare
+import ast
+
+class Analysis(process,VariableDeclare):
+	
+	def setup(filename, pkgInfo=None):
+		super().setup(filename, pkgInfo)
+	
+	def run():
+		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+		sub = query()
+		pprint(setof((ValueDict[a], None if b is None else ValueDict[b], ValueDict[c]), (a,b,c) in sub))
+		utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+		print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+	
+	def query(): pass
+
+class Analysis_subclass_python(process,Analysis):
+	
+	def query():
+		sub = set()
+		for _, a, baseid, _, _, _, f in ClassDef:
+			nosup = False
+			for baseid2,y,f2 in ListLen:
+				if baseid2 == baseid and y == 0 and f2 == f:
+					sub.add((a,None,f))
+					nosup = True
+					break
+			if nosup:
+				continue
+			for baseid2,nid2,_,f2 in Member:
+				if baseid == baseid2 and f2 == f:
+					for nid3,b,_,f3 in Name:
+						if nid2 == nid3 and f3 == f:
+							sub.add((a,b,f))
+		return sub
+
+class Analysis_subclass_distalgo(process,Analysis):
+	
+	def query():
+		return setof((a,b,f), (_, a, baseid, _, _, _, f) in ClassDef,
+							  (_baseid,nid,_,_f) in Member,
+							  (_nid,b,_,_f) in Name) |\
+			   setof((a,None,f),(_, a, baseid, _, _, _, f) in ClassDef,
+			  				  (_baseid,0,_f) in ListLen)
+		
+
+class Analysis_subclass_rule(process,Analysis):
+	
+	def query():
+		sub = infer(rule='inheritinfo')
+		return sub
+	
+	def rules(name='inheritinfo'):
+		InheritInfo(a,b,f), if_(ClassDef(_, a, baseid, _, _, _, f),
+								Member(baseid,nid,_,f),
+								Name(nid,b,_,f))
+		InheritInfo(a,None,f), if_(ClassDef(_, a, baseid, _, _, _, f),
+							  	   ListLen(baseid,0,f))
+
+class Analysis_subclass_combine(process,Analysis):
+	
+	def query():
+		sub1 = infer(rule='subclass_inherit')
+		sub2 = setof((a,None,f),(_, a, baseid, _, _, _, f) in ClassDef,
+							 not some((_baseid,_,_,_f) in Member))
+		return sub1 | sub2
+	
+	def rules(name='subclass_inherit'):
+		InheritInfo(a,b,f), if_(ClassDef(_, a, baseid, _, _, _, f),
+								Member(baseid,nid,_,f),
+								Name(nid,b,_,f))
+
+DEFAULT_FILE = 'madpy' 	# madpy, hylaa, AeroBenchVVPython, numpy, scikit-learn, sklearn, pytorch, pandas, scipy, matplotlib, sympy, django
+DEFAULT_MODE = 'rule'	# rule, python, distalgo, combine
+DEFAULT_QUERY = 'subclass'
+
+def main():
+	pprint(sys.argv)
+	if len(sys.argv) < 2:
+		filename = './data/%s' % DEFAULT_FILE
+		pkgInfo = './data/%s/astFacts/pkginfo_%s.py' %(DEFAULT_FILE,DEFAULT_FILE)
+	else:
+		filename = os.path.join('./data',sys.argv[1])
+		pkgInfo = os.path.join('./data',sys.argv[1],'astFacts/pkginfo_'+sys.argv[1]+'.py')
+	
+	mode = DEFAULT_MODE if len(sys.argv) < 3 else sys.argv[2]
+	query = DEFAULT_QUERY if len(sys.argv) < 4 else sys.argv[3]
+
+	# if not os.path.exists('timing'):
+	# 	os.mkdir('timing')
+	# sys.stdout = open('./timing/%s_%s.tsv' % (os.path.basename(filename), query), 'a')
+
+	config(enable_backup=True)
+
+	o = new(eval('Analysis_%s_%s' % (query,mode)),[filename,pkgInfo])
+	start(o)
+
