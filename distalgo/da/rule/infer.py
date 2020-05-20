@@ -6,6 +6,18 @@ from pathlib import PurePath
 
 UniqueLowerCasePrefix = 'p'
 
+def eval_logicVar(v):
+    return eval(v) if v.isdigit() else \
+              None if v == "'None'" else \
+             False if v == "'False'" else \
+              True if v == "'True'" else v
+
+def LogicVarToXSB(v):
+    return str(v) if v == '_' or isinstance(v, int) or (isinstance(v,str) and v.isdigit()) else \
+         "'None'" if v is None or v == 'None' else \
+        "'False'" if v is False or v == 'False' else \
+         "'True'" if v is True or v == 'True'  else "'%s'" % v
+
 def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
     if not _rules_object:
         _rules_object = self['_rules_object']
@@ -35,43 +47,47 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
         if r not in allBindings:
             bindings.append((r, self[r]))
 
-    if len(queries) == 0:
+    if len(queries) == 0:   # when no queries are passed in, return all the derived predicates
         for v in _rules_object[rule]['UnboundedLeft']|_rules_object[rule]['LhsVars']:
             qstr = v[0]+'(' + ','.join('_'*v[1]) + ')'
             queries.append([PurePath.joinpath(rule_path,v[0]).as_posix(),UniqueLowerCasePrefix+qstr])
-            # queries.append([PurePath.joinpath(rule_path,v[0]).as_posix(), "'%s'" % (UniqueLowerCasePrefix+qstr)])
-    else:
+    else:                   # processing queries arguments
         for (i, item) in enumerate(queries):
+            # when queries are passed with only names, complete the query in form of pred(_,...,_) with information got while parsing
             if item.find('(') < 0:
                 for v,a in _rules_object[rule]['UnboundedLeft']|_rules_object[rule]['LhsVars']:
                     if v == item:
                         qstr = v+'(' + ','.join('_'*a) + ')'
                         queries[i] = [PurePath.joinpath(rule_path,v).as_posix(), UniqueLowerCasePrefix+qstr]
+                        break
+            # when queries are passed in full, convert each logic variables to valid format as XSB
+            else:
+                pred = item.split('(')[0]
+                var = item.split('(')[1].split(')')[0]
+                queries[i] = [PurePath.joinpath(rule_path,pred).as_posix(), 
+                              UniqueLowerCasePrefix+pred+'(%s)' % ','.join(LogicVarToXSB(vv.strip()) for vv in var.split(','))]
 
     xsb_facts = ""
     for b in bindings:
+        # when b is an empty predicate, generate a place holder where all logic vars are -1
         if len(b[1]) == 0:
             xsb_facts += UniqueLowerCasePrefix+b[0]+'(%s).\n' % ','.join(['-1']*_rules_object[rule]['RhsAry'][b[0]])
-            continue
-        if not isinstance(b[1], list) and not isinstance(b[1], set):
+        elif not isinstance(b[1], list) and not isinstance(b[1], set):    # when b is a single value
             if isinstance(b[1], tuple):
-                xsb_facts += UniqueLowerCasePrefix+b[0]+str(b[1])+'.\n'
+                xsb_facts += UniqueLowerCasePrefix+b[0]+'(%s)' % ','.join(LogicVarToXSB(vv) for vv in b[1])+'.\n'
             else:
-                xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(b[1])+').\n'
-        else:
+                xsb_facts += UniqueLowerCasePrefix+b[0]+'('+LogicVarToXSB(b[1])+').\n'
+        else:   # when b is a set/list
             for v in b[1]:
                 if isinstance(v, tuple):
-                    xsb_facts += UniqueLowerCasePrefix+b[0]+'(%s)' % ','.join(str(vv) for vv in v)+'.\n'
+                    xsb_facts += UniqueLowerCasePrefix+b[0]+'(%s)' % ','.join(LogicVarToXSB(vv) for vv in v)+'.\n'
                 else:
-                    xsb_facts += UniqueLowerCasePrefix+b[0]+'('+str(v)+').\n'
+                    xsb_facts += UniqueLowerCasePrefix+b[0]+'('+LogicVarToXSB(v)+').\n'
 
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     write_file(rule+'.facts', xsb_facts)
-    # timing: i/o: write input
-    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()    # timing: i/o: write input
     
-    # although written the replace(\ with \\), but there is no \ in unix/linux path, so seems compatible to all systems. 
-    # but better do something according to the system
     rule_path_rule = PurePath.joinpath(rule_path,rule)
     xsb_path = PurePath.joinpath(rule_path.parent,'xsb')
     if os.name == 'nt':
@@ -83,30 +99,19 @@ def infer(self, bindings=[], queries=[], rule=None, _rules_object = None):
                             stdout=subprocess.PIPE,text=True)
     # output = subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query])#,
                             # stdout=subprocess.PIPE,text=True)
-    # timing: xsb
-    utime3, stime3, cutime3, cstime3, elapsed_time3 = os.times()
+    utime3, stime3, cutime3, cstime3, elapsed_time3 = os.times()    # timing: xsb
     
     results = []
     for r,_ in queries:
         rname = PurePath(r).name
         answers = read_answer(rname)
-        tuples = [tuple(eval(v) if v.isdigit() 
-                                else None if v == "'None'"
-                                else False if v == "'False'"
-                                else True if v == "'True'"
-                                else v 
-                    for v in a.split(',')) if len(a.split(',')) > 1 
-                            else eval(a) if a.isdigit() 
-                            else None if a == "'None'"
-                            else False if a == "'False'"
-                            else True if a == "'True'"
-                            else a
-                 for a in answers.split("\n")[:-1]]
+        tuples = {tuple(eval_logicVar(v) for v in a.split(',')) if len(a.split(',')) > 1 
+                                                                   else eval_logicVar(a)
+                 for a in answers.split("\n")[:-1]}
         results.append(tuples)
-    # timing: i/o: load output
-    utime4, stime4, cutime4, cstime4, elapsed_time4 = os.times()
+    utime4, stime4, cutime4, cstime4, elapsed_time4 = os.times()     # timing: i/o: load output
     
-    # xsb query and i/o time
+    ## xsb query and i/o time
     # lines = output.stdout.split('\n')
     # lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
     # print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
