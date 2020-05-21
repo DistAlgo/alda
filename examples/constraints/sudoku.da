@@ -1,4 +1,4 @@
-def constraint(name='sudoku', pars={s}):
+def constraint(name='sudoku', pars={s,puzzle}):
 	# Variables:
 	s: int          # size of the sub grids
 	n: int = s*s    # size of the board
@@ -32,5 +32,5 @@ puzzle = [[_, _, _, _, _, _, _, _, _],
 		  [_, 3, _, 2, _, 7, 6, 9, _],
 		  [_, _, _, _, _, _, _, _, _]]
 
-result = query(constraint='sudoku',s=3)
+result = query(constraint='sudoku',s=3, puzzle=puzzle)
 pprint(result)
