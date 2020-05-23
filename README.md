@@ -4,98 +4,133 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 
 ## 1. Installation
 1. Install DA-rules by (1) copying or extracting the DA-rules files to a path, designated as `<DArulesROOT>`, in the local file system, and (2) adding `<DArulesROOT>/distalgo` to the front of the `PYTHONPATH` environment variable so that Python can load the `da` module.
-2. To use the extension with rules, install XSB from http://xsb.sourceforge.net/.
+2. To use the extension with rules, install [XSB](http://xsb.sourceforge.net/) by: (1) download XSB from [SVN](https://sourceforge.net/p/xsb/src/HEAD/tree/), (2) compile and install XSB following the instructions in the 2nd chapter of the [manual](http://xsb.sourceforge.net/manual1/manual1.pdf), and (3) add the path for the XSB executable to the `PATH` environment variable.
 3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
 
 ## 2. Using the extension with rules
-- A set of Datalog rules can be written easily using the syntax of a Python function:
-  ```python
-	def rules(name='name_of_rule'):
-		conclusion_1, if_(condition_1, condition_2, ...)
-		conclusion_2, if_(conclusion_1, condition_3, ...)
+### An example program that uses rules
+The following rule set defines the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of edges in a graph. Given a predicate `edge` that asserts whether there is an edge from a first vertex to a second vertex, the transitive closure defines a predicate `path` that asserts whether there is a path though which a first vertex can reach a second vertex by following the given edges.
+```python
+def rules(name='trans_rs'):
+  path(x,y), if_(edge(x,y))
+  path(x,y), if_(edge(x,z), path(z,y))
 
-	result = infer(rule='name_of_rule', 
-                       bindings=[('condition_1',variable_1),('condition_2',variable_2)],
-                       queries=['conclusion_2'])
-  ```
-- The function must be named `rules`.  The argument `name` is the name of the rule set as a quoted string.
-- Inside the function block, Datalog rules of form `conclusion :- condition_1, condition_2, ....` can be written as `conclusion_1, if_(condition_1, condition_2, ...)`. Each conclusion and condition are predicates of the form `predicate(var_1, var_2, ...)`
-- Datalog rules can be used to easily write database alike queries and recursion. For example, the following rule set can be used to computing the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of a graph:
-	```python
-	def rules(name='transitive_closure'):
-		path(x,y), if_(edge(x,y))
-		path(x,y), if_(edge(x,z), path(z,y))
-	```
-- Understanding rules with Python thinking
-	- Each predicate on the right hand side of the rule set can be seen as a membership check of set. For example, `edge(x,y)` returns `True` if tuple `(x,y)` is in the set `edge`. 
-	- Between different conditions on the right hand side of a rule is logic `and` relation. 
-	- And each predicate on the left hand side can be seen as a set add operation that for the rule `path(x,y), if_(edge(x,y))`, if there is tuple `(x,y)` in `edge`, then add `(x,y)` to set `path`. 
-	- The rules in a rule set will be executed repeatedly until no changes can be made.
-	- Although this is not exactly how Datalog engine works, the idea is the most equivalent correspondence in Python.
-- Infer with rules:
-	```python
-	result_1, result_2 = infer(rule='name_of_rule', 
-                               bindings=[('condition_1',variable_1),('condition_2',variable_2)],
-                               queries=['conclution_1','conclusion_2'])
-	```
+trans = infer(rule='trans_rs', bindings=[('edge',E)], queries=['path'])
+```
+The first rule says that there is a path from `x` to `y` if there is an edge from `x` to `y`. The second rule says that there is a path from `x` to `y` if there is an edge from `x` to `z` and there is a path from `z` to `y`. Given a set `edge` of edges, the transitive closure of `edge` is the set `path` of all pairs of vertices `x` and `y` such that there is a path from `x` to `y`.
 
-	call function `infer` with 
-	- parameter `rule` specifies the name of rule you want to use,
-	- parameter `bindings` is a list of tuples that binds predicate with a variable of set type in Python program.
-		- the first element is the name of a predicate in the rule set
-		- the second element is the name of a variable in Python program
-		- when a variable is defined in the same scope as calling of the `infer` function or is a global variable, and the name of the variable is the same as the predicate it is to be bound, the binding of this pair of predicate and variable can be omitted.
-	- parameter `queries` is a list specifying the predicates you want to return from calling the `infer` function. It can be any predicate appears in a rule set.
-	- the return value of the `infer` function is a tuple of values for the required predicates specified in `queries`. Just the same as getting return values from calling functions that return multiple values.
+### Specification
+A set of rules can be specified easily using the syntax of a Python function:
+```python
+def rules(name='rsname'):
+  rule+
+```
+The function must be named `rules`, with a parameter `name`, which defines the name of the rule set. The name serves as the unique identifier of the rule set and uses the same naming convention as Python identifiers. The body of the rule function is a set of rules.
+#### rule
+Each rule is a Datalog rule of the form below, indicating that if `condition_1` through `condition_n` all hold, then `conclusion` holds.
+```python
+  conclusion, if_(condition_1, condition_2, ..., condition_n)
+```
+Each condition and conclusion in a rule is an *assertion* of the form
+```python
+  pred(arg_1, ..., arg_m)
+```
+- `pred` is a predicate name. Each predicate can be a global variable, object field or local variable of the rule set `rsname`.
+- `arg_k` can be a variable name, a constant or an underscore `_` indicating an anonymous variable. A constant can be int numbers, `None`, `True`, `False` or quoted strings. An anonymous variable is a variable referred to only once in a rule so it does not need to be named. All variables in the conclusion must be in a condition.
 
-### Example programs that use rules
+In a rule set, predicates not in any conclusion are called *base predicates* of the rule set, and the other predicates are called *derived predicates* of the rule set.
+
+### Inference with rules
+We can infer with a rule set by calling the built-in function `infer` of the following form:
+```python
+infer(rule='rsname', 
+      bindings=[('pred_1',sexp_1),...,('pred_2',sexp_2)], 
+      queries=['query_1',...,'query_j'])
+```
+- `rule` is the name of a rule set.
+- `bindings` is an optional keyword argument that specifies the assignment to each base predicate `pred_k` in the rule set with a set-valued expression `sexp_k`. Each predicate name `pred_k` needs to be written as a quoted string. If `pred_k` is non-local to rule set `rsname`, the assignment to `pred_k` can be omitted.
+- `queries` is an optional keyword argument that specifies the queries to be made by calling the function. Each `query_k` must be written as a quoted string of the form `pred(arg_1, ..., arg_m)`, where `pred` is a predicate name in rule set `rsname` and `arg_k` can be a constant or an underscore `_` indicating a distinct variable to be inferred. Query `pred(_, ..., _)` can be abbreviated as `pred`. When `queries` is omitted, the `infer` function treats all the derived predicates as queries.
+- The `infer` function returns a set for each query in the order of specifying `queries`.
+
+#### Automatic maintainence
+When using rules with only non-local predicates, the derived predicates are automatically updated without any explicit call to `infer` when any of the base predicate is updated.
+
+
+### Running a program with rules
+Usage: `python3 -m da --rule <filename>`  
+where `<filename>` is the name of a DA-rules script.
+
+### Running the experiments
+
+In the `examples` directory locates the source code of the experiments shown in the paper.
 
 #### Trans
-This problem computes the transitive closure of a graph
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_trans.sh`.  
-	to run a single round of trans, call  
-	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`  
-	where `NUMEDGE` is the number of edges of input data, and  
-	`MODE` can take value from: `'rule'`, `'rev_rule'`, `'distalgo'` and `'python'`.
-2. the data provided in the `input` folder is those used when generating the graphs in the paper
-3. to generate your own input data  
+This example computes the transitive closure of a graph. The input data used in the paper is included in the repository.
+1. to get all the statistics in section 7.3 Transitive closure of the paper, run `./test_trans.sh`
+2. to run a single round of trans, call  
+	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`, where
+	- `NUMEDGE` is the number of edges of input data, and  
+	- `MODE` can take value from:
+		- `'rule'`:
+		- `'rev_rule'`:
+		- `'distalgo'`:
+		- `'python'`:
+3. the data provided in the `input` folder is those used when generating the graphs in the paper
+4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
+5. the output of the analysis will be in the `output` folder
 
 #### Hrbac
-This example is about hierachical role-based access control.
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_hrbac.sh`.  
-	to run a single round of hrbac, call  
-	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`  
-	where `NUMROLE` is the number of roles,  
-	`NUMOP` is the basic number of operations that: 
-	* adding/deleting user (each `NUMOP` times), 
-	* adding/deleting role (each `NUMOP/10'` times), 
-	* adding/deleting UR pair (each `NUMOP*1.1` times), 
-	* adding/deleting RH pair (each `NUMOP/10` times)
-
-	`NUMQUERY` is the number of `AuthorizedUsers` query, and  
-	`MODE` can take value from: `'rule'`, `'rolerule'`, `'transRH'`, `'python'`, and `'distalgo'`.
-2. the data provided in the `input` folder is those used when generating the graphs in the paper
-3. to generate your own input data  
+This example is about hierachical role-based access control. The input data used in the paper is included in the repository.
+1. to get all the statistics in section 7.4 Hierarchical RBAC of the paper, run `./test_hrbac.sh`
+2. to run a single round of hrbac, call  
+	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
+	- `NUMROLE` is the number of roles,  
+	- `NUMOP` is the basic number of operations that:
+		- adding/deleting user (each `NUMOP` times), 
+		- adding/deleting role (each `NUMOP/10'` times), 
+		- adding/deleting UR pair (each `NUMOP*1.1` times), 
+		- adding/deleting RH pair (each `NUMOP/10` times)
+	- `NUMQUERY` is the number of `AuthorizedUsers` query, and  
+	- `MODE` can take value from:
+		- `'rule'`:
+		- `'rolerule'`:
+		- `'transRH'`:
+		- `'python'`:
+		- `'distalgo'`:
+3. the data provided in the `input` folder is those used when generating the graphs in the paper
+4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
+5. the output of the analysis will be in the `output` folder
 
 #### pyAnalysis
-This example is about analysis of Python programs.
-1. USAGE:  
-	to get all the statistics in the graph, run `./test_pyanalysis.sh`.  
-	to run a single analysis, call  
-	`python3 -m da ast_analysis_rule.da DATASET MODE QUERY`  
-	where `DATASET` is the name of the package you want to analyasis,  
-	`MODE` can take value from: `rule`, `python`, `distalgo` and `combine`, and  
-	`QUERY` can take value from: `subclass`, and `class`   
-	the output of the analysis will be in the `output` folder
-2. to generate input data  
-	run `python3 -m da prepare_data.da PACKAGE_FOLDER`.  
-	generated data will be in `./data` folder.
+This example is about the analysis of Python programs.
+- to generate input data, run  
+	`python3 -m da prepare_data.da PACKAGE_FOLDER`  
+	the generated data will be in `./data` folder.
 
+##### Program analysis
+1. to get all the statistics in section 7.5 Program analysis of the paper, run `./test_pyanalysis.sh`.  
+2. to run a single analysis, call  
+	`python3 -m da ast_analysis_rule.da DATASET MODE`, where
+	- `DATASET` is the name of the package you want to analyasis,  
+	- `MODE` can take value from:
+		- `rule`:
+		- `python`:
+		- `distalgo`:
+		- `combine`:
+3. the output of the analysis will be in the `output` folder
+
+##### Transforming loops to comprehensions
+1. to run a single analysis, call  
+	`python3 -m da ast_analysis_rule.da DATASET QUERY`, where
+	- `DATASET` is the name of the package you want to analyasis,  
+	- `QUERY` can take value from:
+		- `loopdepth`:
+		- `candidate`:
+		- `forToCompSimple`:
+2. the output of the analysis will be in the `output` folder
 
 ## 3. Using the extension with constraints
 
@@ -141,7 +176,7 @@ print(result['nvertex'])  # value of decision variable nvertex
 ### Constraint satisfaction problems
 
 A Constraint Satisfaction Problem (CSP) is defined by a triple `<X,D,C>` where `X` is a set of variables, `D` is a set of domains respective to the variables, and `C` is a set of constraints. Variables can be subdivided into parameters and decision variables, where parameters are variables whose values are given, and decision variables are those whose values are to be decided.
-Solving a CSP is to find a solution, which is an assigment to decisions variables with values in their respective domains, such that all the constraints are satisfied.
+Solving a CSP is to find a solution, which is an assignment to decisions variables with values in their respective domains, such that all the constraints are satisfied.
 
 Constraint Optimization Problem (COP) generalizes CSP with an objective, which is a function of some variables. Solving a COP is to find an optimal solution, which is an assignment of values to decision variables such that the value of the objective is minimized or maximized as required by the problem and all the constraints are satisfied.
 
@@ -180,17 +215,17 @@ There are two types of variables: parameters and decision variables.
 
 #### Constraints
 Constraints are the conditions that must be satisfied when assigning values to decision variables. There are two ways of specifying a constraint:
-1. in the form an assignment statement: `c_1 = bexp`, where 'c_1' is the name of the constraint, or
-2. in the form a function definition: 
+1. in the form of an assignment statement: `c_1 = bexp`, where 'c_1' is the name of the constraint, or
+2. in the form of a function definition: 
 	```python
 	def c_2():
 		bexp1
 		bexp2
 		...
 	```
-	Expressions inside the funtion body are implicitly the conjuncts of logical conjunction, where `c_2` is the name of the conjunction.  Defining constraints this way can be simpler by omitting the `and` operator when there are multiple conjuncts.
+	Expressions inside the function body are implicitly the conjuncts of logical conjunction, where `c_2` is the name of the conjunction.  Defining constraints this way can be simpler by omitting the `and` operator when there are multiple conjuncts.
 - Theoretically, `bexp` can be any Boolean-valued expression. But currently only expressions of the following forms are supported:
-	1. universal quantification: It evalutes to `True` iff for all combinations of values of variables that satisfy all membership clauses `vi in sexpi`, the condition `bexp` evaluates to `True`. A membership clause `v in sexp` is `True` if value `v` is a member of the set value of `sexp`,
+	1. universal quantification: It evaluates to `True` iff for all combinations of values of variables that satisfy all membership clauses `vi in sexpi`, the condition `bexp` evaluates to `True`. A membership clause `v in sexp` is `True` if value `v` is a member of the set value of `sexp`,
 		- `each(v1 in sexp1, ..., vk in sexpk, has= bexp)`
 	2. existential quantification: It evaluates to `True` iff for some combinations of values of variables that satisfy all membership clauses `vi in sexpi`, the condition `bexp` evaluates to `True`,
 		- `some(v1 in sexp1, ..., vk in sexpk, has= bexp)`
@@ -198,7 +233,7 @@ Constraints are the conditions that must be satisfied when assigning values to d
 	4. global constraint `alldiff`. `alldiff` is a builtin constraint of one of the form:
 		- `alldiff(sexp)`,
 		- `alldiff(exp, v1 in sexp1, ..., vk in sexpk, bexp)`. 
-		 
+
 	   It evaluates to `True` iff
 		- all items in `sexp`, for the first case
 		- all items in the set of values of `exp` for all combinations of values of variables that satisfy all membership clauses `vi in sexpi` and condition `bexp`, for the second case

@@ -184,12 +184,12 @@ def main():
 		filename = os.path.join('./data',sys.argv[1])
 		pkgInfo = os.path.join('./data',sys.argv[1],'astFacts/pkginfo_'+sys.argv[1]+'.py')
 	
-	mode = DEFAULT_MODE if len(sys.argv) < 3 else sys.argv[2]
-	query = DEFAULT_QUERY if len(sys.argv) < 4 else sys.argv[3]
+	mode = DEFAULT_MODE# if len(sys.argv) < 3 else sys.argv[2]
+	query = DEFAULT_QUERY if len(sys.argv) < 3 else sys.argv[2]
 
-	# if not os.path.exists('timing'):
-	# 	os.mkdir('timing')
-	# sys.stdout = open('./timing/%s_%s.tsv' % (os.path.basename(filename), query), 'a')
+	if not os.path.exists('timing'):
+		os.mkdir('timing')
+	sys.stdout = open('./timing/%s_%s.tsv' % (os.path.basename(filename), query), 'a')
 
 	config(enable_backup=True)
 	
