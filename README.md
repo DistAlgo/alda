@@ -51,7 +51,7 @@ infer(rule='rsname',
 - `rule` is the name of a rule set.
 - `bindings` is an optional keyword argument that specifies the assignment to each base predicate `pred_k` in the rule set with a set-valued expression `sexp_k`. Each predicate name `pred_k` needs to be written as a quoted string. If `pred_k` is non-local to rule set `rsname`, the assignment to `pred_k` can be omitted.
 - `queries` is an optional keyword argument that specifies the queries to be made by calling the function. Each `query_k` must be written as a quoted string of the form `pred(arg_1, ..., arg_m)`, where `pred` is a predicate name in rule set `rsname` and `arg_k` can be a constant or an underscore `_` indicating a distinct variable to be inferred. Query `pred(_, ..., _)` can be abbreviated as `pred`. When `queries` is omitted, the `infer` function treats all the derived predicates as queries.
-- The `infer` function returns a set for each query in the order of specifying `queries`.
+- Return value: For each value `k` from 1 to `j`, return the result of `query_k` as the `k`th component of the return value. The result of a query with `l` distinct variables that are not constants is a set of tuples of `l` components, one for each of the distinct variables in their order of first occurrence in the query. When `l` equals 1, the set of tuples reduced to a set of values.
 
 #### Automatic maintainence
 When using rules with only non-local predicates, the derived predicates are automatically updated without any explicit calls to `infer` when any of the base predicate is updated.
@@ -72,10 +72,10 @@ This example computes the transitive closure of a graph as discussed in section 
 	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`, where
 	- `NUMEDGE` is the number of edges of input data, and  
 	- `MODE` specifies the methods used for computing the transitive closure, and can take value from:
-		- `'rule'`: using the rules in section 4.2 for computing transitive closure,
-		- `'rev_rule'`: using the same rule as the program of `'rule'` but reversing the twoconditions in the recursive rule.
-		- `'distalgo'`: using DistAlgo high-level queries for set queries as introduced in section 7.2
-		- `'python'`: using Python comprehensions for set queries as introduced in section 7.2
+		- `'rule'`: using the rules in section 4.2
+		- `'rev_rule'`: using the same rule as the program of `'rule'` but reversing the twoconditions in the recursive rule
+		- `'distalgo'`: using DistAlgo high-level queries as introduced in section 7.2
+		- `'python'`: using Python comprehensions as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
 4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
@@ -101,8 +101,8 @@ The input data used in the paper is included in the repository.
 		- `'transRH'`: using rules with only non-local predicates as introduced in section 4.1
 		- `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers` as introduced in section 4.4
 		- `'authUR'`: introducing set `authorizedUR` as a field so the previous rule in program `'auth_rules'` can be automatically triggered to update `authorizedUR` as introduced in section 4.4
-		- `'python'`: using Python comprehensions for set queries as introduced in section 7.2
-		- `'distalgo'`: using DistAlgo high-level queries for set queries as introduced in section 7.2
+		- `'python'`: using Python comprehensions as introduced in section 7.2
+		- `'distalgo'`: using DistAlgo high-level queries as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
 4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
