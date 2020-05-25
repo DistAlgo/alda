@@ -68,10 +68,10 @@ In the `examples` directory locates the source code of the experiments discussed
 #### Trans
 This example computes the transitive closure of a graph as discussed in section 2. The input data used in the paper is included in the repository.
 1. to get all the statistics in section 7.3 Transitive closure, run `./test_trans.sh`
-2. to run a single round of trans, call  
+2. to run a single round of transitive closure, call  
 	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`, where
 	- `NUMEDGE` is the number of edges of input data, and  
-	- `MODE` can take value from:
+	- `MODE` specifies the methods used for computing the transitive closure, and can take value from:
 		- `'rule'`: using the rules in section 4.2 for computing transitive closure,
 		- `'rev_rule'`: using the same rule as the program of `'rule'` but reversing the twoconditions in the recursive rule.
 		- `'distalgo'`: using DistAlgo high-level queries for set queries as introduced in section 7.2
@@ -85,7 +85,7 @@ This example computes the transitive closure of a graph as discussed in section 
 This example is about hierachical role-based access control (HRBAC) discussed in section 2.
 The input data used in the paper is included in the repository.
 1. to get all the statistics in section 7.4 Hierarchical RBAC of the paper, run `./test_hrbac.sh`
-2. to run a single round of hrbac, call  
+2. to run a single round of HRBAC, call  
 	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
 	- `NUMROLE` is the number of roles,  
 	- `NUMOP` is the basic number of operations that:
@@ -135,7 +135,7 @@ This example performs a series of analysis on Python for-loops as discussed in s
 	- `QUERY` specifies the analysis to perform, and can take value from:
 		- `'loopdepth'`: compute the depth of for-loops
 		- `'candidate'`: identify candidate for-loops that might be transformable to comprehensions
-		- `'forToCompSimple'`: run the basic transformer to translate for-loops into comprehensions
+		- `'forToCompSimple'`: run the basic transformer to transform for-loops into comprehensions
 2. the output of the analysis will be in the `output` folder
 
 ## 3. Using the extension with constraints
