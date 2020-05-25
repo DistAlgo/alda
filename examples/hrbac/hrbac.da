@@ -160,6 +160,7 @@ class HierarchicalRBAC(CoreRBAC,process):
     utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
     print(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1)
 
+
 class HRBAC_py(HierarchicalRBAC,process):  # using Python but no arg self in def
   
   def trans(E):
@@ -178,6 +179,7 @@ class HRBAC_py(HierarchicalRBAC,process):  # using Python but no arg self in def
     return set(u for u in user for asc in roles
                if (asc,role) in transRH and (u,asc) in ur)
 
+
 class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
   
   def trans(E):
@@ -190,6 +192,7 @@ class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
     transRH = self.trans(RH)
     return setof(u, (u,asc) in UR, (asc,_role) in transRH)
 
+
 class HRBAC_transRH_rs(HierarchicalRBAC,process):
   
   def setup(_users,_roles,_ur,_rh,_workload): 
@@ -199,10 +202,48 @@ class HRBAC_transRH_rs(HierarchicalRBAC,process):
   def AuthorizedUsers(role):
     return setof(u, (u,asc) in UR, (asc,_role) in transRH)
   
-  def rules ():
+  def rules():
     transRH(x,y), if_(RH(x,y))
     transRH(x,y), if_(RH(x,z), transRH(z,y))
     transRH(x,x), if_(ROLES(x)) # with this base case, don't need first rule
+
+
+class HRBAC_auth_rules(HierarchicalRBAC,process):
+  
+  def setup(_users,_roles,_ur,_rh,_workload): 
+    super().setup(_users,_roles,_ur,_rh,_workload)
+    self.transRH = None
+    
+  def rules():
+    transRH(x,y), if_(RH(x,y))
+    transRH(x,y), if_(RH(x,z), transRH(z,y))
+    transRH(x,x), if_(ROLES(x))
+
+  def rules(name='authorizedUR_rs'):
+    authorizedUR(u,role), if_(USERS(u), ROLES(asc), UR(u,asc), transRH(asc ,role))
+
+  def AuthorizedUsers(role):
+    return infer(rule='authorizedUR_rs', queries=['authorizedUR(u,%s)' % role]) # use infer , not  pass in base  predicates
+
+
+class HRBAC_authorizedUR_rs(HierarchicalRBAC,process):
+  
+  def setup(_users,_roles,_ur,_rh,_workload): 
+    super().setup(_users,_roles,_ur,_rh,_workload)
+    self.transRH = None
+    self.authorizedUR = None
+  
+  def AuthorizedUsers(role):
+    return setof(u, (u,_role) in authorizedUR)
+  
+  def rules():
+    transRH(x,y), if_(RH(x,y))
+    transRH(x,y), if_(RH(x,z), transRH(z,y))
+    transRH(x,x), if_(ROLES(x))
+
+  def rules(name='authorizedUR_rs'):
+    authorizedUR(u,role), if_(USERS(u), ROLES(asc), UR(u,asc), transRH(asc ,role))
+
 
 class HRBAC_trans_rules(HRBAC_py,process):
   
@@ -214,6 +255,7 @@ class HRBAC_trans_rules(HRBAC_py,process):
     i = infer(rule='HRBAC_trans_rules', bindings=[('edge',E)], queries=['path'])
     return set(i) | setof((r,r), r in ROLES)
 
+
 class HRBAC_trans_with_role_rules(HRBAC_py,process):
   
   def rules (name='trans_with_role_rules'): # with additional last rule
@@ -224,11 +266,25 @@ class HRBAC_trans_with_role_rules(HRBAC_py,process):
   def trans(E):  # use infer only, pass in also ROLES
     return infer(rule='trans_with_role_rules', bindings=[('edge',E),('role',ROLES)], queries=['path'])
 
-    
+
+class HRBAC_trans_with_ROLES_rules(HRBAC_set,process):
+
+  def rules (name='trans_with_ROLES_rules'):
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z),path(z,y))
+    path(x,x), if_(ROLES(x))
+
+  def trans(E): # use infer only, pass in only E
+    return infer(rule='trans_with_ROLES_rules', bindings=[('edge',E)], queries=['path'])
+
+
 HandlerRoute = {
   'rule': HRBAC_trans_rules,
   'rolerule': HRBAC_trans_with_role_rules,
+  'ROLErule': HRBAC_trans_with_ROLES_rules,
   'transRH': HRBAC_transRH_rs,
+  'auth_rules': HRBAC_auth_rules,
+  'authUR': HRBAC_authorizedUR_rs,
   'python': HRBAC_py,
   'distalgo': HRBAC_set
 }
@@ -247,9 +303,9 @@ def main():
   ur = eval(open('./input/UR_'+str(args.numr)+'.py').read())
   workload = eval(open('./input/hrbacSequence_r'+str(args.numr)+'_q'+str(args.numq)+'_auth'+str(args.q)+'.py').read())
   
-  if not os.path.exists('timing'):
-    os.mkdir('timing')
-  sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
+  # if not os.path.exists('timing'):
+  #   os.mkdir('timing')
+  # sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
   
   if not args.mode in HandlerRoute:
     print('no such mode')

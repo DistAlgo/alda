@@ -4,7 +4,7 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 
 ## 1. Installation
 1. Install DA-rules by (1) copying or extracting the DA-rules files to a path, designated as `<DArulesROOT>`, in the local file system, and (2) adding `<DArulesROOT>/distalgo` to the front of the `PYTHONPATH` environment variable so that Python can load the `da` module.
-2. To use the extension with rules, install [XSB](http://xsb.sourceforge.net/) by: (1) download XSB from [SVN](https://sourceforge.net/p/xsb/src/HEAD/tree/), (2) compile and install XSB following the instructions in the 2nd chapter of the [manual](http://xsb.sourceforge.net/manual1/manual1.pdf), and (3) add the path for the XSB executable to the `PATH` environment variable.
+2. To use the extension with rules, install [XSB](http://xsb.sourceforge.net/) by: (1) download XSB from the [SVN repository](https://sourceforge.net/p/xsb/src/HEAD/tree/), (2) compile and install XSB following the instructions in the 2nd chapter of the [manual](http://xsb.sourceforge.net/manual1/manual1.pdf), and (3) add the path for the XSB executable to the `PATH` environment variable.
 3. To use the extension with constraints, (1) install MiniZinc from https://www.minizinc.org/software.html, (2) add the path for MiniZinc to the `PATH` environment variable, and (3) install the MiniZinc Python interface by running `pip install minizinc`.
 
 
@@ -54,7 +54,7 @@ infer(rule='rsname',
 - The `infer` function returns a set for each query in the order of specifying `queries`.
 
 #### Automatic maintainence
-When using rules with only non-local predicates, the derived predicates are automatically updated without any explicit call to `infer` when any of the base predicate is updated.
+When using rules with only non-local predicates, the derived predicates are automatically updated without any explicit calls to `infer` when any of the base predicate is updated.
 
 
 ### Running a program with rules
@@ -63,26 +63,27 @@ where `<filename>` is the name of a DA-rules script.
 
 ### Running the experiments
 
-In the `examples` directory locates the source code of the experiments shown in the paper.
+In the `examples` directory locates the source code of the experiments discussed in the paper. All the sections mentioned below are from the paper.
 
 #### Trans
-This example computes the transitive closure of a graph. The input data used in the paper is included in the repository.
-1. to get all the statistics in section 7.3 Transitive closure of the paper, run `./test_trans.sh`
+This example computes the transitive closure of a graph as discussed in section 2. The input data used in the paper is included in the repository.
+1. to get all the statistics in section 7.3 Transitive closure, run `./test_trans.sh`
 2. to run a single round of trans, call  
 	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`, where
 	- `NUMEDGE` is the number of edges of input data, and  
 	- `MODE` can take value from:
-		- `'rule'`:
-		- `'rev_rule'`:
-		- `'distalgo'`:
-		- `'python'`:
+		- `'rule'`: using the rules in section 4.2 for computing transitive closure,
+		- `'rev_rule'`: using the same rule as the program of `'rule'` but reversing the twoconditions in the recursive rule.
+		- `'distalgo'`: using DistAlgo high-level queries for set queries as introduced in section 7.2
+		- `'python'`: using Python comprehensions for set queries as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
 4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
 5. the output of the analysis will be in the `output` folder
 
 #### Hrbac
-This example is about hierachical role-based access control. The input data used in the paper is included in the repository.
+This example is about hierachical role-based access control (HRBAC) discussed in section 2.
+The input data used in the paper is included in the repository.
 1. to get all the statistics in section 7.4 Hierarchical RBAC of the paper, run `./test_hrbac.sh`
 2. to run a single round of hrbac, call  
 	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
@@ -93,43 +94,48 @@ This example is about hierachical role-based access control. The input data used
 		- adding/deleting UR pair (each `NUMOP*1.1` times), 
 		- adding/deleting RH pair (each `NUMOP/10` times)
 	- `NUMQUERY` is the number of `AuthorizedUsers` query, and  
-	- `MODE` can take value from:
-		- `'rule'`:
-		- `'rolerule'`:
-		- `'transRH'`:
-		- `'python'`:
-		- `'distalgo'`:
+	- `MODE` specifies the method used for quering the authorized users, and can take value from:
+		- `'rule'`: using rules with only local predicates as introduced in section 4.2
+		- `'rolerule'`: in addition to the previous rules in program `'rule'`, add a rule that uses a local `role` set as introduced in section 4.2
+		- `'ROLErule'`: using rules with both local and non-local predicates as introduced in section 4.3
+		- `'transRH'`: using rules with only non-local predicates as introduced in section 4.1
+		- `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers` as introduced in section 4.4
+		- `'authUR'`: introducing set `authorizedUR` as a field so the previous rule in program `'auth_rules'` can be automatically triggered to update `authorizedUR` as introduced in section 4.4
+		- `'python'`: using Python comprehensions for set queries as introduced in section 7.2
+		- `'distalgo'`: using DistAlgo high-level queries for set queries as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
 4. to generate your own input data  
 	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
 5. the output of the analysis will be in the `output` folder
 
 #### pyAnalysis
-This example is about the analysis of Python programs.
+This folder contains the examples about analysis of Python programs discussed in section 7.5 and 7.6.
 - to generate input data, run  
 	`python3 -m da prepare_data.da PACKAGE_FOLDER`  
 	the generated data will be in `./data` folder.
 
 ##### Program analysis
-1. to get all the statistics in section 7.5 Program analysis of the paper, run `./test_pyanalysis.sh`.  
-2. to run a single analysis, call  
+This example computes the inheritance information of Python programs as discussed in section 7.5.
+1. to get all the statistics in section 7.5 Program analysis, run `./test_pyanalysis.sh`.  
+2. to run the analysis of getting the inheritance information, call  
 	`python3 -m da ast_analysis_rule.da DATASET MODE`, where
-	- `DATASET` is the name of the package you want to analyasis,  
-	- `MODE` can take value from:
-		- `rule`:
-		- `python`:
-		- `distalgo`:
-		- `combine`:
+	- `DATASET` is the name of the package to analyasis,  
+	- `MODE` specifies the methods used for computing basic inheritance information, and can take value from:
+		- `'rule'`: using the rules as introduced in section 7.5
+		- `'python'`: using Python nested for loops and tests as introduced in section 7.5
+		- `'distalgo'`: using DistAlgo queries
+		- `'combine'`: using a combination of rules and DistAlgo queries
 3. the output of the analysis will be in the `output` folder
 
 ##### Transforming loops to comprehensions
-1. to run a single analysis, call  
+This example performs a series of analysis on Python for-loops as discussed in section 7.6.
+1. to run an analysis, call  
 	`python3 -m da ast_analysis_rule.da DATASET QUERY`, where
-	- `DATASET` is the name of the package you want to analyasis,  
-	- `QUERY` can take value from:
-		- `loopdepth`:
-		- `candidate`:
-		- `forToCompSimple`:
+	- `DATASET` is the name of the package to analyasis,  
+	- `QUERY` specifies the analysis to perform, and can take value from:
+		- `'loopdepth'`: compute the depth of for-loops
+		- `'candidate'`: identify candidate for-loops that might be transformable to comprehensions
+		- `'forToCompSimple'`: run the basic transformer to translate for-loops into comprehensions
 2. the output of the analysis will be in the `output` folder
 
 ## 3. Using the extension with constraints
