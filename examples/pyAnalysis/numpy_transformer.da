@@ -1,0 +1,190 @@
+from pprint import pprint
+import sys, os
+from declare import VariableDeclare
+import ast
+from ast import NodeTransformer
+from da.compiler.utils import to_source
+import shutil
+
+class LoopTansformer(NodeTransformer):
+	
+	def __init__(self,transDict):
+		super().__init__()
+		self.transDict = transDict
+
+	def visit_For(self,node):
+		if node in self.transDict:
+			return self.transDict[node]
+		else:
+			return self.generic_visit(node)
+
+class Analysis_rule(process,VariableDeclare):
+
+	def setup(filename, pkgInfo=None, mode='rule', query='subclass'):
+		super().setup(filename, pkgInfo)
+		self.Loop = set()
+
+	def run():
+		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+		eval('self.query_%s_%s' %(query,mode))()
+		utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+		print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+	
+	def gen_npCall(func,op1,op2):
+		return  ast.Call(ast.Attribute(ast.Name('np', ast.Load()), func),
+					  	 [ValueDict[op1], ValueDict[op2]],keywords=[])
+
+	def gen_BinMult(ops):
+		return ast.BinOp(ValueDict[ops[0]], ast.Mult(), ValueDict[ops[1]])
+
+	def query_numpy_rule():
+		print('query_numpy_rule')
+		for l in ListLen:
+			print(ValueDict[l[0]],l[1],ValueDict[l[2]])
+			break
+		candidate = infer(rule='vProdToNp', queries=['numpyCandidate'])
+		print(len(candidate))
+		
+		# collect all the scalar multiplications
+		scalarExpr = setof((id,'scalar',target,tupleof((op1,op2), (_id,_,_,op1,op2) in  candidate)), 
+						   (id,'scalar',target,_,_) in candidate)
+		
+		# convert to numpy
+		transDict = dict()
+		for id, op, target, op1, op2 in candidate:
+			if op == 'inner':
+				npAst = ast.AugAssign(ValueDict[target],
+									  ast.Add(),
+									  gen_npCall('inner',op1,op2))
+			elif op == 'multiply':
+				npAst = ast.Assign([ValueDict[target]], gen_npCall('multiply',op1,op2))
+			else:
+				continue
+			transDict[ValueDict[id]] = npAst
+
+		for id, op, target, scalars in scalarExpr:
+			rhs = gen_BinMult(scalars[0])
+			for s in scalars[1:]:
+				rhs = ast.BinOp(rhs, ast.Add(), gen_BinMult(s))
+			npAst = ast.Assign([ValueDict[target]], rhs)
+			transDict[ValueDict[id]] = npAst
+
+		for key, val in sorted(transDict.items(), key=lambda t: t[0].lineno):
+			print('========== tensor.py: lineno: %s ==========%s----------- transformed to ------------%s' 
+					% (key.lineno, to_source(key), to_source(val)))
+
+	# vertex product to numpy
+	def rules(name='vProdToNp'):
+		# one thing special about subscript, a[i,j] is equivalent to a[i][j]? 
+		# problem occurs for matrix multiplication in some order, not consider this yet
+
+		# get the pattern of: target[idx]
+		IdxExpr(id,target,idx), if_(Subscript(id, target, slicing,_,_),
+			Index(slicing,idxid,_), Name(idxid,idx,_,_))
+
+		##case 1: inner product
+		# 	sum = 0.0							# s initialized to number (not considered yet)
+		# 	for i in range(len(self.a)):		# lhs: a variable. op: AugAssign
+		# 	   sum += self.a[i] * other.a[i]	# rhs: arithExpr of * with both operator a subscript expr of i;
+		#---------------  to  ---------------
+		# 	sum = np.inner(self.a, other.a)
+		NumpyPattern(id, idx, 'inner', target, operand1, operand2), if_(
+			AugAssign(id, target, augop, rhs, _), Add(augop,_), 	# += expression
+			Name(target,_,_,_),									# lhs is a variable
+			BinOp(rhs, left, binop, right, _), Mult(binop,_), 	# rhs is a multiplication
+			IdxExpr(left,operand1,idx), 						# both operand are Subscript expression
+			IdxExpr(right,operand2,idx))						# with the same index
+
+		##case 2.1: scalar multiply				# lhs: subscript expr of i; op: Assign
+		# 	for i in range(len(self.a)):		# rhs: basic expr: constant or variable times subscript expr of i
+		# 		self.a[i] = alpha*self.a[i] + beta*other.a[i]	# rhs can also be sum of multiple times basic exprs
+		#---------------  to  ---------------
+		#  	self.a = alpha*self.a + beta*other.a
+		
+		# get the scalars: variable or number, for simplicity
+		Scalar(id), if_(Name(id,_,_,_))
+		Scalar(id), if_(Num(id,_,_))
+		# ScalarMult(id,idx,scalar,array)
+		ScalarMult(id,idx,left,operand), if_(BinOp(id, left, binop, right, _), Mult(binop,_),
+			Scalar(left), IdxExpr(right,operand,idx))	# scalar on the left
+		ScalarMult(id,idx,right,operand), if_(BinOp(id, left, binop, right, _), Mult(binop,_),
+			Scalar(right), IdxExpr(left,operand,idx))	# scalar on the right
+		# flatten the ScalarMult if they add up
+		ScalarMult(id,idx,scalar,array), if_(BinOp(id, left, binop, right, _), Add(binop,_),
+			ScalarMult(left,idx,scalar,array), ScalarMult(right,_,_,_))	# sum of scalarmult, left value
+		ScalarMult(id,idx,scalar,array), if_(BinOp(id, left, binop, right, _), Add(binop,_),
+			ScalarMult(left,_,_,_), ScalarMult(right,idx,scalar,array))	# sum of scalarmult, right value
+		
+		# might return multiple facts for one assignment, according to the number of added up ScalarMult's
+		NumpyPattern(id, idx, 'scalar', target, operand1, operand2), if_(
+			Assign(id, targetid, valueid, _), Member(targetid,sid,_,_), ListLen(targetid,1,_),
+			IdxExpr(sid,target,idx),					# lhs is subscript expr with idx
+			ScalarMult(valueid,idx,operand1,operand2))	# rhs is a ScalarMult with idx
+
+		##case 2.2: scalar multiply augAssign ver
+		# 	for i in range(len(self.a)):		# lhs: subscript expr of i; op: AugAssign
+		# 		self.a[i] *= s 					# rhs: constant or variable
+		#---------------  to  ---------------
+		# 	self.a = s * self.a
+		NumpyPattern(id, idx, 'scalar', target, operand1, target), if_(
+			AugAssign(id, targetid, augop, operand1, _), Mult(augop,_),
+			IdxExpr(targetid,target,idx),	# lhs is subscript expr with idx
+			Scalar(operand1))				# rhs is a Scalar
+
+		##case 3.1: element-wise multiply		# the result is a list, if sum up, equals inner product
+		## note: no such example in tensor.py	
+		# 	for i in range(len(self.a)):
+		# 		self.a[i] = a[i]*b[i]			# lhs: subscript expr of i; AugAssign, rhs: mult of subscript expr
+		#---------------  to  ---------------
+		# 	self.a = np.multiply(a,b)
+		NumpyPattern(id, idx, 'multiply', target, operand1, operand2), if_(
+			Assign(id, targetid, valueid, _), Member(targetid,sid,_,_), ListLen(targetid,1,_),
+			IdxExpr(sid,target,idx),								# lhs is subscript expr with idx
+			BinOp(valueid, left, binop, right, _), Mult(binop,_),	# rhs is a multiply of subscript expr
+			IdxExpr(left,operand1,idx),IdxExpr(right,operand2,idx))	
+
+		##case 3.2: element-wise multiply augAssign ver	
+		# 	for i in range(len(self.a)):
+		# 		self.a[i] *= other.a[i]			# lhs: subscript expr of i; AugAssign, rhs: subscript expr of i
+		#---------------  to  ---------------
+		# 	self.a = np.multiply(self.a,other.a)
+		NumpyPattern(id, idx, 'multiply', target, target, operand2), if_(
+			AugAssign(id, targetid, augop, rhs, _), Mult(augop,_),
+			IdxExpr(targetid,target,idx),	# lhs is subscript expr with idx
+			IdxExpr(rhs,operand2,idx))
+
+		# find the loop whose iterator are the same as those inside the loop
+		numpyCandidate(id,op,target,operand1,operand2), if_(
+			For(id,itr,_,bodyid,_,_), Name(itr,idx,_,_),
+			Member(bodyid, body,_,_), ListLen(bodyid,1,_), 		# contains only one statement inside body
+			NumpyPattern(body,idx,op,target,operand1,operand2)) # join loop with idx
+
+
+
+
+
+
+DEFAULT_FILE = 'madpy' # madpy, hylaa, AeroBenchVVPython,  numpy, scikit-learn, sklearn, pytorch, pandas, scipy, matplotlib, sympy, django
+DEFAULT_MODE = 'rule'
+DEFAULT_QUERY = 'numpy'	# loopdepth, candidate, forToCompSimple
+
+def main():
+	pprint(sys.argv)
+	if len(sys.argv) < 2:
+		filename = './data/%s' % DEFAULT_FILE
+		pkgInfo = './data/%s/astFacts/pkginfo_%s.py' %(DEFAULT_FILE,DEFAULT_FILE)
+	else:
+		filename = os.path.join('./data',sys.argv[1])
+		pkgInfo = os.path.join('./data',sys.argv[1],'astFacts/pkginfo_'+sys.argv[1]+'.py')
+	
+	mode = DEFAULT_MODE# if len(sys.argv) < 3 else sys.argv[2]
+	query = DEFAULT_QUERY if len(sys.argv) < 3 else sys.argv[2]
+
+	# if not os.path.exists('timing'):
+	# 	os.mkdir('timing')
+	# sys.stdout = open('./timing/%s_%s.tsv' % (os.path.basename(filename), query), 'a')
+
+	config(enable_backup=True)
+	
+	o = new(Analysis_rule,[filename,pkgInfo,mode,query])
+	start(o)
