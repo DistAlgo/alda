@@ -21,7 +21,7 @@ class VariableDeclare(process):
 		self.Bytes = dict()
 		self.Call = dict()
 		self.ClassDef = dict()
-		self.Collection = dict()
+		self.ListLen = dict()
 		self.Compare = dict()
 		self.comprehension = dict()
 		self.Continue = dict()

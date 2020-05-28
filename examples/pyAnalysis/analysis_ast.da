@@ -37,7 +37,7 @@ def gen_tagDict(filename):
 def gen_tagVariable(datafolder, tagDict):
 	
 	specialTag = {'is_Sub', 'Member'}
-	containerTag = {'Collection'}
+	containerTag = {'ListLen'}
 	ignoreAttr = {'lineno', 'col_offset'}
 
 	datafolder = os.path.join(datafolder,'_state')
