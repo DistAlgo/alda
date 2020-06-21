@@ -30,6 +30,7 @@ import time
 import argparse
 
 from .. import __version__
+from .. import common
 from ..importer import da_cache_from_source
 from .utils import is_valid_debug_level, set_debug_level, to_source, to_file
 from .exparser import daast_from_file
@@ -65,6 +66,9 @@ def dastr_to_pyast(src, filename='<str>', args=None):
     """
     # print('ui:dastr_to_pyast')
     daast = daast_from_str(src, filename, args)
+    if daast is not None and common.get_runtime_option('rule', default=False):
+        from da.rule.ruleparser import ruleast_from_daast
+        daast = ruleast_from_daast(daast, filename)
     if daast is not None:
         pyast = PythonGenerator(filename, args).visit(daast)
         if pyast is None:
@@ -142,6 +146,9 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     """
     # print('ui:dastr_to_pycode')
     pyast = dastr_to_pyast(src, filename, args)
+    # f = open(filename+'.py','w')
+    # f.write(to_source(pyast))
+    # f.close()
     if pyast is not None:
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:

@@ -37,9 +37,6 @@ def daast_from_str(src, filename='<str>', args=None):
 		if common.get_runtime_option('constraint', default=False):
 			# print('exparser: daast_from_str')
 			from ..constraint.constraint_parser import Parser
-		elif common.get_runtime_option('rule', default=False):
-			# print('exparser: daast_from_str')
-			from ..rule.rule_parser import Parser
 		else:
 			from .parser import Parser
 		# from .parser import Parser
@@ -58,8 +55,6 @@ def daast_from_str(src, filename='<str>', args=None):
 def Parser(filename, args):
 	if common.get_runtime_option('constraint', default=False):
 		from ..constraint.constraint_parser import Parser
-	elif common.get_runtime_option('rule', default=False):
-		from ..rule.rule_parser import Parser
 	else:
 		from .parser import Parser
 	return Parser(filename, args)

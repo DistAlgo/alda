@@ -216,6 +216,11 @@ class NameScope(DistNode):
         super().__init__(parent, ast)
         # Map names to corresponding NamedVar instances:
         self._names = dict()
+        self.index = NameScope._index
+
+    @property
+    def unique_name(self):
+        return "_" + type(self).__name__ + str(self.index) + "_"
 
     def clone(self):
         node = super().clone()
@@ -405,7 +410,7 @@ class Arguments(DistNode):
     def clone(self):
         node = super().clone()
         node.args = [a.clone() for a in self.args]
-        node.defaults = [d.clone() for d in self.args]
+        node.defaults = [d.clone() for d in self.defaults]
         if self.vararg is not None:
             node.vararg = self.vararg.clone()
         node.kwonlyargs = [a.clone() for a in self.kwonlyargs]
@@ -521,7 +526,6 @@ class NamedVar(DistNode):
         self.name = name
         self._scope = None
         self._indexes = []
-        self.triggerInfer = set()
 
     @property
     def assignments(self):
@@ -2015,6 +2019,11 @@ class CompoundStmt(Statement):
         super().__init__(parent, ast)
         self.body = []
 
+    def clone(self):
+        node = super().clone()
+        node.body = [b.clone() for b in self.body]
+        return node
+
     @property
     def ordered_nameobjs(self):
         return list(chain(*[l.ordered_nameobjs for l in self.body
@@ -2070,6 +2079,13 @@ class Function(CompoundStmt, ArgumentsContainer):
         # List of decorator expressions:
         self.decorators = []
 
+    def clone(self):
+        node = super().clone()
+        node._name = self._name
+        node.process = self.process
+        node.decorators = [d.clone() for d in self.decorators]
+        return node
+    
     @property
     def name(self):
         return self._name
@@ -2114,6 +2130,12 @@ class AssignmentStmt(SimpleStmt):
         self.targets = []
         self.value = None
 
+    def clone(self):
+        node = super().clone()
+        node.targets = [t.clone() for t in self.targets]
+        node.value = self.value.clone()
+        return node
+
     @property
     def ordered_nameobjs(self):
         return list(chain(*[t.ordered_nameobjs
@@ -2128,6 +2150,11 @@ class OpAssignmentStmt(AssignmentStmt):
         super().__init__(parent, ast)
         self.operator = op
         self.targets = [None]
+
+    def clone(self):
+        node = super().clone()
+        node.operator = self.operator
+        return node
 
     @property
     def target(self):
@@ -2146,6 +2173,12 @@ class IfStmt(CompoundStmt):
         self.condition = None
         self.body = []
         self.elsebody = []
+
+    def clone(self):
+        node = super().clone()
+        node.condition = self.condition()
+        node.elsebody = [b.clone() for b in self.elsebody]
+        return node
 
     @property
     def ordered_nameobjs(self):
@@ -2167,6 +2200,12 @@ class WhileStmt(LoopStmt):
         self.body = []
         self.elsebody = []
 
+    def clone(self):
+        node = super().clone()
+        node.condition = self.condition()
+        node.elsebody = [b.clone() for b in self.elsebody]
+        return node
+
     @property
     def ordered_nameobjs(self):
         return list(chain(*[l.ordered_nameobjs
@@ -2182,6 +2221,12 @@ class ForStmt(LoopStmt):
         self.domain = None
         self.body = []
         self.elsebody = []
+
+    def clone(self):
+        node = super().clone()
+        node.domain = self.domain()
+        node.elsebody = [b.clone() for b in self.elsebody]
+        return node
 
     @property
     def ordered_nameobjs(self):
@@ -2199,6 +2244,13 @@ class TryStmt(CompoundStmt):
         self.excepthandlers = []
         self.elsebody = []
         self.finalbody = []
+
+    def clone(self):
+        node = super().clone()
+        node.excepthandlers = [b.clone() for b in self.excepthandlers]
+        node.elsebody = [b.clone() for b in self.elsebody]
+        node.finalbody = [b.clone() for b in self.finalbody]
+        return node
 
     @property
     def ordered_nameobjs(self):
@@ -2218,6 +2270,13 @@ class ExceptHandler(DistNode):
         self.type = None
         self.body = []
 
+    def clone(self):
+        node = super().clone()
+        node.name = self.name.clone()
+        node.type = self.type.clone()
+        node.body = [b.clone() for b in self.body]
+        return node
+
     @property
     def ordered_nameobjs(self):
         return list(chain(*[l.ordered_nameobjs for l in self.body
@@ -2231,6 +2290,12 @@ class AwaitStmt(CompoundStmt):
         super().__init__(parent, ast)
         self.branches = []
         self.timeout = None
+
+    def clone(self):
+        node = super().clone()
+        node.timeout = self.timeout.clone()
+        node.branches = [b.clone() for b in self.branches]
+        return node
 
     @property
     def label(self):
@@ -2270,6 +2335,12 @@ class Branch(DistNode):
         self.condition = condition
         self.body = []
 
+    def clone(self):
+        node = super().clone()
+        node.condition = self.condition.clone()
+        node.body = [b.clone() for b in self.body]
+        return node
+
     @property
     def ordered_nameobjs(self):
         return list(chain(*[l.ordered_nameobjs
@@ -2284,6 +2355,11 @@ class ReturnStmt(SimpleStmt):
         super().__init__(parent, ast)
         self.value = None
 
+    def clone(self):
+        node = super().clone()
+        node.value = self.value.clone()
+        return node
+
 class DeleteStmt(SimpleStmt):
 
     _fields = ['targets']
@@ -2291,6 +2367,11 @@ class DeleteStmt(SimpleStmt):
     def __init__(self, parent, ast=None):
         super().__init__(parent, ast)
         self.targets = []
+
+    def clone(self):
+        node = super().clone()
+        node.targets = [b.clone() for b in self.targets]
+        return node
 
 class YieldStmt(SimpleStmt):
 
@@ -2300,6 +2381,11 @@ class YieldStmt(SimpleStmt):
         super().__init__(parent, ast)
         self.value = None
 
+    def clone(self):
+        node = super().clone()
+        node.value = self.value.clone()
+        return node
+
 class YieldFromStmt(SimpleStmt):
 
     _fields = ['value']
@@ -2307,6 +2393,11 @@ class YieldFromStmt(SimpleStmt):
     def __init__(self, parent, ast=None):
         super().__init__(parent, ast)
         self.value = None
+
+    def clone(self):
+        node = super().clone()
+        node.value = self.value.clone()
+        return node
 
 class WithStmt(CompoundStmt):
 
@@ -2317,6 +2408,12 @@ class WithStmt(CompoundStmt):
         self.items = []
         self.body = []
 
+    def clone(self):
+        node = super().clone()
+        node.items = [b.clone() for b in self.items]
+        node.body = [b.clone() for b in self.body]
+        return node
+
 class RaiseStmt(SimpleStmt):
 
     _fields = ['expr', 'cause']
@@ -2325,6 +2422,11 @@ class RaiseStmt(SimpleStmt):
         super().__init__(parent, ast)
         self.expr = None
         self.cause = None
+
+    def clone(self):
+        node = super().clone()
+        node.cause = self.cause.clone()
+        return node
 
 class PassStmt(SimpleStmt): pass
 
@@ -2366,6 +2468,11 @@ class AssertStmt(SimpleStmt):
         super().__init__(parent, ast)
         self.msg = None
 
+    def clone(self):
+        node = super().clone()
+        node.msg = self.msg.clone()
+        return node
+
 class GlobalStmt(SimpleStmt):
 
     _fields = ['names']
@@ -2373,6 +2480,11 @@ class GlobalStmt(SimpleStmt):
     def __init__(self, parent, ast=None, names=[]):
         super().__init__(parent, ast)
         self.names = list(names)
+
+    def clone(self):
+        node = super().clone()
+        node.names = [n.clone() for n in self.names]
+        return node
 
 class NonlocalStmt(SimpleStmt):
 
@@ -2382,6 +2494,11 @@ class NonlocalStmt(SimpleStmt):
         super().__init__(parent, ast)
         self.names = list(names)
 
+    def clone(self):
+        node = super().clone()
+        node.names = [n.clone() for n in self.names]
+        return node
+
 class ResetStmt(SimpleStmt):
 
     _fields = ['target']
@@ -2389,6 +2506,11 @@ class ResetStmt(SimpleStmt):
     def __init__(self, parent, ast=None):
         super().__init__(parent, ast)
         self.target = ''
+
+    def clone(self):
+        node = super().clone()
+        node.target = self.target
+        return node
 
 class EventType: pass
 class ReceivedEvent(EventType): pass

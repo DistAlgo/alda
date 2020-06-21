@@ -45,7 +45,6 @@ from .common import (builtin, internal, name_split_host, name_split_node,
 from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
     TransportException, AuthenticationException
 
-from .rule import infer as ruleinfer
 from .constraint import query as constraint_query
 
 logger = logging.getLogger(__name__)
@@ -555,21 +554,6 @@ class DistProcess():
         """
         self._register_async_event(Command.EndAck, seqno=0)
         self._sync_async_event(Command.EndAck, seqno=0, srcs=self._id)
-
-
-    @builtin
-    def infer(self, rule, **args):
-        if 'bindings' in args:
-            bindings = args['bindings']
-        else:
-            bindings = []
-        if 'queries' in args:
-            queries = args['queries']
-        else:
-            queries = []
-        # if not rule:
-        #     rule = self.__class__.__name__
-        return ruleinfer(self._state.__dict__, bindings, queries, rule, self._rules_object)
 
     @builtin
     def query(self, constraint, **args):
