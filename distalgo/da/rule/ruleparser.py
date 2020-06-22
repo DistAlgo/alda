@@ -173,7 +173,6 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 	def visit_CallExpr(self,node):
 		if node.func.name == KW_COND:
 			return [self.visit(a) for a in node.args]
-		# print(node.func.name,self.current_rule.find_name(node.func.name))
 		return ruleast.Assertion(self.current_rule.add_name(node.func.name), [self.visit(a) for a in node.args])
 
 	def visit_NameExpr(self,node):
@@ -264,8 +263,26 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 	def current_parent(self):
 		return self.state_stack[-1]
 
+	def merge_rulesets(self, node, source):
+		if hasattr(source, 'rulesets'):
+			if not hasattr(node, 'rulesets'):
+				node.rulesets = dict()
+			for key, val in source.rulesets.items():
+				if key not in node.rulesets:
+					node.rulesets[key] = val
+
 	def visit_Scope(self,node):
 		self.push_state(node)
+		# add the rulesets of bases classes to current scope
+		if hasattr(node, 'bases'):
+			for b in node.bases:
+				self.merge_rulesets(node, b)
+		# add the rulesets in parent scopes to current scope
+		parent = node.parent
+		while parent:
+			if isinstance(parent, dast.NameScope):
+				self.merge_rulesets(node, parent)
+			parent = parent.parent
 		res = self.generic_visit(node)
 		self.add_implicit_infer(node)
 		self.pop_state()
@@ -352,8 +369,30 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 									flagstmt = self.gen_set_flag(d.flag_var, True)
 									stmt.parent.body.insert(i+1, flagstmt)
 
-	def gen_name(self, node):
-		return self.create_expr(dast.NameExpr, value=node)
+	def gen_name(self, node, rule_set=None):
+		if not rule_set or node in rule_set.bounded_base:
+			return self.create_expr(dast.NameExpr, value=node)
+		else:
+			# try to resolve the name if it is not bounded
+			scope = self.current_scope
+			while scope:
+				if isinstance(scope, dast.ClassStmt):
+					selfvar = self.current_scope.find_name('self')
+					res = self.create_expr(dast.IfExpr)
+					res.condition = self.create_expr(dast.CallExpr)
+					res.condition.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('hasattr'))
+					res.condition.args = [selfvar, 
+										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
+					res.condition.keywords = []
+					res.body = self.create_expr(dast.CallExpr)
+					res.body.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('getattr'))
+					res.body.args = [selfvar, 
+										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
+					res.body.keywords = []
+					res.orbody = self.create_expr(dast.NameExpr, value=node)
+					return res
+				scope = scope.parent
+			return self.create_expr(dast.NameExpr, value=node)
 
 	def gen_assignInfer(self, rule_set, user_binding=None):
 		derived = list(rule_set.bounded_derived)
@@ -378,15 +417,14 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 		userDict = dict() if user_binding is None else \
 				   {t.subexprs[0].value: t.subexprs[1] for t in user_binding.subexprs}
 
-		for v in rule_set.unbounded_base:
-			# print(v.name)
-			if v.name not in userDict:
-				self.error('%s not defined' % v.name, self.current_scope)
+		# for v in rule_set.unbounded_base:
+		# 	if v.name not in userDict:
+		# 		self.warn('%s not explicitly defined, try to resolve the name' % v.name, self.current_scope)
 
 		bindings = self.create_expr(dast.ListExpr, 
 									subexprs=[self.create_expr(dast.TupleExpr, 
 															   subexprs=[self.create_expr(dast.ConstantExpr,value=v.name),
-															   userDict[v.name] if v.name in userDict else self.gen_name(v)]) 
+															   userDict[v.name] if v.name in userDict else self.gen_name(v, rule_set)]) 
 											  for v in rule_set.base])
 		
 		queries = user_query if user_query is not None else \
@@ -413,7 +451,7 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if hasattr(scope, 'rulesets'):
 				return scope.rulesets
 			else:
-				scope = scope.parent_scope
+				scope = scope.parent
 		return None
 
 	def visit_CallExpr(self,node):

@@ -146,10 +146,8 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     """
     # print('ui:dastr_to_pycode')
     pyast = dastr_to_pyast(src, filename, args)
-    # f = open(filename+'.py','w')
-    # f.write(to_source(pyast))
-    # f.close()
     if pyast is not None:
+        # open(filename+'.py','w').write(to_source(pyast))
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:
         return None
