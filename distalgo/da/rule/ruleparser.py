@@ -271,12 +271,21 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 				if key not in node.rulesets:
 					node.rulesets[key] = val
 
+	def merge_bases_rulesets(self, node):
+		for b in node.bases:
+			for _, (bc, _) in b.value._indexes:
+				if isinstance(bc, (dast.ClassStmt, dast.Process)):
+					if not hasattr(bc, 'ruleset_processed'):
+						self.merge_bases_rulesets(bc)
+					break
+			self.merge_rulesets(node, bc)
+		node.ruleset_processed = True
+
 	def visit_Scope(self,node):
 		self.push_state(node)
 		# add the rulesets of bases classes to current scope
 		if hasattr(node, 'bases'):
-			for b in node.bases:
-				self.merge_rulesets(node, b)
+			self.merge_bases_rulesets(node)
 		# add the rulesets in parent scopes to current scope
 		parent = node.parent
 		while parent:
