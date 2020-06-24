@@ -2160,7 +2160,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
              isinstance(self.current_context, FunCall):
             if n is None:
                 self.warn("Possible use of uninitialized variable '%s'" %
-                          node.id, node)
+                          node.id, node, self.current_parent)
                 self.debug(str(self.current_scope.parent_scope), node)
                 if self.current_scope.parent_scope is not None:
                     self.debug(self.current_scope.parent_scope._names, node)

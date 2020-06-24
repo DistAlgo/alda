@@ -27,6 +27,9 @@ import sys
 
 import da
 from da.tools.unparse import Unparser
+from .. import common
+from . import dast
+import ast
 
 DB_ERROR = 0
 DB_WARN = 1
@@ -164,7 +167,44 @@ class CompilerMessagePrinter:
         else:
             printe(mesg, 0, 0, self.filename)
 
-    def warn(self, mesg, node):
+    def find_function(self, node, name):
+        if not node:
+            return False
+        if isinstance(node, dast.Function):
+            if node.name == name:
+                return True
+            else:
+                return False
+        else:
+            return self.find_function(node.parent,name)
+
+    def test_parent(self, node):
+        if common.get_runtime_option('rule', default=False) and self.find_function(node, 'rules'):
+            return True
+        if common.get_runtime_option('constraint', default=False)  and self.find_function(node, 'constraint'):
+            return True
+        return False
+
+    def find_call(self, node):
+        if not node:
+            return False
+        if isinstance(node, dast.CallExpr):
+            return True
+        else:
+            return self.find_call(node.parent)
+
+    def test_funccall(self, node, parent_node):
+        if isinstance(node, ast.Name) and self.find_call(parent_node):
+            if common.get_runtime_option('rule', default=False) and node.id == 'infer':
+                return True
+            if common.get_runtime_option('constraint', default=False) and node.id == 'query':
+                return True
+        return False
+
+    def warn(self, mesg, node, parent_node=None):
+        if parent_node:
+            if self.test_parent(parent_node) or self.test_funccall(node, parent_node):
+                return
         self.incwarn()
         if node is not None:
             printw(mesg, node.lineno, node.col_offset, self.filename)
