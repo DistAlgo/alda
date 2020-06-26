@@ -27,7 +27,7 @@ def gen_fact(pred, val):
     else:
         return UniqueLowerCasePrefix+pred+'(%s)' % LogicVarToXSB(val)
 
-def infer(rule, arity, bindings, queries):
+def _infer(rule, arity, bindings, queries):
     # generate facts
     xsb_facts = ""
     for key, val in bindings:
@@ -73,7 +73,6 @@ def infer(rule, arity, bindings, queries):
     # output = subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query],
     #                         stdout=subprocess.PIPE,text=True)
     utime3, stime3, cutime3, cstime3, elapsed_time3 = os.times()    # timing: xsb
-    
     results = []
     for r,_ in _queries:
         rname = PurePath(r).name

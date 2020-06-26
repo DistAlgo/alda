@@ -5,19 +5,23 @@ from . import ruleast
 import sys, os
 from .rule_io import write_file,clear_cache
 from pprint import pprint
+# from .resolver import RuleResolver
 
-KW_RULES = "rules"
+KW_RULES = "rules_"
 KW_COND = "if_"
+KW_INFER = "_infer"
+
+FUNC_NAME_EMPTYSET = "__try_var_defined__"
 
 UniqueUpperCasePrefix = 'V'
 UniqueLowerCasePrefix = 'p'
 
 
-def ruleast_from_daast(daast, filename='<str>'):
+def ruleast_from_daast(daast, filename='<str>', options=None):#, _package=None, _parent=None):
 	try:
 		rp = Parser(filename, None)
 		ruleast = rp.visit(daast)
-		rp2 = ParserSecondPass(filename,rp)
+		rp2 = ParserSecondPass(filename, rp)#, _package, options)
 		ruleast = rp2.visit(ruleast)
 		sys.stderr.write("%s Rules compiled with %d errors and %d warnings.\n" %
 					 (filename, rp2.errcnt, rp2.warncnt))
@@ -36,8 +40,8 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		NodeTransformer.__init__(self)
 		self.state_stack = []
 		self.filename = _filename
-		moduleName = os.path.splitext(os.path.basename(self.filename))[0]
-		clear_cache(moduleName)
+		self.moduleName = os.path.splitext(os.path.basename(self.filename))[0]
+		clear_cache(self.moduleName)
 
 	def push_state(self, node):
 		self.state_stack.append(node)
@@ -52,12 +56,260 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 				return node
 		return None
 
+	@property
+	def current_parent(self):
+		return self.state_stack[-1]
+
+	def create_expr(self, exprcls, **params):
+		if params is None:
+			expr = exprcls(self.current_parent, ast=None)
+		else:
+			expr = exprcls(self.current_parent, ast=None, **params)
+		return expr
+
+	def gen_name(self, node, rule_set=None):
+		if not rule_set or node in rule_set.bounded_base:
+			return self.create_expr(dast.NameExpr, value=node)
+		else:
+			# try to resolve the name if it is not bounded:
+			# getattr(self, name) if hasattr(self, name) else name
+			# even there is no name here, it is possible that the set is empty
+			scope = self.current_scope
+			while scope:
+				if isinstance(scope, dast.ClassStmt):
+					selfvar = self.current_scope.find_name('self')
+					res = self.create_expr(dast.IfExpr)
+					res.condition = self.create_expr(dast.CallExpr)
+					res.condition.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('hasattr'))
+					res.condition.args = [selfvar, 
+										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
+					res.condition.keywords = []
+					res.body = self.create_expr(dast.CallExpr)
+					res.body.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('getattr'))
+					res.body.args = [selfvar, 
+										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
+					res.body.keywords = []
+					res.orbody = self.create_expr(dast.NameExpr, value=node)
+					return res
+				scope = scope.parent
+			return self.create_expr(dast.NameExpr, value=node)
+
+	def gen_assignInfer(self, rule_set, user_binding=None):
+		""" assign the return value of infer to all bounded derived variables
+		the case when queries are not specified
+		"""
+		derived = list(rule_set.bounded_derived)
+		if not derived:
+			return None
+		queries = self.create_expr(dast.ListExpr,
+								   subexprs=[self.create_expr(dast.ConstantExpr, value=v.name) for v in derived])
+		stmt = self.create_expr(dast.AssignmentStmt)
+		stmt.targets = [self.gen_name(v) for v in derived]
+		stmt.value = self.gen_infer_call(rule_set, user_binding, queries)
+		return stmt
+
+	def gen_infer_call(self, rule_set, user_binding=None, user_query=None):
+		""" generate infer call of rule_set with user_binding and user_query
+		an addition arity argument is added storing the arities of all predicates used in the rule.
+		"""
+		callinf = self.create_expr(dast.CallExpr)
+		func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name(KW_INFER))
+		keywords = [('rule',self.create_expr(dast.ConstantExpr, value=self.moduleName+'.'+rule_set.unique_name))]
+		arity = self.create_expr(dast.DictExpr)
+		allpred = list(rule_set.base)+list(rule_set.derived)
+		arity.keys = [self.create_expr(dast.ConstantExpr,value=p.name) for p in allpred]
+		arity.values = [self.create_expr(dast.ConstantExpr,value=rule_set.get_arity(p)) for p in allpred]
+
+		keywords.append(('arity', arity))
+		keywords.append(('bindings', user_binding))
+		keywords.append(('queries', user_query))
+		# pprint(vars(callinf))
+		callinf.func=func
+		callinf.args=[]
+		callinf.keywords=keywords
+		return callinf
+	
+	def gen_inline_if(self, userDict, v, rule_set):
+		"""generate the following code: 
+		userDict[v.name] if v.name in userDict else self.gen_name(v, rule_set)
+		""" 
+		ifexpr = self.create_expr(dast.IfExpr)
+		dm = self.create_expr(dast.ComparisonExpr)
+		vstr = self.create_expr(dast.ConstantExpr, value=v.name)
+		dm.left = vstr
+		dm.right = userDict
+		dm.comparator=dast.InOp
+		ifexpr.condition = dm
+		body = self.create_expr(dast.SubscriptExpr)
+		body.value = userDict
+		body.index = self.create_expr(dast.ConstantExpr, value=v.name)
+		ifexpr.body = body
+		ifexpr.orbody = self.gen_name(v, rule_set)
+		return ifexpr
+
+	def gen_bind_name(self, name):
+		return '__binding_'+name.name+'__'
+
+	def get_bind_name(self, name):
+		var = self.current_scope.find_name(self.gen_bind_name(name))
+		return self.create_expr(dast.NameExpr, value=var)
+
+	def gen_try_varname(self, userDict, name, rule_set):
+		""" generate the following statement
+		try:
+			__binding_name_ = userDict[name] if name in userDict else \
+					getattr(self, name) if hasattr(self, name) else name
+		except NameError:
+			print('Warning: predicate <name> unbounded, use empty set instead')
+			__binding_name_ = set()
+		"""
+		trystmt = self.create_expr(dast.TryStmt)
+		self.push_state(trystmt)
+		var = self.current_scope.add_name(self.gen_bind_name(name))
+		body = self.create_expr(dast.AssignmentStmt)
+		body.targets.append(self.create_expr(dast.NameExpr, value=var))
+		body.value = self.gen_inline_if(userDict, name, rule_set)
+		trystmt.body.append(body)
+		if name in rule_set.bounded_base:
+			name.add_read(body)
+
+		exp = self.create_expr(dast.ExceptHandler)
+		exp.type = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('NameError'))
+		
+		warn = self.create_expr(dast.SimpleStmt)
+		warn.expr = self.create_expr(dast.CallExpr)
+		warn.expr.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('print'))
+		warn.expr.args = [self.create_expr(dast.ConstantExpr, value='Warning: predicate %s unbounded, use empty set instead' % name.name)]
+		warn.expr.keywords = []
+		exp.body.append(warn)
+
+		assign = self.create_expr(dast.AssignmentStmt)
+		assign.targets.append(self.create_expr(dast.NameExpr, value=var))
+		emptyset = self.create_expr(dast.CallExpr)
+		emptyset.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('set'))
+		emptyset.args = []
+		emptyset.keywords = []
+		assign.value = emptyset
+		exp.body.append(assign)
+
+		trystmt.excepthandlers.append(exp)
+		self.pop_state()
+		return trystmt
+
+	def gen_rule_func_def(self, ruleset):
+		""" generate the definition of rule function
+		1. complete the parameter of the function. add 'self' as first parameter if ruleset defined in a Class
+		2. complete the all base predicate with user input bindings and bounded base variable
+		3. generate the call to infer, 
+			3.1 set all the context of bounded base predicate to ReadCtx in the infer statement
+				so that later, a recursive update of bounded base predicate will be generated
+			3.2 call infer with bindings and queries
+				3.2.1 if user specifies queries, then directly return the call of infer
+				3.2.2 if the user do no specifies queries (or in the case the infer is automatically generated)
+					  queries on all bounded derived predicates and assign to corresponding variables
+		"""
+		scope = self.current_scope
+		fd = self.create_expr(dast.Function, name=ruleset.decls)
+		self.push_state(fd)
+		fd.args = self.create_expr(dast.Arguments)
+		while scope:
+			if isinstance(scope, dast.ClassStmt):
+				fd.args.add_arg('self')
+				break
+			scope = scope.parent
+
+		fd.args.add_defaultarg('bindings', self.create_expr(dast.NoneExpr))
+		fd.args.add_defaultarg('queries', self.create_expr(dast.NoneExpr))
+
+		user_binding = self.create_expr(dast.NameExpr, value=fd.find_name('bindings')) 
+		user_query = self.create_expr(dast.NameExpr, value=fd.find_name('queries'))
+
+		# the value of user_bindiing should be a tuple or None,
+		# create a If statement, that test user_binding,
+		bindingif = self.create_expr(dast.IfStmt)
+		self.push_state(bindingif)
+		bindingif.condition = user_binding
+
+		# if user_binding is specified, 
+		# we want the generated code to be
+		# userDict = {key: val for (key,val) in user_binding}
+		userDict = self.create_expr(dast.NameExpr, value=fd.add_name('userDict'))
+		dictcomp = self.create_expr(dast.DictCompExpr)
+		kv = self.create_expr(dast.KeyValue)
+		kv.key = self.create_expr(dast.NameExpr, value=dictcomp.add_name('key'))
+		kv.value = self.create_expr(dast.NameExpr, value=dictcomp.add_name('val'))
+		dictcomp.elem = kv
+		dm = self.create_expr(dast.DomainSpec)
+		dm.domain = user_binding
+		dm.pattern = self.create_expr(dast.TupleExpr, subexprs=[
+				self.create_expr(dast.NameExpr, value=dictcomp.find_name('key')),
+				self.create_expr(dast.NameExpr, value=dictcomp.find_name('val'))])
+		dictcomp.conditions.append(dm)
+
+		# assign the dict comprehension to userDict
+		assignUserDict = self.create_expr(dast.AssignmentStmt)
+		assignUserDict.targets = [userDict]
+		assignUserDict.value = dictcomp
+		bindingif.body.append(assignUserDict)
+
+		# if user_binding not specified, assign userDict to empty dict
+		emptyUserDict = self.create_expr(dast.AssignmentStmt)
+		emptyUserDict.targets = [userDict]
+		emptyUserDict.value = self.create_expr(dast.CallExpr)
+		emptyUserDict.value.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('dict'))
+		emptyUserDict.value.args = []
+		emptyUserDict.value.keywords = []
+		bindingif.elsebody.append(emptyUserDict)
+		self.pop_state()
+		fd.body.append(bindingif)
+
+		for v in ruleset.base:
+			fd.body.append(self.gen_try_varname(userDict, v, ruleset))
+
+		# create the binding value by list
+		# [UserDict[name] if name in UserDict else RuleDefult, ...]
+		bindings = self.create_expr(dast.ListExpr, 
+									subexprs=[self.create_expr(dast.TupleExpr, 
+															   subexprs=[self.create_expr(dast.ConstantExpr,value=v.name),
+																		 self.get_bind_name(v)]) 
+											  for v in ruleset.base])
+		# assign the list to varialbe bindings
+		assignBinding = self.create_expr(dast.AssignmentStmt)
+		assignBinding.targets = [user_binding]
+		assignBinding.value = bindings
+		fd.body.append(assignBinding)
+		
+		# create an If statement that test queries
+		ifstmt = self.create_expr(dast.IfStmt)
+		self.push_state(ifstmt)
+		ifstmt.condition = self.create_expr(dast.NameExpr, value=user_query)
+
+		# if queries are specified, return the value of infer
+		inferexpr = self.gen_infer_call(ruleset, user_binding, user_query)
+		rtstmt = self.create_expr(dast.ReturnStmt)
+		rtstmt.value = inferexpr
+		ifstmt.body.append(rtstmt)
+
+		# else, assign result of infer to derived variables
+		inferstmt = self.gen_assignInfer(ruleset, user_binding)
+		if inferstmt:
+			ifstmt.elsebody.append(inferstmt)
+		self.pop_state()
+		fd.body.append(ifstmt)
+		
+		self.pop_state()
+		return fd
+
 	def visit_Function(self, node):
-		if node.name == KW_RULES:
+		""" replace the definition of function rules_xxx to a function the can be called with 2 parameters: bindings and queries
+		"""
+		if node.name.startswith(KW_RULES):# if node.name == KW_RULES:
 			ruleset = RuleParser(self.filename, self).visit(node)
 			if not hasattr(self.current_scope, 'rulesets'):
 				self.current_scope.rulesets = dict()
 			self.current_scope.rulesets[ruleset.decls] = ruleset
+			res = self.gen_rule_func_def(ruleset)
+			return res
 		else:
 			return self.visit_Scope(node)
 
@@ -74,8 +326,21 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 
 	visit_ClassStmt = visit_Scope
 	visit_InteractiveProgram = visit_Scope
-	visit_Program = visit_Scope
+	# visit_Program = visit_Scope
 	visit_Process = visit_Scope
+
+	def visit_Program(self, node):
+		self.push_state(node)
+		# add the import of infer at the front
+		imptinfer = self.create_expr(dast.ImportFromStmt)
+		imptinfer.module = 'da.rule.infer'
+		imptinfer.items.append(self.create_expr(dast.Alias, name=KW_INFER))
+		nobj = self.current_scope.add_name(KW_INFER)
+		nobj.add_assignment(imptinfer)
+		res = self.generic_visit(node)
+		res.body.insert(0,imptinfer)
+		self.pop_state()
+		return res
 
 class RuleParser(NodeVisitor, CompilerMessagePrinter):
 	def __init__(self, filename="", _parent=None):
@@ -96,27 +361,10 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		var.flag_var = flag_var
 
 	def visit_Function(self, node):
-		if node.name == KW_RULES:
+		if node.name.startswith(KW_RULES): # if node.name == KW_RULES:
 			self.current_rule = ruleast.RuleSet(node.parent, node.ast)
-			arguments = node.args
-			decl = None
-			for i in range(len(arguments.args)):
-				if arguments.args[i].name == 'name':
-					decl = arguments.defaults[i].value
-					break
-			if not decl:
-				parent = node.parent
-				while parent is not None and not isinstance(parent, (dast.ClassStmt, dast.Process)):
-					parent = parent.parent
-				if parent is None:
-					self.error("RuleSet declared without name", node)
-					return
-				else:
-					decl = parent.name
-					self.warn("RuleSet declared without name, use the name of %s: '%s' as default" % (type(parent).__name__,decl), node)
-			self.current_rule.decls = decl
+			self.current_rule.decls = node.name
 			self.current_rule.rules = [self.visit(r.expr) for r in node.body]
-			
 			res = self.current_rule
 			self.current_rule = None
 			
@@ -142,7 +390,6 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 						self.error('Variable %s defined as derived predicate for multiple RuleSet' % v.name, node)
 					v.infer.add(res)
 
-
 			for v in res.bounded_derived:
 				setattr(v, 'no_updates', True)
 
@@ -157,9 +404,10 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		raise NotImplementedError
 
 	def visit_TupleExpr(self, node):
-		# rules of form: p1, if_(p2,...)
-		# conclusion must be of from p(a1,...)
-		# conditions must start with if_
+		""" rules of form: p1, if_(p2,...)
+		conclusion must be of from p(a1,...)
+		conditions must start with if_
+		"""
 		if len(node.subexprs) != 2 or \
 		   not isinstance(node.subexprs[0], dast.CallExpr) or \
 		   not (isinstance(node.subexprs[1],dast.CallExpr) and node.subexprs[1].func.name == KW_COND): 
@@ -185,7 +433,6 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		if isinstance(node.value, str):
 			return ruleast.LogicVar("'%s'" % node.value)
 		elif isinstance(node.value, bytes):
-			# return ruleast.LogicVar(node.value)
 			self.error('ERROR: invalid predicate', node.value)
 		else:
 			return ruleast.LogicVar(node.value)
@@ -202,7 +449,7 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 class XSBTranslator(NodeVisitor):
 
 	def visit_RuleSet(self, node):
-		return '\n'.join(self.visit(rule) for rule in node.rules)
+		return ':- auto_table.\n'+'\n'.join(self.visit(rule) for rule in node.rules)
 	
 	def visit_Rule(self, node):
 		if node.hypos == None: 
@@ -234,17 +481,18 @@ def sort_rulesets(a,b):
 	else:
 		return 1
 
-KW_INFER = "infer"
-
+KW_INFER_CALL = "infer"
 
 class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
-	def __init__(self, _filename="", _parent=None):
+	def __init__(self, _filename="", _parent=None):#, _package=None, options=None):
 		CompilerMessagePrinter.__init__(self, _filename, _parent=_parent)
 		NodeTransformer.__init__(self)
-		# self.trigger_infer = False
 		self.state_stack = []
 		self.filename = _filename
 		self.moduleName = os.path.splitext(os.path.basename(self.filename))[0]
+		# self.resolver = RuleResolver(_filename, options,
+		# 						 _package if _package else options.module_name,
+		# 						 _parent=self)
 
 	def push_state(self, node):
 		self.state_stack.append(node)
@@ -263,35 +511,8 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 	def current_parent(self):
 		return self.state_stack[-1]
 
-	def merge_rulesets(self, node, source):
-		if hasattr(source, 'rulesets'):
-			if not hasattr(node, 'rulesets'):
-				node.rulesets = dict()
-			for key, val in source.rulesets.items():
-				if key not in node.rulesets:
-					node.rulesets[key] = val
-
-	def merge_bases_rulesets(self, node):
-		for b in node.bases:
-			for _, (bc, _) in b.value._indexes:
-				if isinstance(bc, (dast.ClassStmt, dast.Process)):
-					if not hasattr(bc, 'ruleset_processed'):
-						self.merge_bases_rulesets(bc)
-					break
-			self.merge_rulesets(node, bc)
-		node.ruleset_processed = True
-
 	def visit_Scope(self,node):
 		self.push_state(node)
-		# add the rulesets of bases classes to current scope
-		if hasattr(node, 'bases'):
-			self.merge_bases_rulesets(node)
-		# add the rulesets in parent scopes to current scope
-		parent = node.parent
-		while parent:
-			if isinstance(parent, dast.NameScope):
-				self.merge_rulesets(node, parent)
-			parent = parent.parent
 		res = self.generic_visit(node)
 		self.add_implicit_infer(node)
 		self.pop_state()
@@ -300,22 +521,8 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 	visit_Function = visit_Scope
 	visit_ClassStmt = visit_Scope
 	visit_InteractiveProgram = visit_Scope
-	# visit_Program = visit_Scope
+	visit_Program = visit_Scope
 	visit_Process = visit_Scope
-
-	def visit_Program(self, node):
-		self.push_state(node)
-		# add the import of infer at the front
-		imptinfer = self.create_expr(dast.ImportFromStmt)
-		imptinfer.module = 'da.rule.infer'
-		imptinfer.items.append(self.create_expr(dast.Alias, name='infer'))
-		nobj = self.current_scope.add_name('infer')
-		nobj.add_assignment(imptinfer)
-		res = self.generic_visit(node)
-		res.body.insert(0,imptinfer)
-		self.add_implicit_infer(node)
-		self.pop_state()
-		return res
 
 	def create_expr(self, exprcls, **params):
 		if params is None:
@@ -334,30 +541,50 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 		return assignstmt
 
 	def gen_infer_at_use(self, d, rs):
+		""" generate infer before the use of variable d with ruleset rs. 
+		1. test d's update flag before generation
+		2. recusively call gen_infer_at_use on bounded base predicate of ruleset rs before infering d
+		3. set d's update flag to false
+		"""
 		ifstmt = self.create_expr(dast.IfStmt)
+		self.push_state(ifstmt)
 		ifstmt.condition = d.flag_var
 		ifstmt.body = [self.gen_infer_at_use(b, b.infer.copy().pop()) for b in rs.bounded_base if hasattr(b, 'flag_var')]
-		ifstmt.body.append(self.gen_assignInfer(rs))
+		func = self.find_rules_func(rs.decls)
+		body = self.create_expr(dast.SimpleStmt)
+		body.expr = self.gen_rule_func_call(func)
+		ifstmt.body.append(body)
 		ifstmt.body.append(self.gen_set_flag(d.flag_var, False))
+		self.pop_state()
 		return ifstmt
+
+	def gen_rule_func_call(self, func, bindings=None, queries=None):
+		rulecall = self.create_expr(dast.CallExpr)
+		rulecall.func = func
+		keywords = []
+		if bindings:
+			keywords.append(('bindings', bindings))
+		if queries:
+			keywords.append(('queries', queries))
+		rulecall.keywords = keywords
+		rulecall.args = []
+		return rulecall
 
 	def add_implicit_infer(self, node):
 		""" add implicit function call of infer to Scope: node
 		add infer before the use of derived predicates
 		"""
-		# first, add a variable __<unique name of the scope>_infer_dict__ to the scope
 		if hasattr(node, 'rulesets'):
 			override_dict = dict()	# key: function_name, val: tuple: (function, (dict key: stmt, val: set of ruleset))
 			setup_init = set()		# set of ruleset
 			for rs in sorted(node.rulesets.values(), key=cmp_to_key(sort_rulesets)):	# iterate through rulesets
 				for d in rs.bounded_derived:	# iterate through all bounded derived predciates
-					# create a flag variable for the derived predicate
 					for (ctx, (loc, _)) in d._indexes:
 						if ctx is not dast.ReadCtx:
 							continue
 						# add infer call when derived predicates are used
 						stmt = loc.statement if isinstance(loc, dast.Expression) else loc
-						if isinstance(stmt.parent, dast.Function) and stmt.parent.name == 'rules':
+						if isinstance(stmt.parent, dast.Function) and stmt.parent.name.startswith(KW_RULES):# == 'rules':
 							continue
 						for i, b in enumerate(stmt.parent.body):
 							if b is stmt:
@@ -378,93 +605,24 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 									flagstmt = self.gen_set_flag(d.flag_var, True)
 									stmt.parent.body.insert(i+1, flagstmt)
 
-	def gen_name(self, node, rule_set=None):
-		if not rule_set or node in rule_set.bounded_base:
-			return self.create_expr(dast.NameExpr, value=node)
-		else:
-			# try to resolve the name if it is not bounded
-			scope = self.current_scope
-			while scope:
-				if isinstance(scope, dast.ClassStmt):
-					selfvar = self.current_scope.find_name('self')
-					res = self.create_expr(dast.IfExpr)
-					res.condition = self.create_expr(dast.CallExpr)
-					res.condition.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('hasattr'))
-					res.condition.args = [selfvar, 
-										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
-					res.condition.keywords = []
-					res.body = self.create_expr(dast.CallExpr)
-					res.body.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('getattr'))
-					res.body.args = [selfvar, 
-										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
-					res.body.keywords = []
-					res.orbody = self.create_expr(dast.NameExpr, value=node)
-					return res
-				scope = scope.parent
-			return self.create_expr(dast.NameExpr, value=node)
-
-	def gen_assignInfer(self, rule_set, user_binding=None):
-		derived = list(rule_set.bounded_derived)
-		if not derived:
-			return None
-		queries = self.create_expr(dast.ListExpr,
-								   subexprs=[self.create_expr(dast.ConstantExpr, value=v.name) for v in derived])
-		stmt = self.create_expr(dast.AssignmentStmt)
-		stmt.targets = [self.gen_name(v) for v in derived]
-		stmt.value = self.gen_infer_call(rule_set, user_binding, queries)
-		return stmt
-		
-
-	def gen_infer_call(self, rule_set, user_binding=None, user_query=None):
-		if not user_query:
-			return self.gen_assignInfer(rule_set, user_binding)
-
-		callinf = self.create_expr(dast.CallExpr)
-		func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('infer'))
-		keywords = [('rule',self.create_expr(dast.ConstantExpr, value=self.moduleName+'.'+rule_set.unique_name))]
-		
-		userDict = dict() if user_binding is None else \
-				   {t.subexprs[0].value: t.subexprs[1] for t in user_binding.subexprs}
-
-		# for v in rule_set.unbounded_base:
-		# 	if v.name not in userDict:
-		# 		self.warn('%s not explicitly defined, try to resolve the name' % v.name, self.current_scope)
-
-		bindings = self.create_expr(dast.ListExpr, 
-									subexprs=[self.create_expr(dast.TupleExpr, 
-															   subexprs=[self.create_expr(dast.ConstantExpr,value=v.name),
-															   userDict[v.name] if v.name in userDict else self.gen_name(v, rule_set)]) 
-											  for v in rule_set.base])
-		
-		queries = user_query if user_query is not None else \
-				  self.create_expr(dast.ListExpr, 
-								   subexprs=[self.create_expr(dast.ConstantExpr, value=v.name) for v in rule_set.bounded_derived])
-
-		arity = self.create_expr(dast.DictExpr)
-		allpred = list(rule_set.base)+list(rule_set.derived)
-		arity.keys = [self.create_expr(dast.ConstantExpr,value=p.name) for p in allpred]
-		arity.values = [self.create_expr(dast.ConstantExpr,value=rule_set.get_arity(p)) for p in allpred]
-
-		keywords.append(('arity', arity))
-		keywords.append(('bindings', bindings))
-		keywords.append(('queries', queries))
-		# pprint(vars(callinf))
-		callinf.func=func
-		callinf.args=[]
-		callinf.keywords=keywords
-		return callinf
-
-	def find_ruleset(self):
+	def find_rules_func(self, name):
 		scope = self.current_scope
+		attr = self.create_expr(dast.AttributeExpr)
+		attr.value = self.current_scope.find_name('self')
+		attr.attr = name
 		while scope:
-			if hasattr(scope, 'rulesets'):
-				return scope.rulesets
+			var = scope.find_name(name)
+			if var:
+				if isinstance(scope, dast.ClassStmt):
+					return attr
+				else:
+					return self.create_expr(dast.NameExpr, value=var)
 			else:
 				scope = scope.parent
-		return None
+		return attr
 
-	def visit_CallExpr(self,node):
-		if isinstance(node.func, dast.NameExpr) and node.func.name == KW_INFER:
+	def visit_CallExpr(self, node):
+		if isinstance(node.func, dast.NameExpr) and node.func.name == KW_INFER_CALL:
 			# check that the infer function is imported from da.rule.infer, 
 			# not something else overridened by the user
 			whereinfer = None
@@ -475,46 +633,29 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if not (isinstance(whereinfer, dast.ImportFromStmt) and whereinfer.module == 'da.rule.infer'):
 				return self.generic_visit(node)
 		
-			rule_set = None
+			rule_name = None
 			user_binding = None
 			user_query = None
-			rulesets = self.find_ruleset()
-			if not rulesets:
-				self.error('No rules defined in current scope', node)
-				return
-			if node.args:
-				if len(node.args) > 1 or not isinstance(node.args[0], dast.ConstantExpr):
-					self.error('Malformed call of infer', node)
-					return
-				if node.args[0].value not in rulesets:
-					self.error('1. No ruleset named %s defined' % node.args[0].value, node)
-					return
-				rule_set = rulesets[node.args[0].value]
+
 			if node.keywords:
 				for key, val in node.keywords:
 					if key == 'rule':
-						if rule_set or not isinstance(val, dast.ConstantExpr):
-							self.error('Malformed call of infer', node)
-							return
-						if val.value not in rulesets:
-							self.error('2. No ruleset named %s defined' % val.value, node)
-							return
-						rule_set = rulesets[val.value]
+						rule_var = val
 					elif key == 'bindings':
 						user_binding = val
 					elif key == 'queries':
 						user_query = val
 					else:
 						self.warn('Invalid argument %s in call of infer, ignored' % key, node)
-
-			for b in rule_set.bounded_base:
-				b.add_read(node)
-			return self.gen_infer_call(rule_set, user_binding, user_query)
+			if not rule_var:
+				self.error('Infer function requires keyword argument: rule', node)
+			
+			rulecall = self.gen_rule_func_call(rule_var, user_binding, user_query)
+			return rulecall
 		else:
 			return self.generic_visit(node)
 
-
-############################ not used any more ############################
+#################### infer at update: not used any more ####################
 	def add_infer_direct(self, ruleset, stmt):
 		""" add call of infer directly after stmt
 		"""
