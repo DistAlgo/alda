@@ -72,21 +72,29 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 			return self.create_expr(dast.NameExpr, value=node)
 		else:
 			# try to resolve the name if it is not bounded:
-			# getattr(self, name) if hasattr(self, name) else name
+			# for the case of Class:
+			# 	getattr(self, name) if hasattr(self, name) else name
+			# for the case of Process:
+			# 	getattr(self._state, name) if hasattr(self._state, name) else name
 			# even there is no name here, it is possible that the set is empty
 			scope = self.current_scope
 			while scope:
-				if isinstance(scope, dast.ClassStmt):
-					selfvar = self.current_scope.find_name('self')
+				if isinstance(scope, (dast.ClassStmt, dast.Process)):
+					if isinstance(scope, dast.Process):
+						arg1 = self.create_expr(dast.AttributeExpr)
+						arg1.value = self.current_scope.add_name('self')
+						arg1.attr = '_state'
+					else:
+						arg1 = self.current_scope.find_name('self')
 					res = self.create_expr(dast.IfExpr)
 					res.condition = self.create_expr(dast.CallExpr)
 					res.condition.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('hasattr'))
-					res.condition.args = [selfvar, 
+					res.condition.args = [arg1, 
 										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
 					res.condition.keywords = []
 					res.body = self.create_expr(dast.CallExpr)
 					res.body.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('getattr'))
-					res.body.args = [selfvar, 
+					res.body.args = [arg1, 
 										  self.create_expr(dast.ConstantExpr, value=str(node.name))]
 					res.body.keywords = []
 					res.orbody = self.create_expr(dast.NameExpr, value=node)
