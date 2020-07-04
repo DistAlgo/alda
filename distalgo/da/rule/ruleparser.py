@@ -106,6 +106,8 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		stmt = self.create_expr(dast.AssignmentStmt)
 		stmt.targets = [self.gen_name(v) for v in derived]
 		stmt.value = self.gen_infer_call(rule_set, user_binding, queries)
+		for v in rule_set.bounded_derived:
+			v.add_assignment(stmt)
 		return stmt
 
 	def gen_infer_call(self, rule_set, user_binding=None, user_query=None):
@@ -147,6 +149,7 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		ifexpr.orbody = self.gen_name(v, rule_set)
 		return ifexpr
 
+### add try except to decide whether a binding can be found at runtime, not used for now ###
 	def gen_bind_name(self, name):
 		return '__binding_'+name.name+'__'
 
@@ -195,6 +198,16 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		trystmt.excepthandlers.append(exp)
 		self.pop_state()
 		return trystmt
+############################################################################################
+
+	def gen_set_flag(self, flag_var, val):
+		""" generate the assignment statement that set the flag to val(True/False)
+		"""
+		assignstmt = self.create_expr(dast.AssignmentStmt)
+		assignstmt.targets = [flag_var]
+		boolvar = dast.TrueExpr if val else dast.FalseExpr
+		assignstmt.value = self.create_expr(boolvar)
+		return assignstmt
 
 	def gen_rule_func_def(self, ruleset):
 		""" generate the definition of rule function
@@ -263,21 +276,25 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		self.pop_state()
 		fd.body.append(bindingif)
 
-		for v in ruleset.base:
-			fd.body.append(self.gen_try_varname(userDict, v, ruleset))
+		# for v in ruleset.base:
+		# 	fd.body.append(self.gen_try_varname(userDict, v, ruleset))
 
 		# create the binding value by list
 		# [UserDict[name] if name in UserDict else RuleDefult, ...]
 		bindings = self.create_expr(dast.ListExpr, 
 									subexprs=[self.create_expr(dast.TupleExpr, 
 															   subexprs=[self.create_expr(dast.ConstantExpr,value=v.name),
-																		 self.get_bind_name(v)]) 
+																		 # self.get_bind_name(v)]) 
+																		 self.gen_inline_if(userDict, v, ruleset)])
 											  for v in ruleset.base])
 		# assign the list to varialbe bindings
 		assignBinding = self.create_expr(dast.AssignmentStmt)
 		assignBinding.targets = [user_binding]
 		assignBinding.value = bindings
 		fd.body.append(assignBinding)
+
+		for v in ruleset.bounded_base:
+			v.add_read(assignBinding)
 		
 		# create an If statement that test queries
 		ifstmt = self.create_expr(dast.IfStmt)
@@ -294,6 +311,18 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		inferstmt = self.gen_assignInfer(ruleset, user_binding)
 		if inferstmt:
 			ifstmt.elsebody.append(inferstmt)
+			for d in ruleset.bounded_derived:
+				if hasattr(d, 'flag_var'):
+					ifstmt.elsebody.append(self.gen_set_flag(d.flag_var, False))
+		else:
+			# if no derived predicate are bounded and the user calls infer without specifying query, raise an error
+			raiseError = self.create_expr(dast.RaiseStmt)
+			raiseError.expr = self.create_expr(dast.CallExpr)
+			raiseError.expr.func = self.create_expr(dast.NameExpr, value=self.current_scope.find_name('Exception'))
+			raiseError.expr.args = [self.create_expr(dast.ConstantExpr, value='%s: queries not specified and no derived variables are defined' % ruleset.decls)]
+			raiseError.expr.keywords = []
+			ifstmt.elsebody.append(raiseError)
+
 		self.pop_state()
 		fd.body.append(ifstmt)
 		
@@ -549,12 +578,10 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 		ifstmt = self.create_expr(dast.IfStmt)
 		self.push_state(ifstmt)
 		ifstmt.condition = d.flag_var
-		ifstmt.body = [self.gen_infer_at_use(b, b.infer.copy().pop()) for b in rs.bounded_base if hasattr(b, 'flag_var')]
 		func = self.find_rules_func(rs.decls)
 		body = self.create_expr(dast.SimpleStmt)
 		body.expr = self.gen_rule_func_call(func)
 		ifstmt.body.append(body)
-		ifstmt.body.append(self.gen_set_flag(d.flag_var, False))
 		self.pop_state()
 		return ifstmt
 
@@ -570,6 +597,18 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 		rulecall.args = []
 		return rulecall
 
+	def insert_at_any_body_at_stmt(self, stmt, inserts, before=False):
+		""" insert before/after stmt
+		"""
+		for body in ['body', 'elsebody', 'finalbody']:
+			if not hasattr(stmt.parent, body):
+				continue
+			for i, b in enumerate(getattr(stmt.parent, body)):
+				if b is stmt:
+					for j, ins in enumerate(inserts):
+						getattr(stmt.parent, body).insert(i+j+(0 if before else 1), ins)
+					return
+
 	def add_implicit_infer(self, node):
 		""" add implicit function call of infer to Scope: node
 		add infer before the use of derived predicates
@@ -578,32 +617,28 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			override_dict = dict()	# key: function_name, val: tuple: (function, (dict key: stmt, val: set of ruleset))
 			setup_init = set()		# set of ruleset
 			for rs in sorted(node.rulesets.values(), key=cmp_to_key(sort_rulesets)):	# iterate through rulesets
-				for d in rs.bounded_derived:	# iterate through all bounded derived predciates
+				# only generate infer when all the base predicates are bounded and some derived predicates are bounded
+				if rs.unbounded_base or not rs.bounded_derived:
+					continue
+
+				# add infer calls when derived predicates are used (ReadCtx)
+				for d in rs.bounded_derived:
 					for (ctx, (loc, _)) in d._indexes:
 						if ctx is not dast.ReadCtx:
 							continue
-						# add infer call when derived predicates are used
 						stmt = loc.statement if isinstance(loc, dast.Expression) else loc
-						if isinstance(stmt.parent, dast.Function) and stmt.parent.name.startswith(KW_RULES):# == 'rules':
-							continue
-						for i, b in enumerate(stmt.parent.body):
-							if b is stmt:
-								inferstmt = self.gen_infer_at_use(d, rs)
-								stmt.parent.body.insert(i, inferstmt)
-								break
-				for b in rs.bounded_base:		# iterate through all bounded base predciates
+						self.insert_at_any_body_at_stmt(stmt, [self.gen_infer_at_use(d, rs)], True)
+				
+				# set the update flag of all derived predicates to True if a base predicate is assigned or updated
+				for b in rs.bounded_base:
 					if not hasattr(b, 'trigger_infer') or rs not in b.trigger_infer:
 						continue
 					for (ctx, (loc, _)) in b._indexes:
 						if not (ctx is dast.AssignmentCtx or ctx is dast.UpdateCtx):
 							continue
 						stmt = loc.statement if isinstance(loc, dast.Expression) else loc
-						# set the update flag of all derived predicates to True
-						for i, b in enumerate(stmt.parent.body):
-							if b is stmt:
-								for d in rs.bounded_derived:
-									flagstmt = self.gen_set_flag(d.flag_var, True)
-									stmt.parent.body.insert(i+1, flagstmt)
+						flagstmts = [self.gen_set_flag(d.flag_var, True) for d in rs.bounded_derived]
+						self.insert_at_any_body_at_stmt(stmt, flagstmts)
 
 	def find_rules_func(self, name):
 		scope = self.current_scope
