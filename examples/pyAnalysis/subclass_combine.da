@@ -1,0 +1,14 @@
+from analyzer import Analyzer
+
+class ClassAnalyzer(Analyzer):
+	
+	def query_subclass_combine(self):
+		sub1 = infer(rule=self.rules_subclass_inherit, queries=['InheritInfo'])
+		sub2 = setof((a,None),(_, a, baseid, _, _, _) in self.ClassDef,
+							 not some((_baseid,_,_) in self.Member))
+		print(sub1 | sub2)
+
+	def rules_subclass_inherit():
+		InheritInfo(a,b), if_(ClassDef(_, a, baseid, _, _, _),
+								Member(baseid,nid,_),
+								Name(nid,b,_))

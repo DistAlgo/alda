@@ -1,0 +1,10 @@
+from analyzer import Analyzer
+
+class ClassAnalyzer(Analyzer):
+	
+	def query_subclass_distalgo(self):
+		print( setof((a,b), (_, a, baseid, _, _, _) in self.ClassDef,
+							  (_baseid,nid,_) in self.Member,
+							  (_nid,b,_) in self.Name) |\
+			   setof((a,None),(_, a, baseid, _, _, _) in self.ClassDef,
+			  				  (_baseid,0) in self.ListLen))

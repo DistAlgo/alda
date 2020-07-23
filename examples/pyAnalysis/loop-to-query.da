@@ -1,0 +1,100 @@
+import os
+import ast
+from da.compiler.utils import to_source
+import shutil
+from analyzer import Analyzer
+
+class LoopTansformer(ast.NodeTransformer):
+	
+	def __init__(self,transDict):
+		super().__init__()
+		self.transDict = transDict
+
+	def visit_For(self,node):
+		if node in self.transDict:
+			return self.transDict[node]
+		else:
+			return self.generic_visit(node)
+
+class LoopAnalyzer(Analyzer):
+
+	def flattenTuple(self, node):
+		if isinstance(node, ast.Name):
+			return [node.id]
+		if isinstance(node, ast.Tuple):
+			return sum([self.flattenTuple(t) for t in node.elts],[])
+
+	def rules_simplestComp():
+		# r.append(x), r.add(x)
+		ListSetAdd(exprid, result, elt, operator),if_(
+			Expr(exprid, bodyvalue), Call(bodyvalue, funcid, argid,_),
+			Attribute(funcid, result, operator, _), Name(result,_,_),
+			Member(argid, elt,_), ListLen(argid,1))
+
+		compFor(forid, target, itr, result, elt, operator, fileid), if_(
+			ModuleName(forid,fileid),
+			For(forid, target, itr, bodyid, _),
+			ListLen(bodyid, 1), Member(bodyid, body, _), 
+			ListSetAdd(body,result, elt, operator))
+
+	def query_forToCompSimple_rule(self):
+		candidate = infer(rule=self.rules_simplestComp, queries=['compFor'])
+		iterNameDict = {c[0]:self.flattenTuple(self.ValueDict[c[1]]) for c in candidate}
+		transDict = dict()
+		# to comprehension: result = operator(elt for target in iterable)
+		for forid, target, itr, result, elt, operator, fileid in candidate:
+			if self.ValueDict[result].id in iterNameDict[forid]:
+				continue
+			op = self.ValueDict[operator]
+			forast = self.ValueDict[forid]
+			if isinstance(op,str):
+				if op == 'append':
+					comp = ast.ListComp
+					augop = ast.Add()
+				elif op == 'add':
+					comp = ast.SetComp
+					augop = ast.BitOr()
+				else:
+					continue
+				compAst = ast.AugAssign([self.ValueDict[result]], augop,
+									 comp(self.ValueDict[elt], 
+									 	  [ast.comprehension(self.ValueDict[target], self.ValueDict[itr], [], 0)]))
+				if fileid not in transDict:
+					transDict[fileid] = dict()
+				transDict[fileid][forast] = compAst
+				print('=======================%s----------------------%s=======================' % (to_source(forast), to_source(compAst)))
+				# write_transformed(transDict)
+
+	def write_transformed(self, transDict):
+		outFolder = 'output'
+		basename = os.path.basename(self.filename)
+		outroot = os.path.join(outFolder,basename)
+		if os.path.exists(outroot):
+			shutil.rmtree(outroot)
+		for key, val in transDict.items():
+			outFolder = 'output'
+			file = self.ValueDict[key].split('.')
+			for fdir in file[:-1]:
+				outFolder = os.path.join(outFolder,fdir)
+				if not os.path.exists(outFolder):
+					os.mkdir(outFolder)
+			outfile = os.path.join(outFolder,file[-1]+'.py')
+			cr = LoopTansformer(transDict[key]).visit(self.ValueDict[val])
+			txt = to_source(cr)
+			open(outfile,'w').write(txt)
+		for m in self.Module:
+			file = self.ValueDict[m[-1]]
+			print(file)
+			file = file.split('.')
+			outFolder = 'output'
+			for fdir in file[:-1]:
+				outFolder = os.path.join(outFolder,fdir)
+				if not os.path.exists(outFolder):
+					os.mkdir(outFolder)
+			outfile = os.path.join(outFolder,file[-1]+'.py')
+			if m[-1] in transDict:
+				cr = LoopTansformer(transDict[m[-1]]).visit(self.ValueDict[m[0]])
+				txt = to_source(cr)
+			else:
+				txt = to_source(self.ValueDict[m[0]])
+			open(outfile,'w').write(txt)

@@ -1,0 +1,14 @@
+from analyzer import Analyzer
+
+class ClassAnalyzer(Analyzer):
+	
+	def query_subclass_rule(self):
+		sub = infer(rule=self.rules_inheritinfo, queries=['InheritInfo'])
+		print(sub)
+
+	def rules_inheritinfo():
+		InheritInfo(a,b), if_(ClassDef(_, a, baseid, _, _, _),
+								Member(baseid,nid,_),
+								Name(nid,b,_))
+		InheritInfo(a,None), if_(ClassDef(_, a, baseid, _, _, _),
+							  	   ListLen(baseid,0))
