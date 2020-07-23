@@ -1,0 +1,8 @@
+from trans_base import Trans
+
+class Trans_set(Trans, process):  # using DistAlgo set queries
+  def trans(E):
+    T = E
+    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      T.add((x,z))
+    return T

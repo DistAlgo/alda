@@ -1,0 +1,48 @@
+"""
+input number of vertices and edges
+generate a graph
+input a range of vertices and edges and generate a series of graph s.t the larger one contains the smaller one
+
+case 1
+for a fixed number of vertex with varies number of edges, 
+generate the biggest number of edges and select from the edges and get the smaller graphs
+
+case 2
+for varies number of vertex and edges, that the number edge increase as the number of vertex
+sort the graphs by vertex first, then by the edges,
+generate the edges for smallest number of vertex as case 1, 
+generate the rest of edges for larger vertex
+
+case 3
+when the number of vertex is not positvely correlated with the number of edges
+randomly generate edges
+"""
+import random, pickle, os
+
+outfolder = '../input'
+def write_graph(v, e, data):
+	""" input: v and e are numbers, data is a set of edges
+		output: pickle dump data to file: outfolder/v{v}e{e}
+	"""
+	pickle.dump(data,open(os.path.join(outfolder, 'v%se%s' % (v,e)), 'wb'))
+
+############ not used in the experiments
+# def gen_graph_edges(v, edges):
+# 	""" input: fixed v, list of edges
+# 		output: set of edges
+# 	"""
+# 	alledges = {(v1, v2) for v1 in range(v) for v2 in range(v)if v1 != v2}
+# 	for e in sorted(edges, reverse=True):
+# 		alledges = set(random.sample(alledges, e))
+# 		write_graph(v,e,alledges)
+
+def gen_graph(edges):
+	""" a list of edges, vertice is half the number number of edges
+	"""
+	eset = set()
+	for e in sorted(edges):
+		eset = set(random.sample({(v1, v2) for v1 in range(int(e/2)) for v2 in range(int(e/2)) if v1 != v2} - eset, e-len(eset))) | eset
+		write_graph(int(e/2),e,eset)
+
+# gen_graph(list(range(10,110,10)))
+gen_graph(list(range(100,1100,100)))

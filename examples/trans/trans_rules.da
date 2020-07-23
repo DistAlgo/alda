@@ -1,0 +1,8 @@
+from trans_base import Trans
+
+class Trans_rules(Trans, process):
+  def rules_Trans_rules():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+  def trans(E): 
+    return infer(rule=self.rules_Trans_rules, bindings=[('edge',E)], queries=['path'])

@@ -1,0 +1,10 @@
+from trans_base import Trans
+
+class Trans_py(Trans, process):  # using Python but no arg self in def
+  def trans(E):
+    T = E
+    W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
+    while W:
+      T.add(W.pop())
+      W = {(x,d) for (x,y) in T for (a,d) in E if y==a and (x,d) not in T}
+    return T
