@@ -1,0 +1,37 @@
+from hrbac_set import HRBAC_set
+
+class HRBAC_set_maint(HRBAC_set,process):
+
+  def setup(_users,_roles,_ur,_rh,_workload): 
+    super().setup(_users,_roles,_ur,_rh,_workload)
+    self.transRH = trans(_rh)
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    super().AddInheritance(a,d)
+    transRH = trans(RH)
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    super().DeleteInheritance(a,d)
+    transRH = trans(RH)
+
+  def AuthorizedUsers(role):  # assert role in self.ROLES
+    transrh = self.transRH
+    return set(u for u in USERS for asc in ROLES 
+               if (asc,role) in transrh and (u,asc) in UR)
+
+class HRBAC_transRH_rules(HRBAC_set_maint,process):
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    super().AddInheritance(a,d)
+    transRH = infer(rule=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    super().DeleteInheritance(a,d)
+    transRH = infer(rule=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
+
+  def rules_HRBAC_transRH_rules():
+    transRH(x,y), if_(rh(x,y))
+    transRH(x,y), if_(rh(x,z), transRH(z,y))
+    transRH(x,x), if_(roles(x)) # with this base case, don't need first rule

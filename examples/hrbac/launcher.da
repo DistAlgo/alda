@@ -1,0 +1,33 @@
+import sys, os, pickle, argparse, importlib
+
+HandlerRoute = {
+  'rule': 'hrbac_trans_rules.HRBAC_trans_rules',
+  'rolerule': 'hrbac_trans_with_role_rules.HRBAC_trans_with_role_rules',
+  'transRH': 'hrbac_transRH_rs.HRBAC_transRH_rs',
+  'authUR': 'hrbac_authorizedUR_rs.HRBAC_authorizedUR_rs',
+  'python': 'hrbac_py.HRBAC_py',
+  'distalgo': 'hrbac_set.HRBAC_set'
+}
+def main():
+  config(channel is fifo, clock is lamport)
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--numr', type= int, default= 500)  # number of roles (graph size)
+  parser.add_argument('--numq', type= int, default= 50)   # unit of operations, e.g. 50 adding/deleting user 
+  parser.add_argument('--q', type= int, default= 50)      # number of auth queries
+  parser.add_argument('--mode', type= str, default= 'authUR')
+  args=parser.parse_args()
+  print(args)
+  
+  users = set(range(10*args.numr))
+  roles = set(range(args.numr))
+  ur = pickle.load(open(os.path.join('input', 'UR_%s' % args.numr), 'rb'))
+  rh = pickle.load(open(os.path.join('input', 'RH_%s' % args.numr), 'rb'))
+  workload = pickle.load(open(os.path.join('input', 'hrbacSequence_r%s_q%s_auth%s' % (args.numr, args.numq, args.q)), 'rb'))
+  
+  # if not os.path.exists('timing'):
+  #   os.mkdir('timing')
+  # sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
+  
+  rbacClass = importlib.import_module(HandlerRoute[args.mode])
+  o = new(rbacClass, [users,roles,ur,rh,workload])
+  start(o)

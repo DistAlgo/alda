@@ -1,0 +1,16 @@
+from rbac import HierarchicalRBAC
+
+class HRBAC_py(HierarchicalRBAC,process):  # using Python but no arg self in def
+  
+  def trans(E):
+    T = E
+    W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    while W:
+      T.add(W.pop())
+      W = {(x,d) for (x,y) in T for (a,d) in E if y==a} - T
+    return T | {(r,r) for r in ROLES}  # dom(E)+ran(E) may < ROLES
+  
+  def AuthorizedUsers(role):  # assert role in self.ROLES
+    transRH = trans(RH)
+    return set(u for u in USERS for asc in ROLES
+               if (asc,role) in transRH and (u,asc) in UR)

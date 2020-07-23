@@ -1,0 +1,113 @@
+""" generate queries
+read a database and generate queries.
+a workload of size n contains the number of queries:
+	'AddUser': n
+	'AddRole': n/10
+	'AddUR': n*1.1
+	'AddInheritance': n*0.11
+	'AuthorizedUsers': m 		# <- varies
+	'DeleteUser': n
+	'DeleteRole': n/10
+	'DeleteUR': n*1.1
+	'DeleteInheritance': n*0.11
+
+usually: n = 50, m varies
+
+format of query sequence
+	[('queryName1', [(*args1), (*args2), ...]), 
+	 ('queryName2', [(*args1), (*args2), ...]), ]
+"""
+import pickle, os, random, sys
+from allrbac import GeneralHierRBAC
+from gen_rbacDB import write_graph, get_max_depth
+outfolder = 'input'
+
+class Generator(GeneralHierRBAC, process):
+	def setup(_users,_roles,_ur,_rh,_pr,num_objs, num_roles, size_workload, num_auth):
+		super().setup(_users,_roles,_ur,_rh,_pr,num_objs)
+		self.qid = 0
+		self.workload = []
+		self.authusers = dict()
+		self.authidx = None
+
+	def run():
+		seq = ['AddUser','AddRole','AddUR','AddInheritance','AuthorizedUsers','DeleteUser','DeleteRole','DeleteUR','DeleteInheritance']
+		for s in seq:
+			eval('self.gen_'+s)()
+		for n in num_auth:
+			outfile = 'hrbacSequence_r%s_q%s_auth%s' % (num_roles, size_workload, n)
+			data = workload[:authidx]+authusers[n]+workload[authidx:]
+			write_graph(outfile, data)
+
+	def gen_AddUser():
+		choices = list(range(len(USERS), len(USERS) + size_workload))
+		for c in choices: AddUser(c)
+		workload.append(('AddUser', [(c,) for c in choices]))
+
+	def gen_DeleteUser():
+		choices = list(random.sample(USERS, size_workload))
+		for c in choices: DeleteUser(c)
+		workload.append(('DeleteUser', [(c,) for c in choices]))
+
+	def gen_AddRole():
+		choices = list(range(len(ROLES), len(ROLES) + int(size_workload/10)))
+		for c in choices: AddRole(c)
+		workload.append(('AddRole', [(c,) for c in choices]))
+
+	def gen_DeleteRole():
+		choices = list(random.sample(ROLES, int(size_workload/10)))
+		for c in choices: DeleteRole(c)
+		workload.append(('DeleteRole', [(c,) for c in choices]))
+
+	def gen_AddUR():
+		choices = list(random.sample({(u,r) for u in USERS for r in ROLES} - UR, int(size_workload*1.1)))
+		for c in choices: AssignUser(*c)
+		workload.append(('AddUR', choices))
+
+	def gen_DeleteUR():
+		choices = list(random.sample(UR, int(size_workload*1.1)))
+		for c in choices: DeassignUser(*c)
+		workload.append(('DeleteUR', choices))
+
+	def gen_AddInheritance():
+		allRH = {(asc, desc) for asc in ROLES for desc in ROLES if asc < desc} - RH
+		choices = []
+		while len(choices) < size_workload*0.11:
+			choice = random.choice(list(allRH))
+			if get_max_depth(RH | {choice}) > 5:
+				allRH.remove(choice)
+				continue
+			try:
+				AddInheritance(*choice)
+				choices.append(choice)
+			except:
+				allRH.remove(choice)
+		workload.append(('AddInheritance', choices))
+
+	def gen_DeleteInheritance():
+		choices = list(random.sample(RH, int(size_workload*0.11)))
+		for c in choices: DeleteInheritance(*c)
+		workload.append(('DeleteInheritance', choices))
+
+	def gen_AuthorizedUsers():
+		authidx = len(workload)
+		choices = ROLES
+		for n in sorted(num_auth, reverse=True):
+			choices = list(random.sample(choices, n))
+			authusers[n] = [('AuthorizedUsers', [(c,) for c in choices])]
+
+def main():
+	size_workload = 50
+	num_roles = 500
+	num_auth = list(range(50,550,50))
+
+	users = set(range(10*num_roles))
+	roles = set(range(num_roles))
+	ur = pickle.load(open(os.path.join(outfolder, 'UR_%s' % num_roles), 'rb'))
+	rh = pickle.load(open(os.path.join(outfolder, 'RH_%s' % num_roles), 'rb'))
+	num_obj = 0
+	pr = set()
+
+	o = new(Generator,[users,roles,ur,rh,pr,num_obj,num_roles, size_workload, num_auth])
+	start(o)
+

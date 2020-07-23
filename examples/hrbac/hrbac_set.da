@@ -1,0 +1,13 @@
+from rbac import HierarchicalRBAC
+
+class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
+  
+  def trans(E):
+    T = E
+    while some((x,y) in T, (y,z) in E, has= (x,z) not in T):
+      T.add((x,z))
+    return T | setof((r,r), r in ROLES)
+  
+  def AuthorizedUsers(role):
+    transRH = trans(RH)
+    return setof(u, (u,asc) in UR, (asc,_role) in transRH)

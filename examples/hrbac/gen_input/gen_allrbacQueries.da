@@ -1,0 +1,69 @@
+""" generate queries
+read a database and generate queries.
+	CreateSession/DeleteSession: 1
+	CheckAccess: varies
+
+format of query sequence
+	[('queryName1', [(*args1), (*args2), ...]), 
+	 ('queryName2', [(*args1), (*args2), ...]), ]
+"""
+import pickle, os, random, sys
+from allrbac import GeneralHierRBAC
+from gen_allrbacDB import write_graph, get_max_depth
+outfolder = 'input'
+
+class Generator(GeneralHierRBAC, process):
+	def setup(_users,_roles,_ur,_rh,_pr,num_objs, num_roles, num_perms, num_ac):
+		super().setup(_users,_roles,_ur,_rh,_pr,num_objs)
+		self.qid = 0
+		self.workload = []
+		self.checkaccess = dict()
+		self.acidx = None
+		self.sessionCount = 0
+
+	def run():
+		seq = ['CreateSession','CheckAccess','DeleteSession']
+		for s in seq:
+			eval('self.gen_'+s)()
+		for n in num_ac:
+			outfile = 'allrbacSequence_r%s_p%s_ac%s' % (num_roles, num_perms, n)
+			data = workload[:acidx]+checkaccess[n]+workload[acidx:]
+			write_graph(outfile, data)
+
+	def gen_CreateSession():
+		dictUR = {u:[r for u2,r in UR if u == u2] for u,_ in UR}
+		candidateUSERS = listof(u, (u,roles) in dictUR.items(), len(roles) >= 10)
+		u = random.choice(candidateUSERS)
+		ars = set(random.sample(dictUR[u], 10))
+		s = sessionCount
+		sessionCount += 1
+		CreateSession(u,s,ars)
+		workload.append(('CreateSession',[(u,s,ars)]))
+
+	def gen_DeleteSession():
+		s, u = random.choice(list(SU))
+		DeleteSession(u, s)
+		workload.append(('DeleteSession',[(u, s)]))
+
+	def gen_CheckAccess():
+		acidx = len(workload)
+		choices = {(s, op, obj) for s in SESSIONS for op in OPS for obj in OBJS}
+		for n in sorted(num_ac, reverse=True):
+			choices = list(random.sample(choices, n))
+			checkaccess[n] = [('CheckAccess', choices)]
+
+def main():
+	size_workload = 50
+	num_roles = 500
+	num_ac= list(range(100,1100,100))
+	users = set(range(10*num_roles))
+	roles = set(range(num_roles))
+	ur = pickle.load(open(os.path.join(outfolder, 'allUR_%s' % num_roles), 'rb'))
+	rh = pickle.load(open(os.path.join(outfolder, 'allRH_%s' % num_roles), 'rb'))
+	num_perms = 3000
+	num_objs = int(num_perms/5)
+	pr = pickle.load(open(os.path.join(outfolder, 'PR_r%s_p%s' % (num_roles, num_perms)), 'rb'))
+	
+	o = new(Generator,[users,roles,ur,rh,pr,num_objs,num_roles,num_perms,num_ac])
+	start(o)
+

@@ -1,0 +1,11 @@
+from hrbac_py import HRBAC_py
+
+class HRBAC_trans_rules(HRBAC_py,process):
+  
+  def rules_HRBAC_trans_rules():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+  
+  def trans(E):  # use infer plus set query
+    i = infer(rule=rules_HRBAC_trans_rules, bindings=[('edge',E)], queries=['path'])
+    return set(i) | setof((r,r), r in ROLES)

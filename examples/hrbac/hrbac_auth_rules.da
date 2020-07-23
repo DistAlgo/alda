@@ -1,0 +1,19 @@
+from rbac import HierarchicalRBAC
+
+class HRBAC_auth_rules(HierarchicalRBAC,process):
+  
+  def setup(_users,_roles,_ur,_rh,_workload): 
+    super().setup(_users,_roles,_ur,_rh,_workload)
+    self.transRH = None
+    
+  def rules_HRBAC_auth_rules():
+    transRH(x,y), if_(RH(x,y))
+    transRH(x,y), if_(RH(x,z), transRH(z,y))
+    transRH(x,x), if_(ROLES(x))
+
+  def rules_authorizedUR_rs():
+    authorizedUR(u,role), if_(USERS(u), ROLES(asc), UR(u,asc), transRH(asc ,role))
+
+  def AuthorizedUsers(role):
+    return infer(rule=rules_authorizedUR_rs, queries=['authorizedUR(u,%s)' % role]) # use infer , not pass in base predicates
+

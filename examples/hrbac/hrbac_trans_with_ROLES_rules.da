@@ -1,0 +1,11 @@
+from hrbac_py import HRBAC_py
+
+class HRBAC_trans_with_ROLES_rules(HRBAC_py,process):
+
+  def rules_trans_with_ROLES_rules():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z),path(z,y))
+    path(x,x), if_(ROLES(x))
+
+  def trans(E): # use infer only, pass in only E
+    return infer(rule=rules_trans_with_ROLES_rules, bindings=[('edge',E)], queries=['path'])
