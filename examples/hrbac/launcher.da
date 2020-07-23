@@ -1,12 +1,12 @@
 import sys, os, pickle, argparse, importlib
 
 HandlerRoute = {
-  'rule': 'hrbac_trans_rules.HRBAC_trans_rules',
-  'rolerule': 'hrbac_trans_with_role_rules.HRBAC_trans_with_role_rules',
-  'transRH': 'hrbac_transRH_rs.HRBAC_transRH_rs',
-  'authUR': 'hrbac_authorizedUR_rs.HRBAC_authorizedUR_rs',
-  'python': 'hrbac_py.HRBAC_py',
-  'distalgo': 'hrbac_set.HRBAC_set'
+  'rule': ('hrbac_trans_rules','HRBAC_trans_rules'),
+  'rolerule': ('hrbac_trans_with_role_rules','HRBAC_trans_with_role_rules'),
+  'transRH': ('hrbac_transRH_rs','HRBAC_transRH_rs'),
+  'authUR': ('hrbac_authorizedUR_rs','HRBAC_authorizedUR_rs'),
+  'python': ('hrbac_py','HRBAC_py'),
+  'distalgo': ('hrbac_set','HRBAC_set')
 }
 def main():
   config(channel is fifo, clock is lamport)
@@ -28,6 +28,6 @@ def main():
   #   os.mkdir('timing')
   # sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
   
-  rbacClass = importlib.import_module(HandlerRoute[args.mode])
-  o = new(rbacClass, [users,roles,ur,rh,workload])
+  rbacClass = importlib.import_module(HandlerRoute[args.mode][0])
+  o = new(eval('rbacClass.'+HandlerRoute[args.mode][1]), [users,roles,ur,rh,workload])
   start(o)
