@@ -33,7 +33,7 @@ class LoopAnalyzer(Analyzer):
 		Body(id, orelse), if_(Try(id,_,_,orelse,_)) # else: <orelse>
 		Body(id, fbody), if_(Try(id,_,_,_,fbody))   # finally: <fbody>
 		# get the body from With statement
-		Body(id, body), if_(With(id,_,body,_,))     # with items: <body>
+		Body(id, body), if_(With(id,_,body))     # with items: <body>
 
 		# flatten all the bodies
 		Body(id,body),if_(
