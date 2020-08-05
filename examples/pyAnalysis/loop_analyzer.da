@@ -28,12 +28,12 @@ class LoopAnalyzer(Analyzer):
 		Body(id, orelse),if_(If(id,_,_,orelse))     # else: <orelse>
 		# get body, orelse, fbody from Try stmt:
 		Body(id, body), if_(Try(id,body,_,_,_))     # try:  <body>
-		Body(id, body), if_(Try(id,_,handlers,_,_), #[except: <handler>]*
-			Member(handlers, hid,_), ExceptHandler(hid,_,_,body)) 
+		Body(id, body), if_(Try(id,_,handlers,_,_), # except: <handler>
+			 Member(handlers, hid,_), ExceptHandler(hid,_,_,body)) 
 		Body(id, orelse), if_(Try(id,_,_,orelse,_)) # else: <orelse>
 		Body(id, fbody), if_(Try(id,_,_,_,fbody))   # finally: <fbody>
 		# get the body from With statement
-		Body(id, body), if_(With(id,_,body))     # with items: <body>
+		Body(id, body), if_(With(id,_,body))		# with items: <body>
 
 		# flatten all the bodies
 		Body(id,body),if_(
@@ -44,39 +44,6 @@ class LoopAnalyzer(Analyzer):
 		Loops(id, body), if_(
 			Loops(id, spbody), Member(spbody, bid,_), Body(bid, body))
 
-	def query_candidate_rule(self):
-		candidate = infer(rule=self.rules_compCandidate, queries=['compCandidate'])
-		print(len(candidate))
-
-	def rules_compCandidate():
-		# 1. r.append(y), r.add(y)
-		IncPattern(exprid),if_(Expr(exprid, bodyval),
-			Call(bodyval,funcid,argid,_), Attribute(funcid,_,_,_),
-			ListLen(argid,1))
-		# 2. augAssign: r += y, r -= y
-		IncPattern(aaid),if_(AugAssign(aaid,_,_,_))
-		# 3. index assign: r[x] = y
-		IncPattern(aid), if_(Assign(aid, resultid,_), 
-			Subscript(resultid,_,keyid,_), Index(keyid,_))
-		# 4.1 if-else expr with IncPattern body and orbody
-		IncPattern(ifid), if_(
-			If(ifid,_, bodyid, orbodyid),
-			ListLen(bodyid,1), 
-			Member(bodyid,body,_), IncPattern(body),
-			ListLen(orbodyid,1), 
-			Member(orbodyid,orbody,_), IncPattern(orbody))
-		# 4.2 if expr with IncPattern body
-		IncPattern(ifid), if_(
-			If(ifid,_, bodyid, orbody),
-			ListLen(bodyid,1), 
-			Member(bodyid, body,_), IncPattern(body),
-			ListLen(orbody,0))
-		# 5. for-loops with IncPattern body
-		IncPattern(forid), if_(
-			For(forid,_,_, bodyid,_),
-			ListLen(bodyid,1), 
-			Member(bodyid, body,_), IncPattern(body))
-
-		compCandidate(id), if_(For(id,_,_,_,_), IncPattern(id))
+	
 
 	

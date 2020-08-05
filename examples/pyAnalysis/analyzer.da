@@ -27,7 +27,8 @@ ASTNodes = {#'AST','mod',
 			'Invert','Not','UAdd','USub',
 			#'cmpop',
 			'Eq','NotEq','Lt','LtE','Gt','GtE','Is','IsNot','In','NotIn',
-			'comprehension','excepthandler',
+			'comprehension',
+			#'excepthandler',
 			'ExceptHandler',
 			'arguments','arg','keyword','alias','withitem'
 			}
@@ -45,12 +46,7 @@ class Analyzer():
 		for y in os.listdir(bak):
 			if y.startswith('.'):
 				continue
-			file = open(os.path.join(bak,y),'rb')
-			try:
-				setattr(self,y,pickle.load(file))
-			except (EOFError, pickle.UnpicklingError) as e:
-				print(e,':',y)
-			file.close()
+			setattr(self,y,pickle.load(open(os.path.join(bak,y),'rb')))
 			
 		f = open(pkgInfo)
 		self.sub_pkg = {eval(x)[1:] for x in f if x}

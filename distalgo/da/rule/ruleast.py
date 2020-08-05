@@ -41,7 +41,7 @@ class Rule(DARules):
         return None
 
 class RuleSet(NameScope):
-    # _fields = ['decls', 'rules']
+    _fields = NameScope._fields+['decls', 'rules']
     def __init__(self, parent=None, ast=None):
         super().__init__(parent, ast)
         self.decls = ""

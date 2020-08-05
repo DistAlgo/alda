@@ -1,4 +1,3 @@
-# from rbac import HierarchicalRBAC
 import os
 
 class CoreRBAC(process):
@@ -33,13 +32,7 @@ class CoreRBAC(process):
       the set of permissions assigned to the roles assigned to user
   """
 
-  def setup(_users,_roles,_ur):
-    self.USERS = _users
-    self.ROLES = _roles
-    self.PERMS = set()
-    self.UR = _ur         # UR subset USERS * ROLES
-    self.PR = set()         # PR subset PERMS * ROLES
-    # self.workload = _workload
+  def setup(USERS,ROLES,UR): pass
 
   def AddUser(user):        # pre-condition: user not in USERS
     USERS.add(user)
@@ -53,17 +46,7 @@ class CoreRBAC(process):
 
   def DeleteRole(role):     # pre: role in ROLES
     UR -= setof((u,role), u in USERS) # maintain UR
-    PR -= setof((p,role), p in PERMS) # maintain PR
     ROLES.remove(role)
-
-  # missing in ANSI standard
-  def AddPerm(perm):        # pre: perm not in PERMS
-    PERMS.add(perm)
-
-  # missing in ANSI standard
-  def DeletePerm(perm):     # pre: perm in PERMS
-    PR -= setof((perm,r), r in ROLES) # maintain PR
-    PERMS.remove(perm)
 
   # called AssignUser in ANSI standard
   def AddUR(user, role):
@@ -74,15 +57,6 @@ class CoreRBAC(process):
   def DeleteUR(user, role):  # pre: (user,role) in UR
     UR.remove((user,role))
 
-  # called GrantPermission in ANSI standard
-  def AddPR(perm, role):
-    # pre: perm in PERMS, role in ROLES, (perm,role) not in PR
-    PR.add((perm,role))
-
-  # called RevokePermission in ANSI standard
-  def DeletePR(perm, role):  # pre: (perm,role) in PR
-    PR.remove((perm,role))
-
   def AssignedUsers(role):  # pre: role in ROLES
     """the set of users assigned to role in UR"""
     return setof(u, (u,_role) in UR)
@@ -90,11 +64,6 @@ class CoreRBAC(process):
   def AssignedRoles(user):  # pre: user in USERS
     """the set of roles assigned to user in UR"""
     return setof(r, (_user,r) in UR)
-
-  def UserPermissions(user):  # pre: user in USERS
-    """the set of permissions assigned to the roles assigned to user"""
-    return setof(p, (_user,r) in UR, (p,r) in PR)
-
 
 class HierarchicalRBAC(CoreRBAC,process):
   """
@@ -123,10 +92,10 @@ class HierarchicalRBAC(CoreRBAC,process):
       the set of roles of user or descendant roles of the roles
   """
 
-  def setup(_users,_roles,_ur,_rh,_workload):
-    super().setup(_users,_roles,_ur)
-    self.RH = _rh  # RH subset ROLES * ROLES, where asc inh desc
-    self.workload = _workload
+  def setup(USERS,ROLES,UR,RH,workload): pass
+    # super().setup(_users,_roles,_ur)
+    # self.RH = _rh  # RH subset ROLES * ROLES, where asc inh desc
+    # self.workload = _workload
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
@@ -141,9 +110,8 @@ class HierarchicalRBAC(CoreRBAC,process):
     return setof(u, (u,asc) in UR, (asc,_role) in transRH)
 
   # rest of this class: some possible calls, etc. to be worked on
-  def trans(E):
-    pass
-  def run():
+  def trans(E): pass
+  def run(): #pass
     # cp = cProfile.Profile()
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     # cp.enable()
@@ -157,13 +125,12 @@ class HierarchicalRBAC(CoreRBAC,process):
 
 class HRBAC_transRH_rs(HierarchicalRBAC,process):
   
-  def setup(_users,_roles,_ur,_rh,_workload): 
-    super().setup(_users,_roles,_ur,_rh,_workload)
+  def setup(USERS,ROLES,UR,RH,workload):
     self.transRH = None
   
   def AuthorizedUsers(role):
     # return setof(u, (u,asc) in UR, (asc,_role) in transRH)
-    transrh = self.transRH
+    transrh = transRH
     return set(u for u in USERS for asc in ROLES
                if (asc,role) in transrh and (u,asc) in UR)
   

@@ -1,6 +1,18 @@
-import ast
+import os, ast, shutil
 from da.compiler.utils import to_source
 from analyzer import Analyzer
+
+class LoopTansformer(ast.NodeTransformer):
+	
+	def __init__(self,transDict):
+		super().__init__()
+		self.transDict = transDict
+
+	def visit_For(self,node):
+		if node in self.transDict:
+			return self.transDict[node]
+		else:
+			return self.generic_visit(node)
 
 class NumpyAnalyzer(Analyzer):
 		
@@ -46,6 +58,24 @@ class NumpyAnalyzer(Analyzer):
 			for key, val in sorted(innerDict.items(), key=lambda t: t[0].lineno):
 				print('========== %s: lineno: %s ==========%s----------- transformed to ------------%s' 
 						% (self.ValueDict[file], key.lineno, to_source(key), to_source(val)))
+
+	def write_transformed(self, transDict):
+		outFolder = 'output'
+		basename = os.path.basename(self.filename)
+		outroot = os.path.join(outFolder,basename)
+		if os.path.exists(outroot):
+			shutil.rmtree(outroot)
+		for key, val in transDict.items():
+			outFolder = 'output'
+			file = self.ValueDict[key].split('.')
+			for fdir in file[:-1]:
+				outFolder = os.path.join(outFolder,fdir)
+				if not os.path.exists(outFolder):
+					os.mkdir(outFolder)
+			outfile = os.path.join(outFolder,file[-1]+'.py')
+			cr = LoopTansformer(transDict[key]).visit(self.ValueDict[val])
+			txt = to_source(cr)
+			open(outfile,'w').write(txt)
 
 	# vertex product to numpy
 	def rules_vProdToNp():

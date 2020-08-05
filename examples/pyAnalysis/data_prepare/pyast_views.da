@@ -184,10 +184,7 @@ def gen_facts(filename):
     print('value types:',valueTag)
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        filename = '/Users/COTTON/Downloads/numpy'
-    else:
-        filename = sys.argv[1]
+    filename = '/Users/COTTON/Downloads/numpy' if len(sys.argv) < 2 else sys.argv[1]
     gen_facts(filename)
 
 

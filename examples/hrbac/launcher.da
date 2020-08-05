@@ -1,5 +1,23 @@
 import sys, os, pickle, argparse, importlib
 
+# HRBACClass = None
+
+# class Tester(HRBACClass, process):
+#     def setup(USERS,ROLES,UR,RH,workload):
+#       super().setup(USERS,ROLES,UR,RH)
+      
+#     def run():
+#     # cp = cProfile.Profile()
+#       utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+#       # cp.enable()
+#       for op, pr in workload:
+#         for p in pr:
+#           eval('self.'+op)(*p)
+#       # cp.disable()
+#       utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+#       print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+
+
 HandlerRoute = {
   'rule': ('hrbac_trans_rules','HRBAC_trans_rules'),
   'rolerule': ('hrbac_trans_with_role_rules','HRBAC_trans_with_role_rules'),
@@ -24,10 +42,11 @@ def main():
   rh = pickle.load(open(os.path.join('input', 'RH_%s' % args.numr), 'rb'))
   workload = pickle.load(open(os.path.join('input', 'hrbacSequence_r%s_q%s_auth%s' % (args.numr, args.numq, args.q)), 'rb'))
   
-  # if not os.path.exists('timing'):
-  #   os.mkdir('timing')
-  # sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
+  if not os.path.exists('timing'):
+    os.mkdir('timing')
+  sys.stdout = open('./timing/timing_hrbac_%s_r%s_q%s_auth%s.txt' % (args.mode, args.numr, args.numq, args.q), 'a')
   
   rbacClass = importlib.import_module(HandlerRoute[args.mode][0])
-  o = new(eval('rbacClass.'+HandlerRoute[args.mode][1]), [users,roles,ur,rh,workload])
+  HRBACClass = eval('rbacClass.'+HandlerRoute[args.mode][1])
+  o = new(HRBACClass, [users,roles,ur,rh,workload])
   start(o)

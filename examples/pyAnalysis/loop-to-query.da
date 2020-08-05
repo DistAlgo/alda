@@ -1,7 +1,5 @@
-import os
-import ast
+import os, ast, shutil
 from da.compiler.utils import to_source
-import shutil
 from analyzer import Analyzer
 
 class LoopTansformer(ast.NodeTransformer):
@@ -17,6 +15,41 @@ class LoopTansformer(ast.NodeTransformer):
 			return self.generic_visit(node)
 
 class LoopAnalyzer(Analyzer):
+
+	def query_candidate_rule(self):
+		candidate = infer(rule=self.rules_compCandidate, queries=['compCandidate'])
+		print(len(candidate))
+
+	def rules_compCandidate():
+		# 1. r.append(y), r.add(y)
+		IncPattern(exprid),if_(Expr(exprid, bodyval),
+			Call(bodyval,funcid,argid,_), Attribute(funcid,_,_,_),
+			ListLen(argid,1))
+		# 2. augAssign: r += y, r -= y
+		IncPattern(aaid),if_(AugAssign(aaid,_,_,_))
+		# 3. index assign: r[x] = y
+		IncPattern(aid), if_(Assign(aid, resultid,_), 
+			Subscript(resultid,_,keyid,_), Index(keyid,_))
+		# 4.1 if-else expr with IncPattern body and orbody
+		IncPattern(ifid), if_(
+			If(ifid,_, bodyid, orbodyid),
+			ListLen(bodyid,1), 
+			Member(bodyid,body,_), IncPattern(body),
+			ListLen(orbodyid,1), 
+			Member(orbodyid,orbody,_), IncPattern(orbody))
+		# 4.2 if expr with IncPattern body
+		IncPattern(ifid), if_(
+			If(ifid,_, bodyid, orbody),
+			ListLen(bodyid,1), 
+			Member(bodyid, body,_), IncPattern(body),
+			ListLen(orbody,0))
+		# 5. for-loops with IncPattern body
+		IncPattern(forid), if_(
+			For(forid,_,_, bodyid,_),
+			ListLen(bodyid,1), 
+			Member(bodyid, body,_), IncPattern(body))
+
+		compCandidate(id), if_(For(id,_,_,_,_), IncPattern(id))
 
 	def flattenTuple(self, node):
 		if isinstance(node, ast.Name):
@@ -82,19 +115,19 @@ class LoopAnalyzer(Analyzer):
 			cr = LoopTansformer(transDict[key]).visit(self.ValueDict[val])
 			txt = to_source(cr)
 			open(outfile,'w').write(txt)
-		for m in self.Module:
-			file = self.ValueDict[m[-1]]
-			print(file)
-			file = file.split('.')
-			outFolder = 'output'
-			for fdir in file[:-1]:
-				outFolder = os.path.join(outFolder,fdir)
-				if not os.path.exists(outFolder):
-					os.mkdir(outFolder)
-			outfile = os.path.join(outFolder,file[-1]+'.py')
-			if m[-1] in transDict:
-				cr = LoopTansformer(transDict[m[-1]]).visit(self.ValueDict[m[0]])
-				txt = to_source(cr)
-			else:
-				txt = to_source(self.ValueDict[m[0]])
-			open(outfile,'w').write(txt)
+		# for m in self.Module:
+		# 	file = self.ValueDict[m[-1]]
+		# 	print(file)
+		# 	file = file.split('.')
+		# 	outFolder = 'output'
+		# 	for fdir in file[:-1]:
+		# 		outFolder = os.path.join(outFolder,fdir)
+		# 		if not os.path.exists(outFolder):
+		# 			os.mkdir(outFolder)
+		# 	outfile = os.path.join(outFolder,file[-1]+'.py')
+		# 	if m[-1] in transDict:
+		# 		cr = LoopTansformer(transDict[m[-1]]).visit(self.ValueDict[m[0]])
+		# 		txt = to_source(cr)
+		# 	else:
+		# 		txt = to_source(self.ValueDict[m[0]])
+		# 	open(outfile,'w').write(txt)

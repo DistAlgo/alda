@@ -5,13 +5,8 @@ class ClassAnalyzer(Analyzer):
 	def query_subclass_python(self):
 		sub = set()
 		for _, a, baseid, _, _, _ in self.ClassDef:
-			nosup = False
-			for baseid2,y in self.ListLen:
-				if baseid2 == baseid and y == 0:
-					sub.add((a,None))
-					nosup = True
-					break
-			if nosup:
+			if (baseid, 0) in self.ListLen:
+				sub.add((a,None))
 				continue
 			for baseid2,nid2,_ in self.Member:
 				if baseid == baseid2:

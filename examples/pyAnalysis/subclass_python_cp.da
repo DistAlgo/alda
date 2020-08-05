@@ -1,0 +1,11 @@
+from analyzer import Analyzer
+
+class ClassAnalyzer(Analyzer):
+
+	def query_subclass_python(self):
+		print( { (a, None) for _, a, baseid, _, _, _ in self.ClassDef if (baseid,0) in self.ListLen } |\
+			   { (a, b) for _, a, baseid, _, _, _ in self.ClassDef 
+							for baseid2,nid2,_ in self.Member
+								if baseid == baseid2
+									for nid3,b,_ in self.Name
+										if nid2 == nid3 } )

@@ -18,10 +18,10 @@ def main():
     pr = pickle.load(open(os.path.join('input', 'PR_r%s_p%s' % (args.numr, args.nump)), 'rb'))
     workload = pickle.load(open(os.path.join('input', 'allrbacSequence_r%s_p%s_ac%s' % (args.numr, args.nump, args.numac)), 'rb'))
     
-    # if not os.path.exists('timing'):
-    #    os.mkdir('timing')
-    # sys.stdout = open('./timing/timing_allrbac_r%s_p%s_ac%s.txt' % (args.numr, args.nump, args.numac), 'a')
-    
-    o = new(GeneralHierRBAC,[users,roles,ur,rh,pr,num_obj,workload])
+    if not os.path.exists('timing'):
+       os.mkdir('timing')
+    sys.stdout = open('./timing/timing_allrbac_r%s_p%s_ac%s.txt' % (args.numr, args.nump, args.numac), 'a')
+    #                        USERS,ROLES,UR,PR,OBJS,                OPS,          SESSIONS,SU,   SR,   RH,workload
+    o = new(GeneralHierRBAC,[users,roles,ur,pr,set(range(num_objs)),set(range(5)),set(),   set(),set(),rh,workload])
     start(o)
     

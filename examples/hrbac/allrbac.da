@@ -2,17 +2,17 @@ import sys, os, argparse
 
 class CoreRBAC(process):
 
-    def setup(_users,_roles,_ur,_pr, num_objs):
-        self.OBJS = set(range(num_objs))  
-        # self.OPS = set()   # an operation-object pair is called a permission
-        self.OPS = set(range(5))
-        self.USERS = _users
-        self.ROLES = _roles
-        self.PR = _pr # PR subset (OPS * OBJS) * ROLES, for PA in std
-        self.UR = _ur # UR subset USERS * ROLES,    for UA in std
-        self.SESSIONS = set()
-        self.SU = set() # SU subset SESSIONS * USERS
-        self.SR = set() # SR subset SESSIONS * ROLES
+    def setup(USERS,ROLES,UR,PR,OBJS,OPS,SESSIONS,SU,SR): pass
+        # self.OBJS = set(range(num_objs))  
+        # # self.OPS = set()   # an operation-object pair is called a permission
+        # self.OPS = set(range(5))
+        # self.USERS = _users
+        # self.ROLES = _roles
+        # self.PR = _pr # PR subset (OPS * OBJS) * ROLES, for PA in std
+        # self.UR = _ur # UR subset USERS * ROLES,    for UA in std
+        # self.SESSIONS = set()
+        # self.SU = set() # SU subset SESSIONS * USERS
+        # self.SR = set() # SR subset SESSIONS * ROLES
 
     # administrative commands
 
@@ -161,10 +161,10 @@ class CoreRBAC(process):
 class GeneralHierRBAC(CoreRBAC,process):
 
 
-    def setup(_users, _roles, _ur, _rh, _pr, num_objs, _workload):
-        super().setup(_users, _roles, _ur, _pr, num_objs)
-        self.workload = _workload
-        self.RH = _rh
+    def setup(USERS,ROLES,UR,PR,OBJS,OPS,SESSIONS,SU,SR,RH,workload):
+        # super().setup(USERS, _roles, _ur, _pr, num_objs)
+        # self.workload = _workload
+        # self.RH = _rh
         self.transRH = set()
         self.authorizedUR = set()
         self.CA = set()

@@ -1,4 +1,126 @@
-from rbac import HierarchicalRBAC
+import os
+
+class CoreRBAC(process):
+  """
+  Core RBAC keeps several sets including the following:
+
+    USERS: set of users
+    ROLES: set of roles
+    PERMS: set of permissions
+    UR: set of user-role pairs
+    PR: set of permission-role pairs
+
+  with constraints:
+
+    UR subset USERS * ROLES
+    PR subset PERMS * ROLES
+
+  update functions for each set, subject to the constraints above:
+
+    AddUser, DeleteUser, AddRole, DeleteRole, AddPerm, DeletePerm
+    AddUR, DeleteUR, AddPR, DeletePR
+    each Add has pre-conditions:
+      the element is not yet in and the constraints will not be violated. 
+    each Delete has the pre-condition that the element is in,
+      and maintains the constraints.
+
+  query functions including the following:
+  
+    AssignedUsers(role): the set of users assigned to role in UR
+    AssignedRoles(user): the set of roles assigned to user in UR
+    UserPermissions(user): 
+      the set of permissions assigned to the roles assigned to user
+  """
+
+  def setup(USERS,ROLES,UR): pass
+
+  def AddUser(user):        # pre-condition: user not in USERS
+    USERS.add(user)
+
+  def DeleteUser(user):     # pre-condition: user in USERS
+    UR -= setof((user,r), r in ROLES) # maintain UR
+    USERS.remove(user)
+
+  def AddRole(role):        # pre: role not in ROLES
+    ROLES.add(role)
+
+  def DeleteRole(role):     # pre: role in ROLES
+    UR -= setof((u,role), u in USERS) # maintain UR
+    ROLES.remove(role)
+
+  # called AssignUser in ANSI standard
+  def AddUR(user, role):
+    # pre: user in USERS, role in ROLES, (user,role) not in UR
+    UR.add((user,role))
+
+  # called DeassignUser in ANSI standard
+  def DeleteUR(user, role):  # pre: (user,role) in UR
+    UR.remove((user,role))
+
+  def AssignedUsers(role):  # pre: role in ROLES
+    """the set of users assigned to role in UR"""
+    return setof(u, (u,_role) in UR)
+
+  def AssignedRoles(user):  # pre: user in USERS
+    """the set of roles assigned to user in UR"""
+    return setof(r, (_user,r) in UR)
+
+class HierarchicalRBAC(CoreRBAC,process):
+  """
+  Hierarchical RBAC keeps also a role hierarchy:
+
+    RH: set of pairs of roles, called ascendant and descendant roles,
+    where an ascendant role inherits permissions from a descendant role
+
+  with constraints:
+
+    RH subset ROLES * ROLES, and RH is acyclic
+
+  update functions for RH, subject to the constraints above:
+
+    AddInheritance(asc,desc)
+    DeleteInheritance(asc,desc)
+    with the same kinds of pre-conditions as updates in CoreRBAC
+
+  query functions including the following:
+
+    trans:
+      the transitive closure of role hierarchy union reflexive role pairs
+    AuthorizedUsers(role):
+      the set of users of role or ascendant roles of role
+    AuthorizedRoles(user):
+      the set of roles of user or descendant roles of the roles
+  """
+
+  def setup(USERS,ROLES,UR,RH,workload): pass
+    # super().setup(_users,_roles,_ur)
+    # self.RH = _rh  # RH subset ROLES * ROLES, where asc inh desc
+    # self.workload = _workload
+
+  def AddInheritance(a,d):
+    # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
+    RH.add((a,d))
+
+  def DeleteInheritance(a,d):  # pre: (a,d) in RH
+    RH.remove((a,d))
+
+  def AuthorizedUsers(_role):
+    """the set of users of role or ascendant roles of role"""
+    transRH = trans(RH)
+    return setof(u, (u,asc) in UR, (asc,_role) in transRH)
+
+  # rest of this class: some possible calls, etc. to be worked on
+  def trans(E): pass
+  def run(): #pass
+    # cp = cProfile.Profile()
+    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+    # cp.enable()
+    for op, pr in workload:
+      for p in pr:
+        eval('self.'+op)(*p)
+    # cp.disable()
+    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
 
 class HRBAC_set(HierarchicalRBAC,process):  # using DistAlgo set queries
   

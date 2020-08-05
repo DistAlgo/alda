@@ -401,6 +401,8 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		if node.name.startswith(KW_RULES): # if node.name == KW_RULES:
 			self.current_rule = ruleast.RuleSet(node.parent, node.ast)
 			self.current_rule.decls = node.name
+			if get_docstring(node._ast):
+				node.body = node.body[1:]
 			self.current_rule.rules = [self.visit(r.expr) for r in node.body]
 			res = self.current_rule
 			self.current_rule = None
@@ -440,6 +442,12 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		"""
 		raise NotImplementedError
 
+	def flatten(self, x):
+		if isinstance(x, list):
+			return [a for i in x for a in self.flatten(i)]
+		else:
+			return [x]
+
 	def visit_TupleExpr(self, node):
 		""" rules of form: p1, if_(p2,...)
 		conclusion must be of from p(a1,...)
@@ -448,17 +456,26 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		if len(node.subexprs) != 2 or \
 		   not isinstance(node.subexprs[0], dast.CallExpr) or \
 		   not (isinstance(node.subexprs[1],dast.CallExpr) and node.subexprs[1].func.name == KW_COND): 
-			self.error('ERROR: invalid formalization of rules', node)
-			return
+			# self.error('ERROR: invalid formalization of rules', node)
+			# return
 
-		concl = self.visit(node.subexprs[0])
-		hypos = self.visit(node.subexprs[1])
-		return ruleast.Rule(concl,hypos)
+			# nested predicate, flatten it
+			return [self.visit(x) for x in node.subexprs]
+			...
+		else:
+			concl = self.visit(node.subexprs[0])
+			hypos = self.visit(node.subexprs[1])
+			return ruleast.Rule(concl,hypos)
 
 	def visit_CallExpr(self,node):
 		if node.func.name == KW_COND:
 			return [self.visit(a) for a in node.args]
-		return ruleast.Assertion(self.current_rule.add_name(node.func.name), [self.visit(a) for a in node.args])
+		return ruleast.Assertion(self.current_rule.add_name(node.func.name), [x for a in node.args for x in self.flatten(self.visit(a))])
+
+	def visit_BinaryExpr(self, node):
+		node.left = self.visit(node.left)
+		node.right = self.visit(node.right)
+		return node
 
 	def visit_NameExpr(self,node):
 		return ruleast.LogicVar(node.name)
@@ -483,6 +500,15 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 	def visit_NoneExpr(self, node):
 		return ruleast.LogicVar("'None'")
 
+OperatorMap = {
+	dast.AddOp	  : '+',
+	dast.SubOp	  : '-',
+	dast.MultOp	 : '*',
+	dast.DivOp	  : '/',
+	dast.ModOp	  : '%',
+	dast.PowOp	  : '^',
+}
+
 class XSBTranslator(NodeVisitor):
 
 	def visit_RuleSet(self, node):
@@ -495,6 +521,7 @@ class XSBTranslator(NodeVisitor):
 				','.join(self.visit(assrtn) for assrtn in node.hypos) + '.'
 	
 	def visit_Assertion(self, node):
+		# print(node.args)
 		return self.visit(node.pred) + '(' + \
 				','.join(self.visit(arg) for arg in node.args) + ')'
 	
@@ -509,7 +536,12 @@ class XSBTranslator(NodeVisitor):
 	def visit_NamedVar(self, node):
 		return UniqueLowerCasePrefix + node.name
 
-
+	def visit_BinaryExpr(self, node):
+		# direct translation not right.
+		# possible transforming as follow:
+		# a binary expr: a+b need to be translate to Tmp = a+b, 
+		# and put this statement in the hypo and replace the original a+b with Tmp
+		return self.visit(node.left) + OperatorMap[node.operator] + self.visit(node.right)
 
 from functools import cmp_to_key
 def sort_rulesets(a,b):

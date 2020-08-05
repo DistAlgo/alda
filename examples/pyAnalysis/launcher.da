@@ -2,10 +2,10 @@ import sys,os, importlib
 
 DEFAULT_FILE = 'distalgo' # madpy, hylaa, AeroBenchVVPython, numpy, scikit-learn, sklearn, pytorch, pandas, scipy, matplotlib, sympy, django
 DEFAULT_MODE = 'rule' # python, distalgo, combine, rule
-DEFAULT_ANALYZER = 'LoopAnalyzer'	# LoopAnalyzer, NumpyAnalyzer, ModuleAnalyzer, ClassAnalyzer
+DEFAULT_ANALYZER = 'LoopAnalyzer'	# LoopAnalyzer, LoopToQuery, NumpyAnalyzer, ModuleAnalyzer, ClassAnalyzer
 HandlerRoute = {
-	'ruleLoopAnalyzer': ('loop_analyzer', 'LoopAnalyzer', 'loopdepth'),	# candidate,
-	'ruleLoopToQuery': ('loop-to-query', 'LoopAnalyzer', 'forToCompSimple'),
+	'ruleLoopAnalyzer': ('loop_analyzer', 'LoopAnalyzer', 'loopdepth'),
+	'ruleLoopToQuery': ('loop-to-query', 'LoopAnalyzer', 'forToCompSimple'), # candidate, forToCompSimple
 	'ruleNumpyAnalyzer': ('numpy_analyzer', 'NumpyAnalyzer', 'numpy'),
 	'ruleModuleAnalyzer': ('module_analyzer', 'ModuleAnalyzer', 'import'),
 	'pythonClassAnalyzer': ('subclass_python', 'ClassAnalyzer', 'subclass'),

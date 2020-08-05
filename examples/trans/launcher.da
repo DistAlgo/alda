@@ -10,7 +10,7 @@ HandlerRoute = {
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--nume', type= int, default= 100)  # number of roles (graph size)
-  parser.add_argument('--mode', type= str, default= 'rev_rule')
+  parser.add_argument('--mode', type= str, default= 'python')
   args=parser.parse_args()
   inputfile = 'v%se%s' % (int(args.nume/2),args.nume)
   data = pickle.load(open(os.path.join('input', inputfile), 'rb'))

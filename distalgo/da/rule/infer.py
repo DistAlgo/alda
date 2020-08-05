@@ -15,7 +15,15 @@ def eval_logicVar(v):
              False if v == "'False'" else \
               True if v == "'True'" else v
 
+def flatten(x):
+    if isinstance(x, list):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
+
 def LogicVarToXSB(v):
+    if isinstance(v, (list,tuple)):
+        return ','.join(LogicVarToXSB(y) for x in v for y in flatten(x))
     return str(v) if v == '_' or isinstance(v, int) or (isinstance(v,str) and v.isdigit()) else \
          "'None'" if v is None or v == 'None' else \
         "'False'" if v is False or v == 'False' else \
@@ -89,7 +97,7 @@ def _infer(rule, arity, bindings, queries):
     # print('\tnum_fact\tfile_size')
     # print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
     #                             os.path.getsize(PurePath.joinpath(rule_path,rule+'.facts'))))
-    # print('timing   \telapse\tcpu')
+    # print('timing\telapse\tcpu')
     # print('write_input\t%s\t%s'%(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
     # print('subprocess_xsb\t%s\t%s'%(elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
     # print('read_output\t%s\t%s'%(elapsed_time4-elapsed_time3, utime4-utime3 + stime4-stime3 + cutime4-cutime3 + cstime4-cstime3))
