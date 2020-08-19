@@ -91,18 +91,18 @@ def _infer(rule, arity, bindings, queries):
         results.append(tuples)
     utime4, stime4, cutime4, cstime4, elapsed_time4 = os.times()     # timing: i/o: load output
     
-    ## xsb query and i/o time
-    # lines = output.stdout.split('\n')
-    # lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
-    # print('\tnum_fact\tfile_size')
-    # print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
-    #                             os.path.getsize(PurePath.joinpath(rule_path,rule+'.facts'))))
-    # print('timing\telapse\tcpu')
-    # print('write_input\t%s\t%s'%(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
-    # print('subprocess_xsb\t%s\t%s'%(elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
-    # print('read_output\t%s\t%s'%(elapsed_time4-elapsed_time3, utime4-utime3 + stime4-stime3 + cutime4-cutime3 + cstime4-cstime3))
-    # print('xsb_load\t%s\t%s'%(lines[-4],lines[-3]))
-    # print('xsb_query\t%s\t%s'%(lines[-2],lines[-1]))
+    # xsb query and i/o time
+    lines = output.stdout.split('\n')
+    lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
+    print('\tnum_fact\tfile_size')
+    print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
+                                os.path.getsize(PurePath.joinpath(rule_path,rule+'.facts'))))
+    print('timing\telapse\tcpu')
+    print('write_input\t%s\t%s'%(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+    print('subprocess_xsb\t%s\t%s'%(elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
+    print('read_output\t%s\t%s'%(elapsed_time4-elapsed_time3, utime4-utime3 + stime4-stime3 + cutime4-cutime3 + cstime4-cstime3))
+    print('xsb_load\t%s\t%s'%(lines[-4],lines[-3]))
+    print('xsb_query\t%s\t%s'%(lines[-2],lines[-1]))
 
     if len(results) == 0:
         return results

@@ -15,9 +15,9 @@ def main():
   inputfile = 'v%se%s' % (int(args.nume/2),args.nume)
   data = pickle.load(open(os.path.join('input', inputfile), 'rb'))
   
-  # if not os.path.exists('timing'):
-  #     os.mkdir('timing')
-  # sys.stdout = open('./timing/timing_trans_%s_%s.txt' % (args.mode, inputfile), 'a')
+  if not os.path.exists('timing'):
+      os.mkdir('timing')
+  sys.stdout = open('./timing/timing_trans_%s_%s.txt' % (args.mode, inputfile), 'a')
   
   transClass = importlib.import_module(HandlerRoute[args.mode][0])
   o = new(eval('transClass.'+HandlerRoute[args.mode][1]), [data])

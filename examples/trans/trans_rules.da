@@ -7,7 +7,7 @@ class Trans(process):
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     trans(E)
     utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
-    print(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1)
+    print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
 
 class Trans_rules(Trans, process):
   def rules_Trans_rules():

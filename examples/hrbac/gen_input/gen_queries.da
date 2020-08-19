@@ -20,7 +20,7 @@ format of query sequence
 import pickle, os, random, sys
 from allrbac import GeneralHierRBAC
 from gen_rbacDB import write_graph, get_max_depth
-outfolder = 'input'
+outfolder = '../input'
 
 class Generator(GeneralHierRBAC, process):
 	def setup(_users,_roles,_ur,_rh,_pr,num_objs, num_roles, size_workload, num_auth):

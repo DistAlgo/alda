@@ -11,12 +11,22 @@ external_file_query(FileBase,Query) :-
      ->	true
      ;	writeln(warning('No Rule file.'))
     ),
+    statistics(walltime,[_,_]),
+    statistics(runtime,[_,_]),
     consult(RuleFile),
     (file_exists(FactFile)
      ->	load_dyn(FactFile)
      ;	true
     ),
+    statistics(walltime,[_,W1]),
+    statistics(runtime,[_,R1]),
+    writeln(W1),
+    writeln(R1),
     call_iter(Query),
+    statistics(walltime,[_,W2]),
+    statistics(runtime,[_,R2]),
+    writeln(W2),
+    writeln(R2),
     halt(0).
 
 % call queries iteratively,

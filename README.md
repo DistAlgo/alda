@@ -12,21 +12,21 @@ DA-rules is an extension of DistAlgo with rules and constraints.  This implement
 ### An example program that uses rules
 The following rule set defines the [transitive closure](https://en.wikipedia.org/wiki/Transitive_closure) of edges in a graph. Given a predicate `edge` that asserts whether there is an edge from a first vertex to a second vertex, the transitive closure defines a predicate `path` that asserts whether there is a path though which a first vertex can reach a second vertex by following the given edges.
 ```python
-def rules(name='trans_rs'):
+def rules_Trans_rules():
   path(x,y), if_(edge(x,y))
   path(x,y), if_(edge(x,z), path(z,y))
 
-trans = infer(rule='trans_rs', bindings=[('edge',E)], queries=['path'])
+trans = infer(rule=rules_Trans_rules, bindings=[('edge',E)], queries=['path'])
 ```
 The first rule says that there is a path from `x` to `y` if there is an edge from `x` to `y`. The second rule says that there is a path from `x` to `y` if there is an edge from `x` to `z` and there is a path from `z` to `y`. Given a set `edge` of edges, the transitive closure of `edge` is the set `path` of all pairs of vertices `x` and `y` such that there is a path from `x` to `y`.
 
 ### Specification
 A set of rules can be specified easily using the syntax of a Python function:
 ```python
-def rules(name='rsname'):
+def rules_rsname():
   rule+
 ```
-The function must be named `rules`, with a parameter `name`, which defines the name of the rule set. The name serves as the unique identifier of the rule set and uses the same naming convention as Python identifiers. The body of the rule function is a set of rules.
+The function name must be prefixed by `rules_`, following the name of the ruleset given by `rsname`. The function name serves as the unique identifier of the rule set and uses the same naming convention as Python identifiers. The body of the rule function is a set of rules.
 #### rule
 Each rule is a Datalog rule of the form below, indicating that if `condition_1` through `condition_n` all hold, then `conclusion` holds.
 ```python
@@ -44,7 +44,7 @@ In a rule set, predicates not in any conclusion are called *base predicates* of 
 ### Inference with rules
 We can infer with a rule set by calling the built-in function `infer` of the following form:
 ```python
-infer(rule='rsname', 
+infer(rule=rules_rsname, 
       bindings=[('pred_1',sexp_1),...,('pred_2',sexp_2)], 
       queries=['query_1',...,'query_j'])
 ```
@@ -58,7 +58,7 @@ When using rules with only non-local predicates, the derived predicates are auto
 
 
 ### Running a program with rules
-Usage: `python3 -m da --rule <filename>`  
+Usage: `python -m da --rule <filename>`  
 where `<filename>` is the name of a DA-rules script.
 
 ### Running the experiments
@@ -69,7 +69,7 @@ In the `examples` directory locates the source code of the experiments discussed
 This example computes the transitive closure of a graph as discussed in section 2. The input data used in the paper is included in the repository.
 1. to get all the statistics in section 7.3 Transitive closure, run `./test_trans.sh`
 2. to run a single round of transitive closure, call  
-	`python3 -m da --rule --message-buffer-size=409600 trans.da --nume=NUMEDGE --mode=MODE`, where
+	`python -m da --rule --message-buffer-size=409600 launcher.da --nume=NUMEDGE --mode=MODE`, where
 	- `NUMEDGE` is the number of edges of input data, and  
 	- `MODE` specifies the methods used for computing the transitive closure, and can take value from:
 		- `'rule'`: using the rules in section 4.2
@@ -78,15 +78,15 @@ This example computes the transitive closure of a graph as discussed in section 
 		- `'python'`: using Python comprehensions as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
 4. to generate your own input data  
-	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`
-5. the output of the analysis will be in the `output` folder
+	run `gen_graph.da` in `gen_input` folder with command `python -m da gen_graph.da`
+5. the timing of each program will be in the `timing` folder
 
 #### Hrbac
-This example is about hierachical role-based access control (HRBAC) discussed in section 2.
+This example is on hierachical role-based access control (HRBAC) discussed in section 2.
 The input data used in the paper is included in the repository.
 1. to get all the statistics in section 7.4 Hierarchical RBAC of the paper, run `./test_hrbac.sh`
 2. to run a single round of HRBAC, call  
-	`python3 -m da --rule --message-buffer-size=409600 hrbac.da  --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
+	`python -m da --rule --message-buffer-size=409600 launcher.da --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
 	- `NUMROLE` is the number of roles,  
 	- `NUMOP` is the basic number of operations that:
 		- adding/deleting user (each `NUMOP` times), 
@@ -97,46 +97,72 @@ The input data used in the paper is included in the repository.
 	- `MODE` specifies the method used for quering the authorized users, and can take value from:
 		- `'rule'`: using rules with only local predicates as introduced in section 4.2
 		- `'rolerule'`: in addition to the previous rules in program `'rule'`, add a rule that uses a local `role` set as introduced in section 4.2
-		- `'ROLErule'`: using rules with both local and non-local predicates as introduced in section 4.3
+		<!-- - `'ROLErule'`: using rules with both local and non-local predicates as introduced in section 4.3 -->
 		- `'transRH'`: using rules with only non-local predicates as introduced in section 4.1
-		- `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers` as introduced in section 4.4
+		<!-- - `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers` as introduced in section 4.4 -->
 		- `'authUR'`: introducing set `authorizedUR` as a field so the previous rule in program `'auth_rules'` can be automatically triggered to update `authorizedUR` as introduced in section 4.4
 		- `'python'`: using Python comprehensions as introduced in section 7.2
 		- `'distalgo'`: using DistAlgo high-level queries as introduced in section 7.2
 3. the data provided in the `input` folder is those used when generating the graphs in the paper
-4. to generate your own input data  
-	run `gen_input.py` in `gen_input` folder, and move the results in `./gen_input/input` to `./input`.
-5. the output of the analysis will be in the `output` folder
+4. to generate your own input data, run the scripts in `gen_input` folder as follows:
+	- run `gen_rbacDB.py` to generate a dataset of user-role (UR) relation and role-hierach (RH) relation of 500 roles.
+	- run `python -m da gen_queries.da` to generate a workload of sequence of hrbac queries
+5. the timing of each program will be in the `timing` folder
+
+#### AllRbac
+This example is on the full core and hierarchical RBAC, the description of which can be found [here](https://www3.cs.stonybrook.edu/~stoller/papers/rbac-spec.pdf)
+1. to run the AllRBac program, call 
+	`python -m da --rule --message-buffer-size=409600 launcher.da --numr=NUMROLE --nump=NUMPERM --ac=NUMQUERY`, where
+	- `NUMROLE` is the number of roles,  
+	- `NUMPERM` is the number of permissions, and
+	- `NUMQUERY` is the number of `CheckAccess` queries
+2. the data provided in the `input` folder is for reproducing the experiments in the [PEPM 06 RBAC paper](https://www3.cs.stonybrook.edu/~liu/papers/ImplCRBAC-PEPM06.pdf) with a larger number of roles and permissions, 
+	1. Exp.1. fix the number of perissions to 1000 and the number of `CheckAccess` queries to 1000, the number of roles varies from 100 to 1000 with a step of 100.
+	2. Exp.2. fix the number of roles to 500 and the number of `CheckAccess` queries to 1000, the number of permissions varies from 1000 to 3000 with a step of 100.
+	3. Exp.3. fix the number of roles to 500 and permissions to 3000, the number of `CheckAccess` queries varies from 100 to 1000 with a step of 100.
+3. to generate your own input data, run the scripts in `gen_input` folder as follows:
+	- run `gen_allrbacDB.py` to generate a dataset of UR, RH and permission-role (PR) relation
+	- run `python -m da --rule --message-buffer-size=409600 gen_allrbacQueries.da`
 
 #### pyAnalysis
 This folder contains the examples about analysis of Python programs discussed in section 7.5 and 7.6.
-- to generate input data, run  
-	`python3 -m da prepare_data.da PACKAGE_FOLDER`  
-	the generated data will be in `./data` folder.
+- to generate input data, run in the `data_prepare` folder
+	`python pyast_views.da INPUT`, where input can be a Python module or a Python package
+	the generated data will be in `data` folder.
 
-##### Program analysis
-This example computes the inheritance information of Python programs as discussed in section 7.5.
-1. to get all the statistics in section 7.5 Program analysis, run `./test_pyanalysis.sh`.  
-2. to run the analysis of getting the inheritance information, call  
-	`python3 -m da ast_analysis_rule.da DATASET MODE`, where
+<!-- ##### Program analysis -->
+<!-- This example computes the inheritance information of Python programs as discussed in section 7.5. -->
+<!-- 1. to get all the statistics in section 7.5 Program analysis, run `./test_pyanalysis.sh`.   -->
+- to run the analysis of getting the inheritance information, call  
+	`python -m da launcher.da ANALYZER DATASET QUERY MODE`, where
+	- `ANALYZER` is the analyzer to invokde, and can take value from:
+		- `'LoopAnalyzer'`: support only one `MODE`: `'rule'`, and `QUERY`s
+			- `'loopdepth'` compute the depth of the loop and 
+		- `'LoopToQuery'`: support only one `MODE`: `'rule'`, and `QUERY`s
+			- `'candidate'`: find candidate for-loops that can be transformed to comprehensions and print out the potential transformation
+			- `'forToCompSimple`: transform simple for-loops which is a subset of the candidates to comprehensions and write the converted files to `output` folder
+		- `'NumpyAnalyzer'`: support only one `MODE`: `'rule'`, and `QUERY`s
+			- `'numpy'`: find for-loops that can be transformed to numpy function calls and print out the potiencal transformation
+		- `'ClassAnalyzer'`: support all four `MODE`s, and `QUERY`s
+			- `'subclass'`: find and print out the class inheritance relation
 	- `DATASET` is the name of the package to analyasis,  
 	- `MODE` specifies the methods used for computing basic inheritance information, and can take value from:
 		- `'rule'`: using the rules as introduced in section 7.5
 		- `'python'`: using Python nested for loops and tests as introduced in section 7.5
 		- `'distalgo'`: using DistAlgo queries
 		- `'combine'`: using a combination of rules and DistAlgo queries
-3. the output of the analysis will be in the `output` folder
+<!-- 2. the timing of the program will be in the `timing` folder -->
 
-##### Transforming loops to comprehensions
+<!-- ##### Transforming loops to comprehensions
 This example performs a series of analysis on Python for-loops as discussed in section 7.6.
 1. to run an analysis, call  
-	`python3 -m da ast_analysis_rule.da DATASET QUERY`, where
+	`python -m da ast_analysis_rule.da DATASET QUERY`, where
 	- `DATASET` is the name of the package to analyasis,  
 	- `QUERY` specifies the analysis to perform, and can take value from:
 		- `'loopdepth'`: compute the depth of for-loops
 		- `'candidate'`: identify candidate for-loops that might be transformable to comprehensions
 		- `'forToCompSimple'`: run the basic transformer to transform for-loops into comprehensions
-2. the output of the analysis will be in the `output` folder
+2. the output of the analysis will be in the `output` folder -->
 
 ## 3. Using the extension with constraints
 
@@ -272,11 +298,11 @@ query(constraint, **kwargs)
 - The return value of calling `query` is a dictionary, whose keys are names of decision variables in the return of the constraint problem. If the problem is a COP, an additional key `objective` is also returned if not already specified in the return, and is the optimal value of the objective. Additionally, the statistics of solving the problem are also returned under key `statistics`. Detailed explanation of all items in the statistics can be found [here](https://minizinc-python.readthedocs.io/en/latest/_modules/minizinc/result.html).
 
 ### Running the program
-Usage: `python3 -m da --constraint <filename>`
+Usage: `python -m da --constraint <filename>`
 
 Save the example program to a file, say named `vertex_cover.da`, then running following command produces the output:
 
-`>>> python3 -m da --constraint vertex_cover.da`
+`>>> python -m da --constraint vertex_cover.da`
 ```python
 [0, 1, 1, 0, 0, 0]
 2
