@@ -69,15 +69,15 @@ def main():
 
 	size_workload = 50
 	num_roles = 500
-	# num_ac= list(range(100,1100,100))
-	# num_perms = 3000
-	# genQuery(self, size_workload, num_roles, num_perms, num_ac)
+	num_ac= list(range(100,1100,100))
+	num_perms = 3000
+	genQuery(self, size_workload, num_roles, num_perms, num_ac)
 
-	# num_perms = 1000
+	num_perms = 1000
 	num_ac = [1000]
-	# for r in range(100,1100,100):
-	# 	print('r:',r)
-	# 	genQuery(self, size_workload, r, num_perms, num_ac)
+	for r in range(100,1100,100):
+		print('r:',r)
+		genQuery(self, size_workload, r, num_perms, num_ac)
 
 	for p in range(1100, 3000, 100):
 		print('p:',p)
