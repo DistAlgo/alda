@@ -36,6 +36,9 @@ from .utils import is_valid_debug_level, set_debug_level, to_source, to_file
 from .exparser import daast_from_file
 from .exparser import daast_from_str
 from .expygen import PythonGenerator
+# from .parser import daast_from_file
+# from .parser import daast_from_str
+# from .pygen import PythonGenerator
 from .incgen import gen_inc_module
 from .pseudo import DastUnparser
 
@@ -144,10 +147,14 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    # print('ui:dastr_to_pycode')
+    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
     pyast = dastr_to_pyast(src, filename, args)
+    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    if not os.path.exists('timing'):
+        os.mkdir('timing')
+    open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
     if pyast is not None:
-        # open(filename+'.py','w').write(to_source(pyast))
+        # open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:
         return None

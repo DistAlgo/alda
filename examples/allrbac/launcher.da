@@ -12,7 +12,7 @@ def main():
     
     users = set(range(10*args.numr))
     roles = set(range(args.numr))
-    num_obj = int(args.nump/5)
+    num_objs = int(args.nump/5)
     ur = pickle.load(open(os.path.join('input', 'allUR_%s' % args.numr), 'rb'))
     rh = pickle.load(open(os.path.join('input', 'allRH_%s' % args.numr), 'rb'))
     pr = pickle.load(open(os.path.join('input', 'PR_r%s_p%s' % (args.numr, args.nump)), 'rb'))

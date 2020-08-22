@@ -2,17 +2,17 @@ import sys, os, argparse
 
 class CoreRBAC(process):
 
-    def setup(USERS,ROLES,UR,PR,OBJS,OPS,SESSIONS,SU,SR): pass
-        # self.OBJS = set(range(num_objs))  
-        # # self.OPS = set()   # an operation-object pair is called a permission
-        # self.OPS = set(range(5))
-        # self.USERS = _users
-        # self.ROLES = _roles
-        # self.PR = _pr # PR subset (OPS * OBJS) * ROLES, for PA in std
-        # self.UR = _ur # UR subset USERS * ROLES,    for UA in std
-        # self.SESSIONS = set()
-        # self.SU = set() # SU subset SESSIONS * USERS
-        # self.SR = set() # SR subset SESSIONS * ROLES
+    def setup(_users,_roles,_ur,_pr, num_objs):
+        self.OBJS = set(range(num_objs))  
+        # self.OPS = set()   # an operation-object pair is called a permission
+        self.OPS = set(range(5))
+        self.USERS = _users
+        self.ROLES = _roles
+        self.PR = _pr # PR subset (OPS * OBJS) * ROLES, for PA in std
+        self.UR = _ur # UR subset USERS * ROLES,    for UA in std
+        self.SESSIONS = set()
+        self.SU = set() # SU subset SESSIONS * USERS
+        self.SR = set() # SR subset SESSIONS * ROLES
 
     # administrative commands
 
@@ -161,10 +161,9 @@ class CoreRBAC(process):
 class GeneralHierRBAC(CoreRBAC,process):
 
 
-    def setup(USERS,ROLES,UR,PR,OBJS,OPS,SESSIONS,SU,SR,RH,workload):
-        # super().setup(USERS, _roles, _ur, _pr, num_objs)
-        # self.workload = _workload
-        self.RH = RH
+    def setup(_users, _roles, _ur, _rh, _pr, num_objs):
+        super().setup(_users, _roles, _ur, _pr, num_objs)
+        self.RH = _rh
         self.transRH = set()
         self.authorizedUR = set()
         self.CA = set()
@@ -310,14 +309,14 @@ class GeneralHierRBAC(CoreRBAC,process):
     #         send(('answer', qid, result), to= p)
     #     except Exception as e:
     #         send(('answer', qid, e), to= p)
-    def run():
-        # cp = cProfile.Profile()
-        utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-        # cp.enable()
-        for op, pr in workload:
-            for p in pr:
-                eval('self.'+op)(*p)
-        # cp.disable()
-        utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
-        print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+    # def run():
+    #     # cp = cProfile.Profile()
+    #     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+    #     # cp.enable()
+    #     for op, pr in workload:
+    #         for p in pr:
+    #             eval('self.'+op)(*p)
+    #     # cp.disable()
+    #     utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    #     print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
   
