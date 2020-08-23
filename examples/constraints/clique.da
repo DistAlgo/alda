@@ -1,9 +1,9 @@
-def constraint(name= 'clique', pars={vertex, edge}):
+def csp_clique(vertex, edge):
 	# Variables:
 	vertex: set[int]							# set of vertices
-	edge: dict(key= (vertex, vertex), val= int) # set of edges with weight
+	edge: dict[key: (vertex, vertex), val: int] # set of edges with weight
 	# a set of vertices formulating a clique
-	clique: dict(key= vertex, val= ints(0,1)) 
+	clique: dict[key: vertex, val: int[0:1]]
 	
 	# Constraints:
 	# the vertices in a clique are fully connected
@@ -15,14 +15,14 @@ def constraint(name= 'clique', pars={vertex, edge}):
 	# return anyof(clique, c, to_max(sum(clique)))
 	# maximum weight clique problem
 	obj: int = sumof(edge[i,j]*clique[i]*clique[j], i in vertex, j in vertex)
-	return anyof((clique, obj), c, to_max(obj))
+	return anyof((clique,obj), c, to_max(obj))
 
 
 
 from pprint import pprint
 
 # data from https://cs.stackexchange.com/questions/41946/covering-a-graph-with-non-overlapping-cliques
-vertex = {1,2,3,4,5,6,7,8}
+vertex = int[1:8] #{1,2,3,4,5,6,7,8}
 edge = [[0,0,0,1,1,0,1,1],
 		[0,0,1,1,1,1,1,1],
 		[1,1,0,0,1,1,1,1],
@@ -32,5 +32,5 @@ edge = [[0,0,0,1,1,0,1,1],
 		[1,1,1,1,1,0,0,0],
 		[1,1,1,1,1,1,0,0]]
 
-result = query(constraint='clique')
+result = csp_clique(vertex, edge)
 pprint(result)

@@ -1,20 +1,20 @@
-def constraint(name= 'job_sequencing', pars={n, duration, deadline, penalty}):
+def csp_job_sequencing(n, duration, deadline, penalty):
 	# Variables:
 	n: int                          # number of jobs
-	duration: dict(key=int,val=int) # execution time of each job
-	deadline: dict(key=int,val=int) # deadline of each job
-	penalty: dict(key=int,val=int)  # penalty of not finished before deadline
-	sequencing: dict(key=ints(1,n),val=ints(1,n))   # sequence of jobs
+	duration: dict[key:int,val:int] # execution time of each job
+	deadline: dict[key:int,val:int] # deadline of each job
+	penalty: dict[key:int,val:int]  # penalty of not finished before deadline
+	sequencing: dict[key:int[1:n],val:int[1:n]]   # sequence of jobs
 
 	# Constraints:
 	# a sequence of job with no repeating
-	c = alldiff(sequencing[i], i in ints(1,n))
+	c = alldiff(sequencing[i], i in int[1:n])
 	
 	# Target:
 	# find a sequencing of jobs of minimum penalty
-	obj: int = sumof((0 if sumof(duration[sequencing[i]], i in ints(1,j)) 
+	obj: int = sumof((0 if sumof(duration[sequencing[i]], i in int[1:j]) 
 	                    <= deadline[sequencing[j]]
-	                  else penalty[sequencing[j]]), j in ints(1,n))
+	                  else penalty[sequencing[j]]), j in int[1:n])
 	return anyof((sequencing,obj), c, to_min(obj))
 
 
@@ -27,5 +27,5 @@ duration = [1,1,1,1,1];
 deadline = [2,1,3,2,1];
 penalty = [40,0,80,60,80];
 
-result = query(constraint = 'job_sequencing')
+result = csp_job_sequencing(n, duration, deadline, penalty)
 pprint(result)

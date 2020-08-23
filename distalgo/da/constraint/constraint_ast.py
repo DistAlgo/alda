@@ -1,4 +1,4 @@
-from da.compiler.dast import DistNode
+from da.compiler.dast import DistNode, NameScope
 
 
 """ MiniZinc AST
@@ -53,8 +53,19 @@ class DAConstraints(DistNode):
 		for f, a in zip(self._fields, args):
 			setattr(self, f, a)
 
-# class CSP(DAConstraints):
-# 	_fields = ['parameter', 'variable', 'constraint', 'objective']
+class CSP(NameScope):
+	_fields = ['variables', 'constraints', 'objective']
+	def __init__(self, parent=None, ast=None):
+		super().__init__(parent, ast)
+		# self.parameters = []
+		self.variables = dict()
+		self.constraints = dict()
+		self.objective = None
+		self._index = str(CSP._index)
+
+	@property
+	def unique_name(self):
+		return type(self).__name__ + self._index
 
 # a single constraint statement, contains a constraint set
 class Constraint(DAConstraints):
@@ -103,7 +114,7 @@ class Variable(DAConstraints):
 class DADomain(DAConstraints):
 	_attributes = ['parameter', 'opt']
 	def __init__(self, *args):
-		self.parameter = True
+		self.parameter = None
 		self.opt = False
 		super().__init__(*args)
 
@@ -111,6 +122,8 @@ class DomainBasic(DADomain):
 	_fields = ['type', 'lb', 'ub', 'step']
 	def __init__(self, _type, lb= None, ub= None, step= None):
 		super().__init__(_type,lb,ub,step)
+		if _type == 'float' and step:
+			raise ValueError("float type cannot be declared with step")
 
 class DomainTuple(DADomain):
 	_fields = ['elements']

@@ -1,11 +1,11 @@
-def constraint(name= 'exact_cover', pars={X,subsets,S}):
+def csp_exact_cover(X,subsets,S):
 	# Variables
 	X: set[int]  		# the universe
 	subsets: set[int]	# id of subsets in S
 	# S[i,j]: the ith subset in S contains the jth element in the universe
-	S: dict(key= (subsets, X), val= ints(0,1))
+	S: dict[key: (subsets, X), val: int[0:1]]
 	# indicate which subset in S is included in solution
-	T: dict(key= subsets, val= ints(0,1))
+	T: dict[key: subsets, val: int[0:1]]
 	
 	# Constraints
 	# each element in the universe is covered exactly once by sets in S
@@ -25,5 +25,5 @@ S = [[1,0,1,1,0],
 	 [0,1,0,0,1],
 	 [1,1,1,1,0]]
 
-result = query(constraint='exact_cover')
+result = csp_exact_cover(X,subsets,S)
 pprint(result)

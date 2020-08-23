@@ -1,8 +1,8 @@
-def constraint(name= '3d_matching', pars={T,U}):
+def csp_3d_matching(T,U):
 	# Variables
 	T: set[int]                             # the universe
-	U: dict(key= (T, T, T), val= ints(0,1)) # U = TxTxT
-	M: dict(key= (T, T, T), val= ints(0,1)) # subset of U
+	U: dict[key: (T, T, T), val: int[0:1]] # U = TxTxT
+	M: dict[key: (T, T, T), val: int[0:1]] # subset of U
 	
 	# Constraints
 	# M is a subset of U
@@ -33,5 +33,8 @@ U =[[[1,1,1],
 	 [1,1,1],
 	 [1,1,1]]]
 	 
-result = query(constraint='3d_matching')
+result = csp_3d_matching(T,U)
 pprint(result)
+
+
+

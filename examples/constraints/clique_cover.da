@@ -1,24 +1,24 @@
-def constraint(name= 'clique_cover', pars={vertex, edge, k}):
+def csp_clique_cover(vertex, edge, k):
 	# Variables:
 	vertex: set[int]                                  # a set of vertices
-	edge: dict(key= (vertex,vertex), val= ints(0,1))  # a set of edges
+	edge: dict[key: (vertex,vertex), val: int[0:1]]  # a set of edges
 	k: int                         	 # maximum possible number of cliques
 	# a set of cliques. cliques[i,j]: the ith subset containts vertices j
-	cliques: dict(key= (ints(1,k),vertex), val= ints(0,1))
+	cliques: dict[key: (int[1:k],vertex), val: int[0:1]]
 	
 	# Constraints:
 	# the elements in cliques are clique
-	clique = each(i in ints(1,k), has= 
+	clique = each(i in int[1:k], has= 
 	         each(j in vertex, k in vertex, has= j == k or 
 	              cliques[i,j] == 0 or cliques[i,k] == 0 or edge[j,k] == 1))
 	# the cliques cover all the vertices
 	cover = each(j in vertex, has= 
-	        some(i in ints(1,k), has= cliques[i,j] == 1))
+	        some(i in int[1:k], has= cliques[i,j] == 1))
 
 	# Target
 	# find a clique cover of minimum number of cliques
-	num_clique: dict(key= int, val= int) = \
-	        	listof(i, i in ints(1,k), sumof(cliques[i,j], j in vertex) != 0)
+	num_clique: dict[key: int, val: int] = \
+	        	listof(i, i in int[1:k], sumof(cliques[i,j], j in vertex) != 0)
 	return anyof(cliques, clique, cover, to_min(len(num_clique)))
 
 
@@ -27,7 +27,7 @@ from pprint import pprint
 
 # data from https://cs.stackexchange.com/questions/41946/covering-a-graph-with-non-overlapping-cliques
 k = 8
-vertex = {1,2,3,4,5,6,7,8}
+vertex = int[1:8] #{1,2,3,4,5,6,7,8}
 edge = [[0,0,0,1,1,0,1,1],
 		[0,0,1,1,1,1,1,1],
 		[1,1,0,0,1,1,1,1],
@@ -37,7 +37,7 @@ edge = [[0,0,0,1,1,0,1,1],
 		[1,1,1,1,1,0,0,0],
 		[1,1,1,1,1,1,0,0]]
 
-result = query(constraint='clique_cover')
+result = csp_clique_cover(vertex, edge, k)
 pprint(result)
 # have some problem with the result. the generated model and data works correctly in MiniZinc
 # but in python, it gives the correct assignment, but the wrong objective function

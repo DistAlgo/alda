@@ -1,11 +1,11 @@
-def constraint(name= 'max_flow', pars={s,t,vertex,capacity}):
+def csp_max_flow(s,t,vertex,capacity):
   # Variables:
   s: int                                      # the source node
   t: int                                      # the sink node
   vertex: set[int]                            # all vertices
-  capacity: dict(key=(vertex,vertex),val=int) # set of edges with capacity
+  capacity: dict[key:(vertex,vertex),val:int] # set of edges with capacity
   limit: int = max(capacity)                  # upperbound of flow
-  flow: dict(key=(vertex,vertex),val=ints(0,limit))       # a flow
+  flow: dict[key:(vertex,vertex),val:int[0:limit]]       # a flow
   
   # Constraints
   # the flow on each arc must not exceed the capacity
@@ -24,8 +24,8 @@ def constraint(name= 'max_flow', pars={s,t,vertex,capacity}):
 from pprint import pprint
 
 # data from https://developers.google.com/optimization/flow/maxflow
-s = 1
-t = 5
+# s = 1
+# t = 5
 vertex = {1,2,3,4,5}
 capacity = [[0,20,30,10,0],
             [0,0,40,0,30],
@@ -33,5 +33,5 @@ capacity = [[0,20,30,10,0],
             [0,0,5,0,20],
             [0,0,0,0,0]]
 
-result = query(constraint='max_flow')
+result = csp_max_flow(1,5,vertex,capacity)
 pprint(result)

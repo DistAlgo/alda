@@ -1,10 +1,10 @@
-def constraint(name= 'knapsack', pars= {item, size, value, capacity}):
+def csp_knapsack(item, size, value, capacity):
   # Variables:
   item: set[int]                       # number of items
-  size: dict(key=item,val=int)         # size of items
-  value: dict(key=item,val=int)        # value of items
+  size: dict[key:item,val:int]         # size of items
+  value: dict[key:item,val:int]        # value of items
   capacity: int                        # capacity of the knapsack
-  choice: dict(key=item,val=ints(0,1)) # the items put into the knapsack
+  choice: dict[key:item,val:int[0:1]] # the items put into the knapsack
   
   # Constraints:
   # the total size of items in the knapsack must not surpass capacity
@@ -25,5 +25,5 @@ item = {1,2,3,4,5}
 size = [1,1,2,4,12]
 value = [1,2,2,10,4]
 
-result = query(constraint='knapsack')
+result = csp_knapsack(item, size, value, capacity)
 pprint(result)

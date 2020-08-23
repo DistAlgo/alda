@@ -1,8 +1,8 @@
-def constraint(name= 'max_cut', pars={vertex, edge}):
+def csp_max_cut(vertex, edge):
   # Variables:
   vertex: set[int]                            # set of vertices
-  edge: dict(key= (vertex, vertex),val=int)   # set of edges with weight
-  S: dict(key= vertex, val= ints(0,1))        # subset of vertices
+  edge: dict[key: (vertex, vertex),val:int]   # set of edges with weight
+  S: dict[key: vertex, val: int[0:1]]        # subset of vertices
 
   # Target:
   # maximize the total weight of edges between vertices inside S and outside S.
@@ -21,5 +21,5 @@ edge = [[0,1,0,1,0],
 		[1,1,0,0,1],
 		[0,0,1,1,0]]
 
-result = query(constraint='max_cut')
+result = csp_max_cut(vertex, edge)
 pprint(result)

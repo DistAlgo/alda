@@ -1,13 +1,13 @@
-def constraint(name= 'min_cost_flow', pars={s,t,vertex,capacity,cost,sd}):
+def csp_min_cost_flow(s,t,vertex,capacity,cost,sd):
   # Variables:
   s: int                                      # the source node
   t: int                                      # the sink node
   vertex: set[int]                            # all vertices
-  capacity: dict(key=(vertex,vertex),val=int) # set of edges with capacity
+  capacity: dict[key:(vertex,vertex),val:int] # set of edges with capacity
   limit: int = max(capacity)                  # the limit of flow
-  cost: dict(key=(vertex,vertex),val=int)     # the cost for the edges
-  sd: dict(key=vertex,val=int)   # a map from vertex to supply(+)/demand(-)
-  flow: dict(key=(vertex,vertex),val=ints(0,limit))   # a flow
+  cost: dict[key:(vertex,vertex),val:int]     # the cost for the edges
+  sd: dict[key:vertex,val:int]   # a map from vertex to supply(+)/demand(-)
+  flow: dict[key:(vertex,vertex),val:int[0:limit]]   # a flow
   
   # Constraints
   # the flow on each arc must not exceed the capacity
@@ -29,8 +29,8 @@ def constraint(name= 'min_cost_flow', pars={s,t,vertex,capacity,cost,sd}):
 from pprint import pprint
 
 # data from https://developers.google.com/optimization/flow/mincostflow
-s = 1;
-t = 5;
+# s = 1;
+# t = 5;
 vertex = {1,2,3,4,5}
 capacity = [[0,15,8,0,0],
             [0,0,20,4,10],
@@ -44,5 +44,5 @@ cost = [[0,4,4,0,0],
         [0,0,3,0,0]]
 sd = [20,0,0,-5,-15];
 
-result = query(constraint='min_cost_flow')
+result = csp_min_cost_flow(1,5,vertex,capacity,cost,sd)
 pprint(result)

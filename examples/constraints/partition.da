@@ -1,16 +1,16 @@
-def constraint(name= 'partition', pars={n, X}):
+def csp_partition(n, X):
     # Variables
     n: int  # the maximum integer involved in the problem
-    X: dict(key= ints(1,n), val= int)   # a multiset of int
+    X: dict[key: int[1:n], val: int]   # a multiset of int
     ub: int = max(X)
-    S: dict(key= ints(1,n), val= ints(0,ub))   # a subset of X
-    T: dict(key= ints(1,n), val= ints(0,ub))   # a subset of X
+    S: dict[key: int[1:n], val: int[0:ub]]   # a subset of X
+    T: dict[key: int[1:n], val: int[0:ub]]   # a subset of X
     
     # Constraints
     # S+T = X
-    partition= each(i in ints(1,n), has= S[i]+T[i] == X[i])
+    partition= each(i in int[1:n], has= S[i]+T[i] == X[i])
     # sum of the numbers in S equals those of T
-    eq= sumof(S[i]*i, i in ints(1,n)) == sumof(T[i]*i, i in ints(1,n))
+    eq= sumof(S[i]*i, i in int[1:n]) == sumof(T[i]*i, i in int[1:n])
     
     # Target:
     # find the partition S and T that satisfy the constraints
@@ -20,8 +20,8 @@ def constraint(name= 'partition', pars={n, X}):
 
 from pprint import pprint
 
-n = 2
-X = [4,1]
+# n = 2
+# X = [4,1]
 
-result = query(constraint='partition')
+result = csp_partition(2, [4,1])
 pprint(result)

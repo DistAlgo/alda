@@ -1,9 +1,9 @@
-def constraint(name= 'mis', pars={vertex, edge}):
+def csp_mis(vertex, edge):
 	# Variables:
 	vertex: set[int]                                  # set of vertices
-	edge: dict(key= (vertex, vertex), val= ints(0,1)) # set of edges
+	edge: dict[key: (vertex, vertex), val: int[0:1]] # set of edges
 	# a set of vertices formulating an independent set
-	mis: dict(key= vertex, val= ints(0,1))   
+	mis: dict[key: vertex, val: int[0:1]]   
 	
 	# Constraints:
 	# no edges between any two vertices in the set
@@ -29,5 +29,5 @@ edge = [[0,1,1,0,0,0,1,0],
 		[1,0,0,0,1,0,0,1],
 		[0,1,0,0,0,1,1,0]]
 
-result = query(constraint='mis')
+result = csp_mis(vertex, edge)
 pprint(result)

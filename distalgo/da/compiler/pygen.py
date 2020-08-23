@@ -971,6 +971,10 @@ class PythonGenerator(NodeVisitor):
                         ast = IfExp(test,
                                     propagate_fields(pyTuple([elem])),
                                     pyTuple([]))
+                    elif isinstance(node, dast.LenCompExpr):
+                        ast = pyCall("lenof", args=[IfExp(test,
+                                                          propagate_fields(pyList([elem])),
+                                                          pyList([]))])
                     elif isinstance(node, dast.GeneratorExpr):
                         # Impossible:
                         self.error("Illegal generator expression.", node)
@@ -1347,7 +1351,7 @@ class PythonGenerator(NodeVisitor):
             if item.asname is None:
                 names.append(alias(item.name, None))
             else:
-                names.append(alias(item.name, item.asname.name))
+                names.append(alias(item.name, item.asname))
         return [ImportFrom(node.module, names, node.level)]
 
     def visit_AssertStmt(self, node):

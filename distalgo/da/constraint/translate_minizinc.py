@@ -3,6 +3,7 @@ from da.compiler import dast
 from . import constraint_ast as cast
 import os, sys
 from pprint import pprint
+from da.compiler.utils import CompilerMessagePrinter
 
 MZ_MODEL_HOME = os.path.join(os.path.dirname(__file__),'minizinc_model')
 if not os.path.exists(MZ_MODEL_HOME):
@@ -93,31 +94,39 @@ MZ_LIBRARY = {
 	MZ_ALLDIFF: "globals.mzn"
 }
 
-class Translator(NodeVisitor):
-	def __init__(self, filename):
+class Translator(NodeVisitor, CompilerMessagePrinter):
+	def __init__(self, filename="", _parent=None):
+		CompilerMessagePrinter.__init__(self, filename, _parent=_parent)
+		NodeVisitor.__init__(self)
 		self.returnVariables = []
 		self.augVariables = []
 		self.augConstraints = []
 		self.activeLibrary = set()
-		self.file = open(os.path.join(MZ_MODEL_HOME,filename+'.mzn'),'w')
+		# self.file = open(os.path.join(MZ_MODEL_HOME,filename+'.mzn'),'w')
 
 
 	def visit(self, node):
-		if isinstance(node, dict):
-			target = self.visit(node['target'])
+		if isinstance(node, cast.CSP):
+			txt = ""
+			target = self.visit(node.objective)
 			var = []
 			con = []
-			for n, v in node['variable'].items():
+			for n, v in node.variables.items():
 				var.append(self.visit(v))
-			for n, c in node['constraint'].items():
+			for n, c in node.constraints.items():
 				con.append(self.visit(c))
 			for l in self.activeLibrary:
-				self.file.write('include "%s";\n' % l)
+				txt += 'include "%s";\n' % l
+				# self.file.write('include "%s";\n' % l)
 			for v in var:
-				self.file.write(v)
+				txt += v
+				# self.file.write(v)
 			for c in con:
-				self.file.write(c)
-			self.file.write(target)
+				txt += c
+				# self.file.write(c)
+			txt += target
+			return txt
+			# self.file.write(target)
 		elif isinstance(node, str):
 			return node
 		else:
@@ -325,11 +334,17 @@ class Translator(NodeVisitor):
 	def visit_TupleExpr(self,node):
 		return [self.visit(e) for e in node.subexprs]
 
+	def visit_SliceExpr(self, node):
+		return '%s..%s' % (self.visit(node.lower), self.visit(node.upper))
+
 	def visit_SubscriptExpr(self, node):
 		#  'subexprs': [<da.compiler.dast.NameExpr object at 0x10d1fdc90>,
 		#			   <da.compiler.dast.TupleExpr object at 0x10d1fd590>]}
 		var = self.visit(node.value)
 		idx = self.visit(node.index)
+		if var == 'int' or var == 'float':
+			return idx
+
 		if isinstance(idx, list):
 			return '%s[%s]' % (var, ', '.join(idx))
 		else:
@@ -414,7 +429,7 @@ class Translator(NodeVisitor):
 		
 		txt = ''
 		typ = MZ_TYPE_DICT[node.type]
-		if not node.parameter:
+		if node.parameter is False:
 			txt += 'var '
 			if node.opt:
 				txt += 'opt '
@@ -439,7 +454,7 @@ class Translator(NodeVisitor):
 		key = self.visit(node.key)
 		val = self.visit(node.val)
 		txt += 'array [%s] of ' % key
-		if not node.parameter:
+		if node.parameter is False:
 			txt += 'var '
 		if node.opt:
 			txt += 'opt '
@@ -455,7 +470,7 @@ class Translator(NodeVisitor):
 		# % Set type-inst expressions
 		# <set-ti-expr-tail> ::= "set" "of" <base-type>
 		txt = ''
-		if not node.parameter:
+		if node.parameter is False:
 			txt = 'var '
 		if node.opt:
 			txt += 'opt '

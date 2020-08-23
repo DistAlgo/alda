@@ -33,12 +33,9 @@ from .. import __version__
 from .. import common
 from ..importer import da_cache_from_source
 from .utils import is_valid_debug_level, set_debug_level, to_source, to_file
-from .exparser import daast_from_file
-from .exparser import daast_from_str
-from .expygen import PythonGenerator
-# from .parser import daast_from_file
-# from .parser import daast_from_str
-# from .pygen import PythonGenerator
+from .parser import daast_from_file
+from .parser import daast_from_str
+from .pygen import PythonGenerator
 from .incgen import gen_inc_module
 from .pseudo import DastUnparser
 
@@ -67,11 +64,13 @@ def dastr_to_pyast(src, filename='<str>', args=None):
     compiler. Returns the generated Python AST.
 
     """
-    # print('ui:dastr_to_pyast')
     daast = daast_from_str(src, filename, args)
     if daast is not None and common.get_runtime_option('rule', default=False):
         from da.rule.ruleparser import ruleast_from_daast
         daast = ruleast_from_daast(daast, filename)
+    if daast is not None and common.get_runtime_option('constraint', default=False):
+        from da.constraint.cparser import cast_from_daast
+        daast = cast_from_daast(daast, filename)
     if daast is not None:
         pyast = PythonGenerator(filename, args).visit(daast)
         if pyast is None:
@@ -93,7 +92,6 @@ def dafile_to_pyast(filename, args=None):
     Returns the generated Python AST.
 
     """
-    # print('ui:dafile_to_pyast')
     if args is None:
         args = parse_compiler_args([])
     daast = daast_from_file(filename, args)
@@ -129,7 +127,6 @@ def dafile_to_pycode(filename, args=None, _optimize=-1, dfile=None):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    print('dafile_to_pycode')
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
         return _pyast_to_pycode(pyast,
@@ -154,7 +151,7 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
         os.mkdir('timing')
     open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
     if pyast is not None:
-        # open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
+        open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:
         return None
@@ -167,7 +164,6 @@ def dafile_to_pystr(filename, args=None):
     compiler. Returns the generated Python code as a string.
 
     """
-    # print('ui:dafile_to_pystr')
     pyast = dafile_to_pyast(filename, args)
     if pyast is not None:
         return to_source(pyast)
@@ -183,7 +179,6 @@ def dastr_to_pystr(src, filename='<str>', args=None):
     compiler. Returns the generated Python code as a string.
 
     """
-    # print('dastr_to_pystr')
     pyast = dastr_to_pyast(src, filename, args)
     if pyast is not None:
         return to_source(pyast)
@@ -217,7 +212,6 @@ def dafile_to_pseudofile(filename, outname=None, args=None):
     filename is inferred by replacing the suffix of 'filename' with '.py'.
 
     """
-    # print('ui:dafile_to_pseudofile')
     purename, _, suffix = filename.rpartition(".")
     if len(purename) == 0:
         purename = suffix
@@ -249,7 +243,6 @@ def dafile_to_pyfile(filename, outname=None, args=None):
     'args.filename' with '.py'.
 
     """
-    # print('ui:dafile_to_pyfile')
     purename, _, suffix = filename.rpartition(".")
     if len(purename) == 0:
         purename = suffix
@@ -278,7 +271,6 @@ def dafile_to_pycfile(filename, outname=None, optimize=-1, args=None,
     """Byte-compile one DistAlgo source file to Python bytecode.
 
     """
-    # print('ui:dafile_to_pycfile')
     import importlib._bootstrap_external
 
     if outname is None:
@@ -327,7 +319,6 @@ def dafile_to_incfiles(args):
     plus '_inc.py'.
 
     """
-    # print('ui:dafile_to_incfiles')
     filename = args.infile
     outname = args.outfile
     incname = args.incfile
