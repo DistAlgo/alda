@@ -58,6 +58,8 @@ import tokenize
 import io
 import os
 
+from pprint import pprint
+
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
 INFSTR = "1e" + repr(sys.float_info.max_10_exp + 1)
@@ -534,9 +536,12 @@ class Unparser:
 
     def _Set(self, t):
         # assert(t.elts) # should be at least one element
-        self.write("{")
-        interleave(lambda: self.write(", "), self.dispatch, t.elts)
-        self.write("}")
+        if t.elts:
+            self.write("{")
+            interleave(lambda: self.write(", "), self.dispatch, t.elts)
+            self.write("}")
+        else:
+            self.write("set()")
 
     def _Dict(self, t):
         self.write("{")
