@@ -206,6 +206,10 @@ else:\n
 			int[:ub] := <= ub
 			int[lb:] := >= lb
 		"""
+		if not isinstance(node.value, dast.NameExpr):
+			return self.generic_visit(node)
+		# print(node)
+		# pprint(vars(node.value))
 		t = node.value.name
 		if t == 'int' and isinstance(node.index, dast.SliceExpr):
 			# range(lb, ub+1, step)
@@ -390,7 +394,7 @@ class DomainParser(NodeVisitor, CompilerMessagePrinter):
 		if node.name in {'int','float','str','bool'}:
 			return cast.DomainBasic(node.name)
 		else:
-			return node
+			return cast.DomainVar(node)
 
 	# def visit_CallExpr(self, node):
 	# 	# ints(lb,ub,step), floats(lb,ub)

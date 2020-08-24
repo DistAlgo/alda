@@ -139,7 +139,8 @@ class DomainSet(DADomain):
 class DomainMultiSet(DADomain):
 	_fields = ['domain']
 	
-
+class DomainVar(DADomain):
+	_fields = ['var']
 
 # objective function
 class Objective(DAConstraints):

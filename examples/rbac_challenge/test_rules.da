@@ -1,0 +1,247 @@
+"""
+#from tmp import *
+
+class P(process):
+  def setup():
+    self.me = 'annie'
+  def printme(x):
+    print(me+x)
+
+class P1(process):
+  def setup():
+    self.me2 = 'annie2'
+  def printme2(x):
+    print(me2+x)
+
+class Test(P,P1,process):
+  def setup():
+    print('set up Test')
+    #P.setup()
+    #super().setup()
+    self.more = 'liu'
+    print(me, me2, more)
+  def run():
+    print('run')
+    printme(more)
+    printme2(more)
+    print(me, me2, more)
+    #print(super().me)
+    #super().printme(more)
+    #super().printme2(more)
+
+def main():
+  t = new(Test)
+  print('after new')
+  setup(t,[])
+  print('after setup')
+  start(t)
+"""
+
+#trans_rules = 'trans_rules'
+#SSD = 'SSD'
+def anyof(s):
+  """return any element of set s if s is not empty or 'None' otherwise"""
+  return next(iter(s)) if s else None
+
+#import inspect
+
+from ac_rules import *
+
+class TestCore(CoreRBAC,process):
+
+  def setup():
+    pass
+
+  def _print():
+    print(USERS,ROLES,PERMS,UR,PR)
+
+  def do(op,*args):
+    op(*args)
+
+  def adds():
+    print('==== core adds')
+    do(super().AddUser,'annie')
+    #print(USERS)
+    super().AddUser('annie')
+    super().AddUser('john')
+    super().AddRole('professor')
+    super().AddRole('faculty')
+    super().AddPerm('profroom')
+    super().AddPerm('facroom')
+    super().AddUR('annie','professor')
+    super().AddUR('john','faculty')
+    super().AddPR('profroom','professor')
+    super().AddPR('facroom','faculty')
+    #_print()
+
+  def deletes():
+    print('==== core deletes') # inspect.stack()[0][3])
+    super().DeleteUR('annie','professor')
+    super().DeleteUR('john','faculty')
+    super().DeletePR('profroom','professor')
+    super().DeletePR('facroom','faculty')
+    super().DeleteUser('annie')
+    super().DeleteUser('john')
+    super().DeleteRole('professor')
+    super().DeleteRole('faculty')
+    super().DeletePerm('profroom')
+    super().DeletePerm('facroom')
+    #_print()
+
+  def queries():
+    print('==== core queries')
+    print(super().AssignedUsers('professor'))
+    print(super().AssignedUsers('faculty'))
+    print(super().AssignedRoles('annie'))
+    print(super().AssignedRoles('john'))
+    print(super().UserPermissions('annie'))
+    print(super().UserPermissions('john'))
+    print(super().CheckAccess('annie','profroom'))
+    print(super().CheckAccess('john','facroom'))
+    print(super().CheckAccess('annie','facroom'))
+    print(super().CheckAccess('john','profroom'))
+
+  def run():
+    print('start test ',self)
+    adds()
+    queries()
+    deletes()
+    print('end test ',self)
+
+class TestHier(HierarchicalRBAC,TestCore,process):
+
+  def _print():
+    super()._print()
+    print(RH)
+
+  def adds():
+    super().adds()
+    print('==== hier adds')
+    super().AddInheritance('professor','faculty')
+
+  def deletes():
+    print('==== hier deletes')
+    super().DeleteInheritance('professor','faculty')
+    super().deletes()
+
+  def queries():
+    super().queries()
+    print('==== hier queries')
+    print(super().AuthorizedUsers('professor'))
+    print(super().AuthorizedUsers('faculty'))
+    print(super().AuthorizedRoles('annie'))
+    print(super().AuthorizedRoles('john'))
+    print(super().UserPermissions('annie'))
+    print(super().UserPermissions('john'))
+    print(super().CheckAccess('annie','facroom'))
+    print(super().CheckAccess('john','profroom'))    
+
+class TestSSD(CoreRBACwithSSD,TestCore,process):
+
+  # need to change countof(...) to len(setof(...) before running constraint()
+  # need to add def of anyof to SSD before running 3 commented functions
+
+  def _print():
+    super()._print()
+    print(SsdNAMES)
+
+  def adds():
+    super().adds()
+    print('==== SSD adds')
+    super().AddRole('order')
+    super().AddRole('pay')
+    super().AddRole('receive')
+    super().CreateSsdSet('buy', {'order', 'pay', 'receive'}, 2)
+    super().AddSsdRoleMember('buy', 'use')
+    #super().SetSsdSetCardinality('buy', 3)
+
+  def deletes():
+    print('==== SSD deletes')
+    super().DeleteSsdRoleMember('buy', 'use')
+    #super().DeleteSsdSet('buy')
+    super().DeleteRole('order')
+    super().DeleteRole('pay')
+    super().DeleteRole('receive')
+    super().deletes()
+
+  def queries():
+    super().queries()
+    print('==== SSD queries')
+    #print(super().constraint())
+    print(super().SsdRoleSets())
+    print(super().SsdRoleSetRoles('buy'))
+    #print(super().SsdRoleSetCardinality('buy'))
+
+class TestHierSSD(HierarchicalRBACwithSSD,TestHier,TestSSD,process): 
+  def adds():
+    super().adds()
+
+#class TestDist(DistRBAC,TestCore,process):
+#class TestDist(DistRBAC,TestHier,process):
+#class TestDist(DistRBAC,TestSSD,process):
+class TestDist(DistRBAC,TestHierSSD,process):
+
+  def setup(OTHERS):
+    output('====started setup in TestDist')
+    super().setup(OTHERS)
+    output('====ended setup in TestDist')
+
+  def adds():
+    super().adds()
+    output('==== dist adds')
+    for o in OTHERS:
+      output('here')
+      super().AddGuestRole(o,'professor','guestprofessor')
+
+  def deletes():
+    output('==== dist deletes')
+    for o in OTHERS:
+      super().DeleteGuestRole(o,'professor','guestprofessor')
+    super().deletes()
+
+  def queries():
+    super().queries()
+    output('==== dist queries')
+    for o in OTHERS:
+      output('GuestRoles', super().GuestRoles(o,'professor'))
+    output('OthersRoles', super().OthersRoles('guestprofessor'))
+    await timeout(2)
+    super().queries()
+
+  def run():
+    adds()
+    -- ready
+    queries()
+    await timeout(4)
+    deletes()
+
+class TestAdmin(AdminRBAC,TestHierSSD, process):
+
+  def queries():
+    super().queries()
+    print('==== AdminRBAC queries')
+    print(super().MineMinRoles())
+
+
+    
+def main(): 
+  #test = new(TestCore,[])
+  #test = new(TestHier,[])
+  #test = new(TestSSD,[])
+  #test = new(TestHierSSD,[])
+  test = new(TestAdmin,[])
+  start(test)
+
+  # ds = new(TestDist, num= 2)
+  # dl = list(ds)
+  # print('dl: ', dl)
+  # for d in ds: setup(d, [ds-{d}])
+  # print('starting')
+  # start(ds)
+  # await timeout(1)
+  # send(('AddGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
+  # await timeout(2)
+  # send(('DeleteGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
+  # print('ending')
+  # end(ds)
+

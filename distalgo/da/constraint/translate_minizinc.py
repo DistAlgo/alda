@@ -411,6 +411,13 @@ class Translator(NodeVisitor, CompilerMessagePrinter):
 #					   | <num-expr> ".." <num-expr>
 # % Type-inst variables
 # <ti-variable-expr-tail> ::= $[A-Za-z][A-Za-z0-9_]*
+	def visit_DomainVar(self, node):
+		txt = ''
+		if node.parameter is False:
+			txt += 'var '
+		txt += self.visit(node.var)
+		return txt
+
 	def visit_DomainBasic(self, node):
 		# DomainBasic: int, float, str, bool
 		#	 type:   string
@@ -472,8 +479,8 @@ class Translator(NodeVisitor, CompilerMessagePrinter):
 		txt = ''
 		if node.parameter is False:
 			txt = 'var '
-		if node.opt:
-			txt += 'opt '
+		# if node.opt:
+		# 	txt += 'opt '
 		txt += 'set'
 		if not node.domain:
 			return txt

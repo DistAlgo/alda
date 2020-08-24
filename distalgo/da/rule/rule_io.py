@@ -15,6 +15,6 @@ def read_answer(filename):
 
 def clear_cache(filename):
 	for x in Path(rule_path).iterdir():
-		if x.is_file() and PurePath(x).name.startswith(filename):
+		if x.is_file() and PurePath(x).name.startswith(filename+'.RuleSet'):
 			x.unlink()
 		
