@@ -95,7 +95,14 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 			# 	return rtn
 			func_template = """result = {KW_QUERY}('{RuleTarget}', {KWARGS})\n
 rtn = list()\n
-for r in [{ReturnVars}]:\n
+returnVars = [{ReturnVars}]\n
+if not result:\n
+	print('Unsatisfiable!')\n
+	if len(returnVars) == 1:\n
+		return None\n
+	else:\n
+		return (None,)*len(returnVars)\n
+for r in returnVars:\n
 	if r in result:\n
 		rtn.append(result[r])\n
 	elif "objective" in result and r == {OBJNAME}:\n
