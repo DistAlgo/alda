@@ -10,8 +10,8 @@ def csp_sudoku(s,puzzle=None):
 	# the numbers in each column are pairwisely different
 	column = each(j in int[1:n], has= alldiff(puzzle[i,j], i in int[1:n]))
 	# the numbers in each sub-grid are pairwisely different
-	square = each(i in int[1:n], j in int[1:n], has=
-	         alldiff(puzzle[s*(i-1)+p, s*(j-1)+q], p in int[1:n], q in int[1:n]))
+	square = each(i in int[1:s], j in int[1:s], has=
+	         alldiff(puzzle[s*(i-1)+p, s*(j-1)+q], p in int[1:s], q in int[1:s]))
 	# Target:
 	# find a filling of puzzle that satisfies the constraint
 	return anyof(puzzle, row, column, square)
