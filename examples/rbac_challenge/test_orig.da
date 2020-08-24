@@ -205,41 +205,33 @@ class TestDist(DistRBAC,TestHierSSD,process):
     for o in OTHERS:
       output('GuestRoles', super().GuestRoles(o,'professor'))
     output('OthersRoles', super().OthersRoles('guestprofessor'))
-    await timeout(2)
+    await(False, timeout=2)
     super().queries()
 
   def run():
     adds()
     -- ready
     queries()
-    await timeout(4)
+    await(False, timeout= 4)
     deletes()
-
-class TestAdmin(AdminRBAC,TestHierSSD, process):
-
-  def queries():
-    super().queries()
-    print('==== AdminRBAC queries')
-    print(super().MineMinRoles())
-
+    
 def main(): 
   #test = new(TestCore,[])
   #test = new(TestHier,[])
   #test = new(TestSSD,[])
   #test = new(TestHierSSD,[])
-  test = new(TestAdmin,[])
-  start(test)
+  #start(test)
 
-  # ds = new(TestDist, num= 2)
-  # dl = list(ds)
-  # print('dl: ', dl)
-  # for d in ds: setup(d, [ds-{d}])
-  # print('starting')
-  # start(ds)
-  # await timeout(1)
-  # send(('AddGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
-  # await timeout(2)
-  # send(('DeleteGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
-  # print('ending')
-  # end(ds)
+  ds = new(TestDist, num= 2)
+  dl = list(ds)
+  print('dl: ', dl)
+  for d in ds: setup(d, [ds-{d}])
+  print('starting')
+  start(ds)
+  await(False, timeout=1)
+  send(('AddGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
+  await(False, timeout=2)
+  send(('DeleteGuestUR', 'annie', dl[0], 'professor'), to= dl[1])
+  print('ending')
+  end(ds)
 

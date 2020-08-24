@@ -9,16 +9,6 @@ We consider Role-Based Access Control (RBAC) with 6 components:
   Distributed RBAC
 """
 
-def map_to_int_list(obj):
-  IdDict = dict()
-  ObjDict = dict()
-  i = 1
-  for o in obj:
-    IdDict[o] = i
-    ObjDict[i] = o
-    i += 1
-  return list(range(1,len(obj)+1)), IdDict, ObjDict
-
 class CoreRBAC(process):
   """
   Core RBAC keeps several sets including the following:
@@ -119,12 +109,12 @@ class HierarchicalRBAC_set(CoreRBAC,process):   # using while for Trans
 
 class HierarchicalRBAC_rules(CoreRBAC,process): # using rules for Trans
 
-  def rules_Trans_rules():
-    path(x,y), if_(edge(x,y))
-    path(x,y), if_(edge(x,z), path(z,y))
+  def rules(name= 'Trans_rules'):
+    if edge(x,y): path(x,y)
+    if edge(x,z) and path(z,y): path(x,y) 
 
   def Trans(E):
-    return infer(rule=rules_Trans_rules, bindings=[('edge',E)], queries=['path']) | setof((r,r), r in ROLES)
+    return infer(path, edge=E, rules=Trans_rules) | setof((r,r), r in ROLES)
 
 class HierarchicalRBAC(HierarchicalRBAC_set,process):
   """
@@ -169,60 +159,6 @@ class HierarchicalRBAC(HierarchicalRBAC_set,process):
   def AuthorizedRoles(user):
     return setof(r, (_user,asc) in UR, (asc,r) in Trans(RH))
 
-class HierarchicalRBAC_auto(CoreRBAC,process):
-  """
-  Hierarchical RBAC keeps also a role hierarchy:
-
-    RH: set of pairs of roles, called ascendant and descendant roles,
-    where an ascendant role inherits permissions from a descendant role
-
-  with constraints:
-
-    RH subset ROLES * ROLES, and RH is acyclic
-
-  update functions for RH, subject to the constraints above:
-
-    AddInheritance(asc, desc)
-    DeleteInheritance(asc, desc)
-    with the same kinds of pre-conditions as updates in CoreRBAC
-
-  query functions including the following:
-
-    Trans:
-      the transitive closure of role hierarchy union reflexive role pairs
-    AuthorizedUsers(role):
-      the set of users of role or ascendant roles of role
-    AuthorizedRoles(user):
-      the set of roles of user or descendant roles of the roles
-  """
-
-  def setup(): 
-    self.RH = set()            # RH subset ROLES * ROLES, where asc inh desc
-    self.transRH = set()
-    self.authorizedUR = set()
-
-  def AddInheritance(a, d):
-    # pre: a in ROLES,d in ROLES, (a,d) notin RH, a!=d, (d,a) notin Trans(RH)
-    RH.add((a,d))
-
-  def DeleteInheritance(a, d): # pre: (a,d) in RH
-    RH.remove((a,d))
-
-  def rules_authorizedUR_rs():
-    transRH(x,y), if_(RH(x,y))
-    transRH(x,y), if_(RH(x,z), transRH(z,y))
-    transRH(x,x), if_(ROLES(x))
-
-  def rules_rules_authorizedUR_rs():
-    authorizedUR(u,role), if_(USERS(u), ROLES(asc), UR(u,asc), transRH(asc ,role))
-
-  def AuthorizedUsers(role):
-    assert role in ROLES
-    return setof(u, (u,_role) in authorizedUR)
-  
-  def AuthorizedRoles(user):
-    assert user in USERS
-    return setof(r, (_user,r) in authorizedUR)
 
 class CoreRBACwithSSD(CoreRBAC,process):
   """
@@ -305,7 +241,7 @@ class CoreRBACwithSSD(CoreRBAC,process):
     return anyof(c, (_name,c) in SsdNC)
 
 
-class HierarchicalRBACwithSSD(HierarchicalRBAC_auto,CoreRBACwithSSD,process):
+class HierarchicalRBACwithSSD(HierarchicalRBAC,CoreRBACwithSSD,process):
   """
   Hierarchical RBAC with SSD combines all from
   Hierarchical RBAC and Core RBAC with SSD, except that 
@@ -317,7 +253,7 @@ class HierarchicalRBACwithSSD(HierarchicalRBAC_auto,CoreRBACwithSSD,process):
                 countof(r, r in AuthorizedRoles(u), (_name,r) in SsdNR) <=c)
 
 
-class AdminRBAC(HierarchicalRBACwithSSD, process):
+class AdminRBAC(HierarchicalRBACwithSSD):
   """
   Administrative RBAC for HierarchicalRBACwithSSD
   has optimization and planning functions:
@@ -347,60 +283,10 @@ class AdminRBAC(HierarchicalRBACwithSSD, process):
     CoreRBAC, HierarchicalRBAC, or CoreRBACwithSSD.
   """
 
-  def csp_MineMinRoles(USERS, ROLES, PERMS, NAMES, UR, PR, SsdNC, SsdNR, authUR):
-    USERS: set[int]
-    ROLES: set[int]
-    PERMS: set[int]
-    NAMES: set[int]
-    UR: dict[key: (USERS,ROLES), val:int[0:1]]
-    PR: dict[key: (PERMS,ROLES), val:int[0:1]]
-    SsdNC: dict[key: NAMES, val:int]
-    SsdNR: dict[key: (NAMES,ROLES), val:int[0:1]]
-    authUR: dict[key: (USERS,ROLES), val:int[0:1]]
-
-    domUR: set[USERS] = setof(u, u in USERS, r in ROLES, UR[u,r] == 1)
-    ranUR: set[ROLES] = setof(r, u in USERS, r in ROLES, UR[u,r] == 1)
-    domPR: set[PERMS] = setof(p, p in PERMS, r in ROLES, PR[p,r] == 1)
-    ranPR: set[ROLES] = setof(r, p in PERMS, r in ROLES, PR[p,r] == 1)
-    UP: dict[key: (USERS,PERMS), val:bool] = array2d(USERS,PERMS,listof(sumof(UR[u,r] == 1 and PR[p,r] == 1, r in ROLES) > 0, p in PERMS, u in USERS))
-
-    R: dict[key: ROLES, val:int[0:1]]
-    UR2: dict[key: (USERS,ROLES), val:int[0:1]]
-    PR2: dict[key: (PERMS,ROLES), val:int[0:1]]
-    UP2: dict[key: (USERS,PERMS), val:bool] = array2d(USERS,PERMS,listof(sumof(UR2[u,r] == 1 and PR2[p,r] == 1, r in ROLES) > 0, p in PERMS, u in USERS))
-
-    def subsets():
-      each(r in ROLES, has= R[r] == 0 or (r in ranUR and r in ranPR))
-      each(u in USERS, r in ROLES, has= UR2[u,r] == 0 or (u in domUR and R[r] == 1))
-      each(p in PERMS, r in ROLES, has= PR2[p,r] == 0 or (p in domPR and R[r] == 1))
-
-    equiv = each(u in USERS, p in PERMS, has= UP[u,p] == UP2[u,p])
-
-    # Will cause unsatisfication
-    # ssd = each(u in USERS, name in SsdNC, has=
-    #               countof(r, r in ROLES, authUR[u,r] == 1, SsdNR[name,r] == 1) <= SsdNC[name])
-
-    return anyof((R, UR2, PR2), ssd, subsets, equiv, to_min(len(R)))
-
   def MineMinRoles():
-    users, userIdDict, userDict = map_to_int_list(USERS)
-    roles, roleIdDict, roleDict = map_to_int_list(ROLES)
-    perms, permIdDict, permDict = map_to_int_list(PERMS)
-    names, nameIdDict, nameDict = map_to_int_list(SsdNAMES)
-
-    ur = [[1 if (userDict[u],roleDict[r]) in UR else 0 for r in roles] for u in users]
-    pr = [[1 if (permDict[p],roleDict[r]) in PR else 0 for r in roles] for p in perms]
-    nc = listof(c, n in names, (nameDict[n],c) in SsdNC)# [c for n in names if (nameDict[n],c) in SsdNC]
-    nr = [[1 if (nameDict[n],roleDict[r]) in SsdNR else 0 for r in roles] for n in names]
-    authUR = [[1 if (userDict[u],roleDict[r]) in authorizedUR else 0 for r in roles] for u in users]
-
-    (R, UR2, PR2) = csp_MineMinRoles(set(users), set(roles), set(perms), set(names), ur, pr, nc, nr, authUR)
-    return (setof(roleDict[r], r in roles, R[r-1] == 1), 
-            setof((userDict[u], roleDict[r]), u in users, r in roles, UR2[u-1][r-1] == 1), 
-            setof((permDict[p], roleDict[r]), p in perms, r in roles, PR2[p-1][r-1] == 1) )
-    # return anyof((R, UR2, PR2), R in subset(ran(UR)&ran(PR)),
-    #              UR2 in subset(dom(UR)*R), PR2 in subset(dom(PR)*R),
-    #              UR2 * PR2 == UR * PR, minimize= count(R))
+    return anyof((R, UR2, PR2), R in subset(ran(UR)&ran(PR)),
+                 UR2 in subset(dom(UR)*R), PR2 in subset(dom(PR)*R),
+                 UR2 * PR2 == UR * PR, minimize= count(R))
 
   def MineMinRoleAssignments():
     return anyof((R, UR2, PR2), R in subset(ran(UR)&ran(PR)),
