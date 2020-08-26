@@ -106,7 +106,8 @@ def view_file(path, outputDir, prefix):
         pkgid = getid(_id)
         facts = viewDast(pyast, [pkgid])
         allFacts |= facts
-        open(os.path.join(outputDir,_id.replace('/','.')+'.py'), 'w').write('\n'.join(repr(x) for x in facts))
+        deli = '\\' if sys.platform == 'win32' else '/'
+        open(os.path.join(outputDir,_id.replace(deli,'.')+'.py'), 'w').write('\n'.join(repr(x) for x in facts))
 
 def view_directory(path, outputDir, prefix):
     print(path, outputDir, prefix)
