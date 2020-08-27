@@ -1,4 +1,4 @@
-import os, ast, shutil
+import os, sys, ast, shutil
 from da.compiler.utils import to_source
 from analyzer import Analyzer
 
@@ -27,12 +27,13 @@ class NumpyAnalyzer(Analyzer):
 		candidate = infer(rule=self.rules_vProdToNp, queries=['numpyCandidate'])
 		
 		# collect all the scalar multiplications
-		scalarExpr = setof((id,'scalar',target,tupleof((op1,op2), (_id,_,_,op1,op2,_) in  candidate), f), 
-						   (id,'scalar',target,_,_,f) in candidate)
+		scalarExpr = setof((id,'scalar',target,tupleof((op1,op2), (_id,_,_,op1,op2) in  candidate)), 
+						   (id,'scalar',target,_,_) in candidate)
 		
 		# convert to numpy
 		transDict = dict()
-		for id, op, target, op1, op2, f in candidate:
+		for id, op, target, op1, op2 in candidate:
+			f = self.FileDict[id]
 			if f not in transDict:
 				transDict[f] = dict()
 			if op == 'inner':
@@ -45,7 +46,8 @@ class NumpyAnalyzer(Analyzer):
 				continue
 			transDict[f][self.ValueDict[id]] = npAst
 
-		for id, op, target, scalars, f in scalarExpr:
+		for id, op, target, scalars in scalarExpr:
+			f = self.FileDict[id]
 			if f not in transDict:
 				transDict[f] = dict()
 			rhs = self.gen_BinMult(scalars[0])
@@ -59,22 +61,27 @@ class NumpyAnalyzer(Analyzer):
 				print('========== %s: lineno: %s ==========%s----------- transformed to ------------%s' 
 						% (self.ValueDict[file], key.lineno, to_source(key), to_source(val)))
 
+		self.write_transformed(transDict)
+
 	def write_transformed(self, transDict):
-		outFolder = 'output'
+		outFolder = os.path.join('output','NumpyAnalyzer')
 		basename = os.path.basename(self.filename)
 		outroot = os.path.join(outFolder,basename)
 		if os.path.exists(outroot):
 			shutil.rmtree(outroot)
-		for key, val in transDict.items():
-			outFolder = 'output'
-			file = self.ValueDict[key].split('.')
-			for fdir in file[:-1]:
-				outFolder = os.path.join(outFolder,fdir)
-				if not os.path.exists(outFolder):
-					os.mkdir(outFolder)
-			outfile = os.path.join(outFolder,file[-1]+'.py')
-			cr = LoopTansformer(transDict[key]).visit(self.ValueDict[val])
-			txt = to_source(cr)
+		for m in self.Module:
+			fileid = self.FileDict[m[0]]
+			file = self.ValueDict[fileid]
+			outdir = os.path.join(outFolder, os.path.dirname(file))
+			os.makedirs(outdir, exist_ok=True)
+			outfile = os.path.join(outdir, os.path.basename(file)+'.py')
+			
+			if fileid in transDict:
+				cr = LoopTansformer(transDict[fileid]).visit(self.ValueDict[m[0]])
+				txt = 'import numpy as np\n'
+				txt += to_source(cr)
+			else:
+				txt = to_source(self.ValueDict[m[0]])
 			open(outfile,'w').write(txt)
 
 	# vertex product to numpy
@@ -163,9 +170,9 @@ class NumpyAnalyzer(Analyzer):
 			IdxExpr(rhs,operand2,idx))
 
 		# find the loop whose iterator are the same as those inside the loop
-		numpyCandidate(id,op,target,operand1,operand2,fileid), if_(
+		numpyCandidate(id,op,target,operand1,operand2), if_(
 			For(id,itr,_,bodyid,_), Name(itr,idx,_),
 			Member(bodyid,body,_), ListLen(bodyid,1), 		# contains only one statement inside body
-			NumpyPattern(body,idx,op,target,operand1,operand2),# join loop with body and idx
-			ModuleName(id,fileid)) 
+			NumpyPattern(body,idx,op,target,operand1,operand2))# join loop with body and idx
+
 

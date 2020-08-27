@@ -30,14 +30,15 @@ ASTNodes = {#'AST','mod',
 			'comprehension',
 			#'excepthandler',
 			'ExceptHandler',
-			'arguments','arg','keyword','alias','withitem'
+			'arguments','arg','keyword','alias','withitem',
+			# util nodes
+			'is_Sub', 'Member','Context','ListLen',
 			}
 
 
 class Analyzer():
 	def __init__(self, package, mode, query):
 		filename = './data/%s' % package
-		pkgInfo = './data/%s/astFacts/pkginfo_%s.py' %(package,package)
 		self.packName = os.path.basename(filename)
 		bak = os.path.join(filename,'_state')
 		if not (os.path.exists(bak) and os.listdir(bak)):
@@ -47,10 +48,6 @@ class Analyzer():
 			if y.startswith('.'):
 				continue
 			setattr(self,y,pickle.load(open(os.path.join(bak,y),'rb')))
-			
-		f = open(pkgInfo)
-		self.sub_pkg = {eval(x)[1:] for x in f if x}
-		f.close()
 
 		for x in ASTNodes:
 			if not hasattr(self, x):

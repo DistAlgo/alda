@@ -61,7 +61,7 @@ class ResolverException(CompilerException): pass
 
 def to_source(tree):
     textbuf = io.StringIO(newline='')
-    textbuf.write(VERSION_HEADER.format(da.__version__))
+    # textbuf.write(VERSION_HEADER.format(da.__version__))
     Unparser(tree, textbuf)
     return textbuf.getvalue()
 

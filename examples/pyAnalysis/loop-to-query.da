@@ -1,4 +1,4 @@
-import os, ast, shutil
+import os, sys, ast, shutil
 from da.compiler.utils import to_source
 from analyzer import Analyzer
 
@@ -18,7 +18,7 @@ class LoopAnalyzer(Analyzer):
 
 	def query_candidate_rule(self):
 		candidate = infer(rule=self.rules_compCandidate, queries=['compCandidate'])
-		print(len(candidate))
+		print('-------- number of candidate transformable loops:', len(candidate))
 
 	def rules_compCandidate():
 		# 1. r.append(y), r.add(y)
@@ -64,8 +64,7 @@ class LoopAnalyzer(Analyzer):
 			Attribute(funcid, result, operator, _), Name(result,_,_),
 			Member(argid, elt,_), ListLen(argid,1))
 
-		compFor(forid, target, itr, result, elt, operator, fileid), if_(
-			ModuleName(forid,fileid),
+		compFor(forid, target, itr, result, elt, operator), if_(
 			For(forid, target, itr, bodyid, _),
 			ListLen(bodyid, 1), Member(bodyid, body, _), 
 			ListSetAdd(body,result, elt, operator))
@@ -75,7 +74,8 @@ class LoopAnalyzer(Analyzer):
 		iterNameDict = {c[0]:self.flattenTuple(self.ValueDict[c[1]]) for c in candidate}
 		transDict = dict()
 		# to comprehension: result = operator(elt for target in iterable)
-		for forid, target, itr, result, elt, operator, fileid in candidate:
+		for forid, target, itr, result, elt, operator in candidate:
+			fileid = self.FileDict[forid]
 			if self.ValueDict[result].id in iterNameDict[forid]:
 				continue
 			op = self.ValueDict[operator]
@@ -95,39 +95,30 @@ class LoopAnalyzer(Analyzer):
 				if fileid not in transDict:
 					transDict[fileid] = dict()
 				transDict[fileid][forast] = compAst
-				print('=======================%s----------------------%s=======================' % (to_source(forast), to_source(compAst)))
-				# write_transformed(transDict)
+
+		for file, innerDict in transDict.items():
+			for key, val in sorted(innerDict.items(), key=lambda t: t[0].lineno):
+				print('========== %s: lineno: %s ==========%s----------- transformed to ------------%s' 
+						% (self.ValueDict[file], key.lineno, to_source(key), to_source(val)))
+
+		self.write_transformed(transDict)
 
 	def write_transformed(self, transDict):
-		outFolder = 'output'
+		outFolder = os.path.join('output','LoopToQuery')
 		basename = os.path.basename(self.filename)
 		outroot = os.path.join(outFolder,basename)
 		if os.path.exists(outroot):
 			shutil.rmtree(outroot)
-		for key, val in transDict.items():
-			outFolder = 'output'
-			file = self.ValueDict[key].split('.')
-			for fdir in file[:-1]:
-				outFolder = os.path.join(outFolder,fdir)
-				if not os.path.exists(outFolder):
-					os.mkdir(outFolder)
-			outfile = os.path.join(outFolder,file[-1]+'.py')
-			cr = LoopTansformer(transDict[key]).visit(self.ValueDict[val])
-			txt = to_source(cr)
+		for m in self.Module:
+			fileid = self.FileDict[m[0]]
+			file = self.ValueDict[fileid]
+			outdir = os.path.join(outFolder, os.path.dirname(file))
+			os.makedirs(outdir, exist_ok=True)
+			outfile = os.path.join(outdir, os.path.basename(file)+'.py')
+			
+			if fileid in transDict:
+				cr = LoopTansformer(transDict[fileid]).visit(self.ValueDict[m[0]])
+				txt =to_source(cr)
+			else:
+				txt = to_source(self.ValueDict[m[0]])
 			open(outfile,'w').write(txt)
-		# for m in self.Module:
-		# 	file = self.ValueDict[m[-1]]
-		# 	print(file)
-		# 	file = file.split('.')
-		# 	outFolder = 'output'
-		# 	for fdir in file[:-1]:
-		# 		outFolder = os.path.join(outFolder,fdir)
-		# 		if not os.path.exists(outFolder):
-		# 			os.mkdir(outFolder)
-		# 	outfile = os.path.join(outFolder,file[-1]+'.py')
-		# 	if m[-1] in transDict:
-		# 		cr = LoopTansformer(transDict[m[-1]]).visit(self.ValueDict[m[0]])
-		# 		txt = to_source(cr)
-		# 	else:
-		# 		txt = to_source(self.ValueDict[m[0]])
-		# 	open(outfile,'w').write(txt)
