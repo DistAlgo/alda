@@ -1,0 +1,84 @@
+# this file contains test cases for ruleset defined in class scope
+# with different local and non-local predicates
+
+correct_result_1 = {(1,2), (1,3), (2,3)}
+correct_result_2 = {(4,5), (4,6), (5,6)}
+edge_global = {(4,5), (5,6)}
+
+# test with local "edge" predicates
+class Graph1(process):
+    def setup(E): pass
+
+    def rules_trans():
+        path(x,y), if_(edge(x,y))
+        path(x,y), if_(edge(x,z), path(z,y))
+
+    def trans(E):
+        return infer(rule=rules_trans, bindings = [('edge', E)], queries=['path'])
+
+    def run():
+        result = trans(E)
+        assert (result == correct_result_1), ('WRONG RESULT: QUERY 1 !!!!!!!!!!!\nQuery result: ' + str(result))
+
+# test with global "edge_global" predicates
+class Graph2(process):
+    def setup(): pass
+
+    def rules_trans():
+        path(x,y), if_(edge_global(x,y))
+        path(x,y), if_(edge_global(x,z), path(z,y))
+
+    def trans():
+        return infer(rule=rules_trans, queries=['path'])
+
+    def run():
+        result = trans()
+        assert (result == correct_result_2), ('WRONG RESULT: QUERY 2 !!!!!!!!!!!\nQuery result: ' + str(result))
+
+# test with global "edge_global" predicate and non-local derived predicate "path"
+
+class Graph3(process):
+    def setup():
+        self.path = {}
+    def rules_trans():
+        path(x,y), if_(edge_global(x,y))
+        path(x,y), if_(edge_global(x,z), path(z,y))
+
+    def trans():
+        infer(rule=rules_trans)
+
+    def run():
+        trans()
+        assert (path == correct_result_2), ('WRONG RESULT: QUERY 3 !!!!!!!!!!!\nQuery result: ' + str(path))
+
+
+# test with "edge" field predicate and non-local derived predicate "path"
+
+class Graph4(process):
+    def setup(E):
+        self.path = {}
+    def rules_trans():
+        path(x,y), if_(edge(x,y))
+        path(x,y), if_(edge(x,z), path(z,y))
+
+    def trans():
+        infer(rule=rules_trans, bindings = [('edge', E)])
+
+    def run():
+        trans()
+        assert (path == correct_result_1), ('WRONG RESULT: QUERY 4 !!!!!!!!!!!\nQuery result: ' + str(path))
+
+def main():
+    edge_local = {(1,2), (2,3)}
+    o1 = new(Graph1, [edge_local])
+    o2 = new(Graph2, [])
+    o3 = new(Graph3, [])
+    o4 = new(Graph4, [edge_local])
+    start(o1)
+    start(o2)
+    start(o3)
+    start(o4)
+
+
+
+

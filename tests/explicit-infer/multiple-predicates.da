@@ -1,0 +1,43 @@
+# this file contains test cases for rulesets and queries with multiple base predicates and queries
+def rules_trans_1():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+    two_edges(x,y), if_(edge(x,z), edge(z,y))
+
+def rules_trans_2():
+    path(x,y), if_(edge(x,y))
+    path(x,y), if_(edge(x,z), path(z,y))
+    path(x,x), if_(self_loop(x))
+    two_edges(x,y), if_(edge(x,z), edge(z,y))
+
+
+# test with multiple queries
+edge = {(1,2), (2,3)}
+correct_path_query = {(1,2), (1,3), (2,3)}
+corect_two_edges_query = {(1,3)}
+
+q_r_1 = infer(rule = rules_trans_1, queries = ['path','two_edges'])
+assert (correct_path_query == q_r_1[0]), ('WRONG RESULT: QUERY 1 !!!!!!!!!!!\nQuery result: ' + str(q_r_1[0]))
+assert (corect_two_edges_query == q_r_1[1]), ('WRONG RESULT: QUERY 2 !!!!!!!!!!!\nQuery result: ' + str(q_r_1[1]))
+
+
+# test with multiple base predicates
+self_loop = {1,3}
+correct_path_query_with_self_loop = {(1,2), (1,3), (2,3), (1,1), (3,3)}
+q_r_2 = infer(rule = rules_trans_2, queries = ['path'])
+assert (correct_path_query_with_self_loop == q_r_2), ('WRONG RESULT: QUERY 3 !!!!!!!!!!!\nQuery result: ' + str(q_r_2))
+
+
+# test with multiple base predicates and multiple queries
+q_r_3 = infer(rule = rules_trans_2, queries = ['path','two_edges'])
+assert (correct_path_query_with_self_loop == q_r_3[0]), ('WRONG RESULT: QUERY 4 !!!!!!!!!!!\nQuery result: ' + str(q_r_3[0]))
+assert (corect_two_edges_query == q_r_3[1]), ('WRONG RESULT: QUERY 5 !!!!!!!!!!!\nQuery result: ' + str(q_r_3[1]))
+
+# test with multiple bindings
+edge_local = {(4,5), (5,6)}
+self_loop_local = {5}
+correct_path_query_with_self_loop = {(4,5), (4,6), (5,6), (5,5)}
+corect_two_edges_query = {(4,6)}
+q_r_4 = infer(rule = rules_trans_2, bindings = [('edge', edge_local), ('self_loop', self_loop_local)], queries = ['path','two_edges'])
+assert (correct_path_query_with_self_loop == q_r_4[0]), ('WRONG RESULT: QUERY 6 !!!!!!!!!!!\nQuery result: ' + str(q_r_4[0]))
+assert (corect_two_edges_query == q_r_4[1]), ('WRONG RESULT: QUERY 7 !!!!!!!!!!!\nQuery result: ' + str(q_r_4[1]))

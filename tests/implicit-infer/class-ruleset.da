@@ -1,0 +1,20 @@
+# this file contains test cases for ruleset defined in class
+
+correct_result = {(1,2), (1,3), (2,3)}
+edge = {(1,2), (2,3)}
+
+class Graph(process):
+    def setup():
+        self.path = {}
+
+    def rules_trans():
+        path(x,y), if_(edge(x,y))
+        path(x,y), if_(edge(x,z), path(z,y))
+
+    def run():
+        if path != correct_result:
+            print('WRONG RESULT: QUERY 1 !!!!!!!!!!!\nQuery result: ' + str(path))
+
+def main():
+    o = new(Graph, [])
+    start(o)
