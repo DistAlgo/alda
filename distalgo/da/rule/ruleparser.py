@@ -563,6 +563,37 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 		# 						 _package if _package else options.module_name,
 		# 						 _parent=self)
 
+	def generic_visit(self, node):
+		""" override generic_visit function, 
+		to avoid repeately visiting a node when new nodes are added before it
+		the other parts are copied from Python ast.generic_visit source code
+		"""
+		for field, old_value in iter_fields(node):
+			if isinstance(old_value, list):
+				new_values = []
+				visited = set()
+				for value in old_value:
+					if value in visited:
+						continue
+					if isinstance(value, AST):
+						visited.add(value)
+						value = self.visit(value)
+						visited.add(value)
+						if value is None:
+							continue
+						elif not isinstance(value, AST):
+							new_values.extend(value)
+							continue
+					new_values.append(value)
+				old_value[:] = new_values
+			elif isinstance(old_value, AST):
+				new_node = self.visit(old_value)
+				if new_node is None:
+					delattr(node, field)
+				else:
+					setattr(node, field, new_node)
+		return node
+
 	def push_state(self, node):
 		self.state_stack.append(node)
 
@@ -582,10 +613,10 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 
 	def visit_Scope(self,node):
 		self.push_state(node)
-		res = self.generic_visit(node)
+		self.generic_visit(node)
 		self.add_implicit_infer(node)
 		self.pop_state()
-		return res
+		return node
 
 	visit_Function = visit_Scope
 	visit_ClassStmt = visit_Scope
@@ -662,12 +693,20 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 					continue
 
 				# add infer calls when derived predicates are used (ReadCtx)
+				processed = set()
 				for d in rs.bounded_derived:
 					for (ctx, (loc, _)) in d._indexes:
-						if ctx is not dast.ReadCtx:
-							continue
 						stmt = loc.statement if isinstance(loc, dast.Expression) else loc
-						self.insert_at_any_body_at_stmt(stmt, [self.gen_infer_at_use(d, rs)], True)
+						if stmt in processed:
+							continue
+						if ctx is dast.ReadCtx:
+							processed.add(stmt)
+							self.insert_at_any_body_at_stmt(stmt, [self.gen_infer_at_use(d, rs)], True)
+						elif ctx is dast.AssignmentCtx:
+							# set update flag after assignment ctx. 
+							# TODO: add error check if explicit assignment happens after initialization
+							flagstmts = self.gen_set_flag(d.flag_var, True)
+							self.insert_at_any_body_at_stmt(stmt, [flagstmts])
 				
 				# set the update flag of all derived predicates to True if a base predicate is assigned or updated
 				for b in rs.bounded_base:
