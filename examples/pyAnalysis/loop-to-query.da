@@ -70,10 +70,12 @@ class LoopAnalyzer(Analyzer):
 		compFor(forid, target, itr, result, elt, operator), if_(
 			For(forid, target, itr, bodyid, _),
 			ListLen(bodyid, 1), Member(bodyid, body, _), 
-			ListSetAdd(body,result, elt, operator))
+			ListSetAdd(body,result, elt, operator), AllowedOp(operator))
 
 	def query_forToCompSimple_rule(self):
-		candidate = infer(rule=self.rules_simplestComp, queries=['compFor'])
+		candidate = infer(rule=self.rules_simplestComp, 
+						  bindings=[('AllowedOp', {self.ValueIdDict['add'], self.ValueIdDict['append']})],
+						  queries=['compFor'])
 		iterNameDict = {c[0]:self.flattenTuple(self.ValueDict[c[1]]) for c in candidate}
 		transDict = dict()
 		# to comprehension: result = operator(elt for target in iterable)
@@ -91,6 +93,7 @@ class LoopAnalyzer(Analyzer):
 					comp = ast.SetComp
 					augop = ast.BitOr()
 				else:
+					print('!!!!!! unexpected operator',op)
 					continue
 				compAst = ast.AugAssign([self.ValueDict[result]], augop,
 									 comp(self.ValueDict[elt], 
