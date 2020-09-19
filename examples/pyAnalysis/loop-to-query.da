@@ -19,6 +19,9 @@ class LoopAnalyzer(Analyzer):
 	def query_candidate_rule(self):
 		candidate = infer(rule=self.rules_compCandidate, queries=['compCandidate'])
 		print('-------- number of candidate transformable loops:', len(candidate))
+		for c in candidate:
+			node = self.ValueDict[c]
+			print('========== %s: lineno: %s ==========%s' % (self.ValueDict[self.FileDict[c]], node.lineno, to_source(node)))
 
 	def rules_compCandidate():
 		# 1. r.append(y), r.add(y)
@@ -28,8 +31,8 @@ class LoopAnalyzer(Analyzer):
 		# 2. augAssign: r += y, r -= y
 		IncPattern(aaid),if_(AugAssign(aaid,_,_,_))
 		# 3. index assign: r[x] = y
-		IncPattern(aid), if_(Assign(aid, resultid,_), 
-			Subscript(resultid,_,keyid,_), Index(keyid,_))
+		IncPattern(aid), if_(Assign(aid, tarlistid,_), 
+			Member(tarlistid, resultid, _), Subscript(resultid,_,keyid,_))
 		# 4.1 if-else expr with IncPattern body and orbody
 		IncPattern(ifid), if_(
 			If(ifid,_, bodyid, orbodyid),

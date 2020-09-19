@@ -175,7 +175,7 @@ def gen_facts(filename):
         projectFolder = gen_folders(packName)
         view_directory(abspath, os.path.join(projectFolder, txtFolder), packName)
     elif os.path.isfile(filename):
-        packName, ext = os.path.basename(path).splitext(f)
+        packName, ext = os.path.splitext(os.path.basename(filename))
         projectFolder = gen_folders(packName)
         view_file(filename, os.path.join(projectFolder, txtFolder), '')
     
