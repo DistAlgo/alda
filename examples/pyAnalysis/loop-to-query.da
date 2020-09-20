@@ -14,6 +14,29 @@ class LoopTansformer(ast.NodeTransformer):
 		else:
 			return self.generic_visit(node)
 
+VariableDict = dict()
+class GetVariable(ast.NodeVisitor):
+	
+	def generic_visit(self, node):
+		"""Called if no explicit visitor function exists for a node."""
+		if node in VariableDict:
+			return VariableDict[node]
+
+		result = set()
+		for field, value in ast.iter_fields(node):
+			if isinstance(value, list):
+				for item in value:
+					if isinstance(item, ast.AST):
+						result |= self.visit(item)
+			elif isinstance(value, ast.AST):
+				result |= self.visit(value)
+
+		VariableDict[node] = result
+		return result
+
+	def visit_Name(self, node):
+		return {node.id}
+
 class LoopAnalyzer(Analyzer):
 
 	def query_candidate_rule(self):
@@ -79,12 +102,20 @@ class LoopAnalyzer(Analyzer):
 		iterNameDict = {c[0]:self.flattenTuple(self.ValueDict[c[1]]) for c in candidate}
 		transDict = dict()
 		# to comprehension: result = operator(elt for target in iterable)
+		varVisitor = GetVariable()
 		for forid, target, itr, result, elt, operator in candidate:
 			fileid = self.FileDict[forid]
 			if self.ValueDict[result].id in iterNameDict[forid]:
 				continue
 			op = self.ValueDict[operator]
 			forast = self.ValueDict[forid]
+			# check dependencies: 1. result independent to target, 2. elt independent to result
+			resultVars = varVisitor.visit(self.ValueDict[result])
+			targetVars = varVisitor.visit(self.ValueDict[target])
+			eltVars = varVisitor.visit(self.ValueDict[elt])
+			# print(resultVars, targetVars, eltVars)
+			if targetVars.intersection(resultVars) or resultVars.intersection(eltVars):
+				continue
 			if isinstance(op,str):
 				if op == 'append':
 					comp = ast.ListComp
