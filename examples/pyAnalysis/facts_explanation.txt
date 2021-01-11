@@ -1,0 +1,93 @@
+===============================================================
+Initial Notes (from Yi):
+
+Each fact in the generated *.py file represents an AST node in Python AST in the format of 
+(’node_type’, node_id, (('field_name', field_id)*), (('attribute_name', attribute_id)*))
+The fields of the AST nodes are exactly the same as in Python 3.7 AST documents, and the attributes are basically lineno and col_offset.
+
+The generated *.py files are actually not used anywhere, it is only for me to easily check the output. 
+The data used in the analysis are those in the folder _state, and they are organized by type of node rather than by file name as of the *.py files. And all the ’node_type’, 'field_name' and 'attribute_name' are removed, and the tuples are flattened. So eventually each file in the _state folder is a set of tuple of ids.
+And I have removed some of the fields and attributes I currently find useless in the analysis, such as 'lineno', 'col_offset', etc. 
+
+There are also some nodes created by me for easy analyzing. They are
+
+    Member(list_id, item_id, idx)
+        presents that the idx’th element of list of id list_id is the node of id item_id
+
+    ListLen(list_id, num)
+        presents that the length of the list of id list_id is num
+
+    is_Sub(file_id, folder_id)
+        presents that the folder of id  folder_id contains the file of id file_id
+
+    Context(node_id, ctx_id)
+     presents that the node of id node_id appears in the context of ctx_id where the context can be a Module, a Class or a Function. The fact is not used anywhere yet, so it might be changed anytime if any analysis need this. 
+
+
+And there are some dictionaries for getting the value from id and getting the id from value, where the value can be the instance of a node or the value of a literal, etc. basically any corresponding value of above mentioned id's.
+    
+    ValueDict[id] = value
+    ValueIdDict[value] = id
+    FileDict[id] = file_id
+        this dictionary is used for checking which file a node belongs.
+        
+===============================================================
+Description of Other AST facts:
+
+Assign(node_id, "target", "value"): assignment
+
+AugAssing(node_id, “target”, “op”, “value”): augmented assignment (e.g., .x += .exp)
+
+For(node_id, “target”, “iter”, “body”, “orelse”): for-loop.
+
+Subscript(node_id, "value", "slice", "ctx"): a subscripted (a.k.a. indexed) value. value is the subscripted object (usually sequence or mapping), slice is an index, slice or key.  ctx is Load, Store or Del according to the action performed with the subscript.
+
+Index(node_id, "value"): an index value. In a subscript, node_id is usually the slice of Subscript(node_id, "value", "slice", "ctx") fact.
+
+BinOp(node_id, “left”, “op”, “right”): a binary operation.
+
+Tuple(node_id, “elts”, “ctx”): a tuple, can be for index reference of multi-dimensional sequences (e.g., "i,j" in a[i, j]). “elts” holds a list of nodes representing the elements, “ctx” is Store if the container is an assignment target (i.e. (x,y)=something), and Load otherwise.
+
+Name(node_id, “id”, “ctx”): a variable name. Variable references can be used to lead the value of a variable, to assign a new value to it, or to delete it. This is reflected in the ctx. Thus, ctx is one of the following type: Load, Store, Del.
+
+Call(node_id, “func”, “args”, “keywords”): a function call. “func” is the function, which will often be a Name or Attribute object. “args” holds a list of the arguments passed by position. “keywords” holds a list of keyword arguments representing arguments passed by keyword. A keyword argument is represented with fact keyword(arg, value) with arg is the parameter name and value is a node to pass in. 
+
+Expr(node_id, “value”): an expression that appears as a statement, with its return value not used or stored. 
+
+ClassDef(node_id, "name", "base", "keywords", "body", "decorator_list"): a class definition. 
+name is the class name 
+bases is a list of nodes for explicitly specified base classes
+“keywords” holds a list of keyword arguments representing arguments passed by keyword. A keyword argument is represented with fact keyword(arg, value) with arg is the parameter name and value is a node to pass in. 
+
+If(node_id, "test", "body", "orelse"): if statement
+
+FunctionDef(node_id, "name", "args", "body", "decorator_list", "returns"): function definition.
+
+Module(node_id, "body"): module node.
+
+Try(node_id, "body", "handlers", "orlese", "finalbody"): try statement. "handlers" is a list of ExceptHandler nodes.
+
+ExceptHandler(node_id, "type", "name", "body"): A single except clause. "type" is the exception type it will match, typically a Name node (or None for a catch-all except: clause). "name" is a raw string for the name to hold the exception, or None if the clause doesn’t have as foo. "body" is a list of nodes.
+
+With(node_id, "items", "body"): a with block. items is a list of withitem nodes representing the context managers. 
+
+
+===============================================================
+Discussions:
+
+SS: is the information in ValueDict represented in the datalog facts?  for example, if we want a rule to check whether the function being called is 'add', it needs to use the info in ValueDict, right?
+
+YT: Yes. And I think if you want to use rules to check the function name you need to get the id of string ’add’ from ValueIdDict first and then query with the id.
+
+SS: since the id's of interest cannot be put directly in the rules, they need to be stored in a base relation passed to the ruleset.  for example:
+
+infer(rule=..., bindings = ['addId', {(ValueDict['add'])}], ...)
+
+is this the cleanest way to do it?
+
+YT: Yes, this way is fine, except it should be ValueIdDict['add']. 
+
+There is another way that if the derived predicates contains the id of function name, then you can pass the id in with the query. 
+
+For example, if there is a derived predicate: FuncName(func_id, name_id), then you can infer with 
+    infer(rule=..., queries=['FuncName(_, %s)' %ValueIdDict['add'])

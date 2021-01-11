@@ -11,7 +11,8 @@ HandlerRoute = {
 	'pythonClassAnalyzer': ('subclass_python', 'ClassAnalyzer', 'subclass'),
 	'distalgoClassAnalyzer': ('subclass_distalgo', 'ClassAnalyzer', 'subclass'),
 	'ruleClassAnalyzer': ('subclass_rule', 'ClassAnalyzer', 'subclass'),
-	'combineClassAnalyzer': ('subclass_combine', 'ClassAnalyzer', 'subclass')
+	'combineClassAnalyzer': ('subclass_combine', 'ClassAnalyzer', 'subclass'),
+	'combineDAGAnalyzer': ('classstructure_combine', 'DAGAnalyzer', 'classstructure')
 }
 
 def main():

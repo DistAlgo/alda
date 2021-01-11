@@ -1,0 +1,505 @@
+from analyzer import Analyzer
+from da.compiler.utils import to_source
+import sys
+
+ASTNodes = {#'AST','mod',
+			'Module','Interactive','Expression','Suite',
+			#'stmt',
+			'FunctionDef','AsyncFunctionDef','ClassDef',
+			'Return','Delete','Assign','AugAssign','AnnAssign',
+			'For','AsyncFor','While','If','With','AsyncWith',
+			'Raise','Try','Assert','Import','ImportFrom',
+			'Global','Nonlocal','Expr','Pass','Break','Continue',
+			#'expr',
+			'BoolOp','BinOp','UnaryOp','Lambda','IfExp',
+			'Dict','Set','ListComp','SetComp','DictComp','GeneratorExp',
+			'Await','Yield','YieldFrom','Compare','Call',
+			'Num','Str','FormattedValue','JoinedStr','Bytes','NameConstant',
+			'Ellipsis','Constant',
+			'Attribute','Subscript','Starred','Name','List','Tuple',
+			#'expr_context',
+			'Load','Store','Del','AugLoad','AugStore','Param',
+			#'slice',
+			'Slice','ExtSlice','Index',
+			#'boolop',
+			'And','Or',
+			#'operator',
+			'Add','Sub','Mult','MatMult','Div','Mod','Pow','LShift','RShift','BitOr','BitXor','BitAnd','FloorDiv',
+			#'unaryop',
+			'Invert','Not','UAdd','USub',
+			#'cmpop',
+			'Eq','NotEq','Lt','LtE','Gt','GtE','Is','IsNot','In','NotIn',
+			'comprehension',
+			#'excepthandler',
+			'ExceptHandler',
+			'arguments','arg','keyword','alias','withitem',
+			# util nodes
+			'is_Sub', 'Member','Context','ListLen',
+			}
+
+class DAGAnalyzer(Analyzer):
+	
+	def query_classstructure_combine(self):
+		output_class_inheritance_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_class_inheritance.txt'
+		output_duplicate_class_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_duplicate_class_names_same_file.txt'
+		out_most_extended_class_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_most_extended_class.txt'
+		
+		module_ids = setof(module_id, (module_id,_) in self.Module)
+		try_ids = setof(try_id, (try_id, _, _, _, _) in self.Try)
+		if_ids = setof(if_id, (if_id, _, _, _) in self.If)
+		
+		with open(output_class_inheritance_file, 'w') as f, open(output_duplicate_class_file, 'w') as f_dc, open(out_most_extended_class_file, 'w') as f_me:
+			f.write('Number of generated AST nodes = ' + str(sumof(len(getattr(self, node_name, set())), node_name in ASTNodes)) + '\n')
+
+			f.write('Number of files = ' + str(len(setof(self.FileDict[f], f in self.FileDict))) + '\n')
+			extends, class1, internal_class, ancestor, descendant = infer(rule=self.rules_inheritinfo, queries=['extends', 'class1', 'internal_class', 'ancestor', 'descendant'])
+			loner_class = setof(c1, c1 in internal_class, (not some((c2, _) in extends, has = (c2, c1) in extends)) and (not some((_, c2) in extends, has = (c1, c2) in extends)))
+			f.write('Number of class definitions in the analyzed source code = ' + str(len(internal_class)) + '\n')
+
+			f.write('Number of "extends" facts = ' + str(len(extends)) + '\n++++++++++++++++++++++\n\n')
+
+			duplicate_name_class = setof(c1, (id1 , c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2))) 
+			f.write('Number of multiply defined class names = ' + str(len(duplicate_name_class)) + '\n')
+			f_dc.write('Number of multiply defined class names = ' + str(len(duplicate_name_class)) + '\n')
+			duplicate_name_class_same_file = setof((c1, self.FileDict[id1]), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and self.is_same_file(id1, id2))) 
+			duplicate_class_same_file_with_id = setof((c1, id1), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and self.is_same_file(id1, id2))) 
+			
+			# MULTIPLY DEFINE CLASSES ANALYZING
+
+			f_dc.write('MULTIPLY DEFINE CLASSES ANALYZING: \n')
+			f_dc.write('Number of class names that are defined multiple times in the same file = ' + str(len(setof(c, (c, _) in duplicate_name_class_same_file))) + '\n')
+
+			# related_files: ids of the files that contain multiply defined class names.
+			related_files = setof(self.FileDict[c_id], (c, c_id) in duplicate_class_same_file_with_id)
+
+			in_scope = infer(rule=self.rules_scope, queries=['InScope'])
+
+			# filter all facts in in_scope in which the nodes are defined in related_files
+			in_scope_related_files = setof((ancs_id, desc_id), (ancs_id, desc_id) in in_scope, self.FileDict[ancs_id] in related_files)
+
+			same_class_name_if_else, same_class_name_class, same_class_name_function, same_class_name_module, same_class_name_exception, same_class_name_with, same_class_name_for = infer(rule = self.rules_duplicateClassSameFile, bindings = [('duplicate_class_same_file_with_id', duplicate_class_same_file_with_id), ('InScope', in_scope_related_files)], queries=['same_class_name_if_else', 'same_class_name_class', 'same_class_name_function', 'same_class_name_module', 'same_class_name_exception', 'same_class_name_with', 'same_class_name_for'])
+			
+			f_dc.write('\n\nRESULTS WITHOUT TEST-RELATED FILES: \n')
+
+			duplicate_class_same_file_with_id_no_test = setof((c, c_id), (c, c_id) in duplicate_class_same_file_with_id, ('test' not in self.ValueDict[self.FileDict[c_id]]) and ('testing' not in self.ValueDict[self.FileDict[c_id]]))
+			
+			same_class_name_if_else_no_test = self.get_duplicate_classes_same_file_test(same_class_name_if_else, False)
+			same_class_name_class_no_test = self.get_duplicate_classes_same_file_test(same_class_name_class, False)
+			same_class_name_function_no_test = self.get_duplicate_classes_same_file_test(same_class_name_function, False)
+			same_class_name_module_no_test = self.get_duplicate_classes_same_file_test(same_class_name_module, False)
+			same_class_name_exception_no_test = self.get_duplicate_classes_same_file_test(same_class_name_exception, False)
+			same_class_name_with_no_test = self.get_duplicate_classes_same_file_test(same_class_name_with, False)
+			same_class_name_for_no_test = self.get_duplicate_classes_same_file_test(same_class_name_for, False)
+		
+			f_dc.write('Number of classes that are defined multiple times in the same file = ' + str(len(duplicate_class_same_file_with_id_no_test)) + '\n')
+			
+
+			f_dc.write('Among those classes, \n')
+			f_dc.write('	number of classes that are defined in the top level scope of a file (module) = ' + str(len(same_class_name_module_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_module_no_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of an if-else = ' + str(len(same_class_name_if_else_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_if_else_no_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of a class definition = ' + str(len(same_class_name_class_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_class_no_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of a funtion definition = ' + str(len(same_class_name_function_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_function_no_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of a try-except-finally = ' + str(len(same_class_name_exception_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_exception_no_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of a with = ' + str(len(same_class_name_with_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_with_no_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of a for = ' + str(len(same_class_name_for_no_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_for_no_test, f_dc, module_ids, try_ids)
+
+			detected_same_class_name_no_test_with_scope_id = same_class_name_if_else_no_test | same_class_name_class_no_test | same_class_name_function_no_test | same_class_name_module_no_test | same_class_name_exception_no_test | same_class_name_with_no_test | same_class_name_for_no_test
+			detected_same_class_name_no_test = setof((c, c_id), (c, c_id, _) in detected_same_class_name_no_test_with_scope_id)
+			undtected_same_class_name_no_test = setof((c1, self.FileDict[id1]), (c1, id1) in duplicate_class_same_file_with_id_no_test, (c1, id1) not in detected_same_class_name_no_test)
+			
+			f.write('Number of remaining classes = ' + str(len(undtected_same_class_name_no_test)) + '\n')
+			f.write('List of remaining classes: \n')
+
+			for (class_name, file) in undtected_same_class_name_no_test:
+				f_dc.write('class: ' + self.ValueDict[class_name] + '\n')
+				f_dc.write('file: ' + self.ValueDict[file] + '\n-----------------------\n')
+
+			f_dc.write('\n\nRESULTS WITH TEST-RELATED FILES ONLY: \n')
+
+			duplicate_class_same_file_with_id_with_test = setof((c, c_id), (c, c_id) in duplicate_class_same_file_with_id, ('test' in self.ValueDict[self.FileDict[c_id]]) or ('testing' in self.ValueDict[self.FileDict[c_id]]))
+			
+			same_class_name_if_else_with_test = self.get_duplicate_classes_same_file_test(same_class_name_if_else, True)
+			same_class_name_class_with_test = self.get_duplicate_classes_same_file_test(same_class_name_class, True)
+			same_class_name_function_with_test = self.get_duplicate_classes_same_file_test(same_class_name_function, True)
+			same_class_name_module_with_test = self.get_duplicate_classes_same_file_test(same_class_name_module, True)
+			same_class_name_exception_with_test = self.get_duplicate_classes_same_file_test(same_class_name_exception, True)
+			same_class_name_with_with_test = self.get_duplicate_classes_same_file_test(same_class_name_with, True)
+			same_class_name_for_with_test = self.get_duplicate_classes_same_file_test(same_class_name_for, True)
+		
+			f_dc.write('Number of classes that are defined multiple times in the same file = ' + str(len(duplicate_class_same_file_with_id_with_test)) + '\n')
+			
+
+			f_dc.write('Among those classes, \n')
+			f_dc.write('	number of classes that are defined in the top level scope of a file (module) = ' + str(len(same_class_name_module_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_module_with_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of an if-else = ' + str(len(same_class_name_if_else_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_if_else_with_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of a class definition = ' + str(len(same_class_name_class_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_class_with_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of a funtion definition = ' + str(len(same_class_name_function_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_function_with_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of a try-except-finally = ' + str(len(same_class_name_exception_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_exception_with_test, f_dc, module_ids, try_ids)
+			
+			f_dc.write('	number of classes that are defined in the scope of a with = ' + str(len(same_class_name_with_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_with_with_test, f_dc, module_ids, try_ids)
+
+			f_dc.write('	number of classes that are defined in the scope of a for = ' + str(len(same_class_name_for_with_test)) + '\n')
+			self.output_multiply_defined_classes_in_scope(same_class_name_for_with_test, f_dc, module_ids, try_ids)
+
+			detected_same_class_name_with_test_with_scope_id = same_class_name_if_else_with_test | same_class_name_class_with_test | same_class_name_function_with_test | same_class_name_module_with_test | same_class_name_exception_with_test | same_class_name_with_with_test | same_class_name_for_with_test
+			detected_same_class_name_with_test = setof((c, c_id), (c, c_id, _) in detected_same_class_name_with_test_with_scope_id)
+			undtected_same_class_name_with_test = setof((c1, self.FileDict[id1]), (c1, id1) in duplicate_class_same_file_with_id_with_test, (c1, id1) not in detected_same_class_name_with_test)
+			
+			f_dc.write('Number of remaining classes = ' + str(len(undtected_same_class_name_with_test)) + '\n')
+			f_dc.write('List of remaining classes: \n')
+
+			for (class_name, file) in undtected_same_class_name_with_test:
+				f_dc.write('class: ' + self.ValueDict[class_name] + '\n')
+				f_dc.write('file: ' + self.ValueDict[file] + '\n-----------------------\n')
+
+
+			f_dc.write('\n\n\nIF CONDITION ANLYSIS\n=================================\n\n')
+			found_if_ids = setof(if_id, (_, _, if_id) in same_class_name_if_else_no_test)
+			if_strs = setof(next(line for line in to_source(self.ValueDict[if_id]).split('\n') if len(line) != 0).strip(), if_id in found_if_ids)
+			if_conds = setof(if_str.split('if ')[1].replace('not', '').replace('(', '').replace(')','').replace(':','').strip().lower(), if_str in if_strs)
+			for if_cond in if_conds:
+				f_dc.write('Condition: ' + if_cond + '\n')
+
+				#other_if_ids = (if_id, if_id in if_ids, if_cond in next(line for line in to_source(self.ValueDict[if_id]).split('\n') if len(line) != 0).lower())
+				all_if_ids = [if_id for if_id in if_ids if if_cond in next(line for line in to_source(self.ValueDict[if_id]).split('\n') if len(line) != 0).lower()]
+				
+				f_dc.write('Number of if statements have this condition: ' + str(len(all_if_ids)) + '\n')
+				f_dc.write('All if statements use this condition: ' + '\n')
+
+				for if_id in all_if_ids:
+					if_node = self.ValueDict[if_id]
+					f_dc.write('	file: ' + self.ValueDict[self.FileDict[if_id]] + '\n')
+					f_dc.write('	line number: ' + str(if_node.lineno) + '\n')
+					f_dc.write('	if statement: \"' + next(line for line in to_source(self.ValueDict[if_id]).split('\n') if len(line) != 0) + '\"\n')
+					f_dc.write('	-----------------------\n')
+				f_dc.write('\n\n')
+	
+			# ----
+
+			duplicate_name_extends_class = setof(c1, c1 in duplicate_name_class, (some((c2, _) in extends, has = (c2, c1) in extends)) or (some((_, c2) in extends, has = (c1, c2) in extends)))
+			f.write('Number of multiply defined class names in extends relation = ' + str(len(duplicate_name_extends_class)) + '\n++++++++++++++++++++++\n\n')
+			
+			if len(extends) == 0:
+				f.write('THERE IS NO CLASS INHERITANCE IN THIS PROGRAM!')
+				f_me.write('THERE IS NO CLASS INHERITANCE IN THIS PROGRAM!')
+				sys.exit()
+
+			root_class, leaf_class = self.get_root_leaf_classes(extends, class1)
+			external_class  = class1 - internal_class
+			f.write('Number of leaf classes = ' + str(len(leaf_class))+ "\n")
+			f.write('Number of root classes = ' + str(len(root_class)) + "\n")
+			f.write('Number of external extended classes = ' + str(len(external_class)) + '\n')
+			f.write('Number of loner classes = ' + str(len(loner_class)) + '\n')
+			f.write('Total number of class names (include class names defined in the program and external extended class names) = ' + str(len(class1)) + '\n++++++++++++++++++++++\n\n')
+
+			height = self.get_height(loner_class, leaf_class, extends, class1)
+			f.write('Maximum height = ' + str(maxof(h, (_, h) in height)) + '\n')
+			f.write('Average node height (exclude loner classes) = ' + str(sumof(h, (_, h) in height) / len(height)) + '\n')
+			tree_height = setof((c, h), (c, h) in height, c in root_class)
+			f.write('Average tree height (exclude loner classes) = ' + str(sumof(h, (_, h) in tree_height) / len(tree_height)) + '\n')
+
+			depth = self.get_depth(loner_class, root_class, extends, class1)
+			f.write('Maximum depth = ' + str(maxof(d, (_, d) in depth)) + '\n')
+			f.write('Average node depth (exclude loner classes) = ' + str(sumof(d, (_, d) in depth) / len(depth)) + '\n')
+		
+			num_children = self.get_num_children(extends, class1, loner_class)
+			num_parent = self.get_num_parent(extends, class1, external_class, loner_class)
+
+			num_desc = self.get_num_desc(descendant, class1, loner_class)
+			num_ancs = self.get_num_ancs(ancestor, class1, external_class, loner_class)
+			
+			# MOST EXTENDED CLASS(ES) ANALYSIS
+			most_extended_class = setof(c, (c, nc) in num_children, nc == maxof(nc1, (c1, nc1) in num_children))
+			most_extended_class_with_file = setof((c1, self.FileDict[id1]), (id1, c1, _, _, _, _) in self.ClassDef, c1 in most_extended_class)
+			
+			f_me.write('MOST EXTENDED CLASS(ES) ANALYSIS: ' + '\n')
+			f_me.write('max number of children: ' + str(maxof(nc1, (c1, nc1) in num_children)) + '\n')
+			for (class_name, file) in most_extended_class_with_file:
+				f_me.write('class: ' + self.ValueDict[class_name] + '\n')
+				f_me.write('file: ' + self.ValueDict[file] + '\n-----------------------')
+			f.write('List of children: ')
+			for p in most_extended_class:
+				f_me.write('parent class: ' + self.ValueDict[p] + '\n')
+				f_me.write('children list: ' + '\n')
+				children_set = setof(c1, (c1, c2) in extends, c2 == p)
+				children_set_with_file = setof((c1, self.FileDict[id1]), (id1, c1, _, _, _, _) in self.ClassDef, c1 in children_set)
+				for (child, file) in children_set_with_file:
+					f_me.write('class: ' + self.ValueDict[child] + '\n')
+					f_me.write('file: ' + self.ValueDict[file] + '\n-----------------------')
+				f_me.write('----------------------------')
+			# ---
+
+			tree_size = setof((c, s), (c, s) in num_desc, c in root_class)
+			f.write('Average number of leaf nodes in a tree (exclude loner classes) = ' + str(len(leaf_class)/len(root_class)) + '\n')
+			f.write('Average number of nodes in a tree (exclude loner classes) = ' + str(sumof(s, (_, s) in tree_size) / len(tree_size)) + '\n++++++++++++++++++++++\n\n')
+			
+			histogram_num_children = self.get_histogram_num_class(num_children)
+			historgram_num_parent = self.get_histogram_num_class(num_parent)
+
+			f.write('Histogram_num_children (exclude loner classes)  \n-------------------\n')
+			f.write(str(self.set_to_sorted_list(histogram_num_children)) + '\n\n')
+			f.write('Histogram_num_parent (exclude loner classes and external extended classes)  \n-------------------\n')
+			f.write(str(self.set_to_sorted_list(historgram_num_parent)) + '\n++++++++++++++++++++++\n\n')
+
+			histogram_num_desc = self.get_histogram_num_class(num_desc)
+			histogram_num_ancs = self.get_histogram_num_class(num_ancs)
+			
+			f.write('Histogram_num_desc (exclude loner classes)  \n-------------------\n')
+			f.write(str(self.set_to_sorted_list(histogram_num_desc)) + '\n\n')
+			f.write('Histogram_num_ancs (exclude loner clases and external extended classes)  \n-------------------\n')
+			f.write(str(self.set_to_sorted_list(histogram_num_ancs)) + '\n++++++++++++++++++++++\n\n')
+
+
+	def output_multiply_defined_classes_in_scope(self, duplicate_classes, out_f, module_ids, try_ids):
+
+		for item in duplicate_classes:
+			class_node = self.ValueDict[item[1]]
+			context_node = self.ValueDict[item[2]]
+			out_f.write('		class: ' + self.ValueDict[item[0]] + '\n')
+			out_f.write('		file: ' + self.ValueDict[self.FileDict[item[1]]] + '\n')
+			out_f.write('		class def line number: ' + str(class_node.lineno) + '\n')
+			if item[2] not in module_ids:
+				if item[2] in try_ids:
+					out_f.write('		context: \n')
+					context_str = [line for line in to_source(context_node).split('\n') if ('try' in line) or ('except' in line)]
+					for line in context_str:
+						out_f.write('		' + line + '\n')
+				else:
+					out_f.write('		context: \"' + next(line for line in to_source(context_node).split('\n') if len(line) != 0) + '\"\n')
+			out_f.write('		-----------------------\n')
+		out_f.write('\n\n')	
+
+
+	def get_duplicate_classes_same_file_test(self, same_classes, count_test_related_file):
+		# this function will return a set of (class_name, class_node_id, scope_node_id) tuples filtered from the set same classes of
+		# (class_name, class_node_id, scope_node_id) tuples based on the boolean parameter count_test_related_file.
+		# if count_test_related_file = True, the returned set will only contain class definitions in test-related files.
+		# if count_test_related_file = False, the return set will contain class definitions that are not defined in test-related files.
+		if count_test_related_file:
+			return setof((c_name, c_id, scope_id), (c_name, c_id, scope_id) in same_classes, ('test' in self.ValueDict[self.FileDict[c_id]]) or ('testing' in self.ValueDict[self.FileDict[c_id]]))
+		else:
+			return setof((c_name, c_id, scope_id), (c_name, c_id, scope_id) in same_classes, ('test' not in self.ValueDict[self.FileDict[c_id]]) and ('testing' not in self.ValueDict[self.FileDict[c_id]]))
+
+	def is_same_file(self, id1, id2):
+		# return true if 2 nodes with node id id1 and id2 belongs to a same file, and false otherwise.
+		return self.FileDict[id1] == self.FileDict[id2]
+
+	def get_root_leaf_classes(self, extends, class1):
+		return setof(c1, (_, c1) in extends, not some((_, c2) in extends, has = (c1, c2) in extends)), setof(c1, (c1, _) in extends, not some((c2, _) in extends, has = (c2, c1) in extends))
+
+	def get_num_children(self, extends, class1, loner_class):
+		return setof((c1, len(setof(c2, (c2, c) in extends, c == c1))), c1 in class1, c1 not in loner_class)
+
+	def get_num_parent(self, extends, class1, external_class, loner_class):
+		return setof((c1, len(setof(c2, (c, c2) in extends, c == c1))), c1 in class1, (c1 not in external_class) and (c1 not in loner_class))
+
+	def get_num_desc(self, descendant, class1, loner_class):
+		return setof((c1, len(setof(c2, (c2, c) in descendant, c == c1))), c1 in class1, c1 not in loner_class)
+
+	def get_num_ancs(self, ancestor, class1, external_class, loner_class):
+		return setof((c1, len(setof(c2, (c2, c) in ancestor, c == c1))), c1 in class1, (c1 not in external_class) and (c1 not in loner_class))
+
+	def ran(self, e): 
+		return setof(y, (x,y) in e)
+
+	def get_histogram_num_class(self, num_facts):
+		return setof((n, len(setof(c, (c, n1) in num_facts, n1 == n))), n in self.ran(num_facts))
+
+	def height(self, c, extends, leaf_class):
+		return 0 if c in leaf_class else 1 + maxof(self.height(c2, extends, leaf_class), (c2, c1) in extends, c1 == c)
+
+	def get_height(self, loner_class, leaf_class, extends, class1):
+		return setof((c, self.height(c, extends, leaf_class)), c in class1, c not in loner_class)
+
+	def depth(self, c, extends, root_class):
+		return 0 if c in root_class else 1 + maxof(self.depth(c2, extends, root_class), (c1, c2) in extends, c1 == c)
+
+	def get_depth(self, loner_class, root_class, extends, class1):
+		return setof((c, self.depth(c, extends, root_class)), c in class1, c not in loner_class)
+
+	def set_to_sorted_list(self, s):
+		return sorted(list(s), key = lambda x: x[0])
+
+	def rules_inheritinfo():
+		# extends(c1, c2): class c1 extends class c2.
+		extends(c1,c2), if_(ClassDef(_, c1, baseid, _, _, _),
+								Member(baseid, nid, _),
+								Name(nid, c2, _)
+								)
+
+		# class1(c): class c is defined within the analyzing source codes, or class c is imported from an external libraries and is extended by a class which is defiend withtin the analyzing source codes. 
+		class1(c), if_(ClassDef(_, c, _, _, _, _))
+
+		class1(c2), if_(ClassDef(_, c1, baseid, _, _, _),
+								Member(baseid, nid, _),
+								Name(nid, c2, _))
+
+		# internal_class(c): class c is defined within the analyzing source codes.
+		internal_class(c), if_(ClassDef( _, c, _, _, _, _))
+
+		# ancestor(c): class c1 is an ancestor of class c2
+		ancestor(c1, c2), if_(extends(c2, c1))
+
+		ancestor(c1, c2), if_(extends(c2, c3),
+								ancestor(c1, c3))
+
+		# descendant(c): class c1 is a descendant of class c2
+		descendant(c1, c2), if_(extends(c1, c2))
+
+		descendant(c1, c2), if_(extends(c1, c3),
+								descendant(c3, c2))
+
+	def rules_scope():
+		# InScope(ancs_id, desc_id): node with id desc_id is at the top level of the scope of node with id ancs_id. 
+		# only consider scopes of for-loops, with statements, exception statements (try, except, finally), function definitions, class definitions, and if-else statments.
+		InScope(parent_id, child_id), if_(For(parent_id, _, _, bodyid, _),
+										#Scope(child_id),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(With(parent_id, _, bodyid),
+										#Scope(child_id),		
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(FunctionDef(parent_id, _, _, bodyid, _, _),
+										#Scope(child_id),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(ClassDef(parent_id, _, _, _, bodyid, _),
+										#Scope(child_id),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(If(parent_id, _, bodyid, _),
+										#Scope(child_id),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(If(parent_id, _, _, orelse),
+										#Scope(child_id),
+										Member(orelse, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, bodyid, _, _, _),
+										#Scope(child_id),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, _, handlers_list_id, _, _),
+										#Scope(child_id),
+										Member(handlers_list_id, handler_id, _),
+										ExceptHandler(handler_id, _, _, handler_body_id),
+										Member(handler_body_id, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, _, _, _, finally_body_id),
+										#Scope(child_id),
+										Member(finally_body_id, child_id, _))
+
+		# Scope(node_id), if_(For(node_id, _, _, _, _))
+		# Scope(node_id), if_(With(node_id, _, _))
+		# Scope(node_id), if_(FunctionDef(node_id, _, _, _, _, _))
+		# Scope(node_id), if_(ClassDef(node_id, _, _, _, _, _))
+		# Scope(node_id), if_(If(node_id, _, _, _))
+		# Scope(node_id), if_(If(_, _, _, node_id))
+		# Scope(node_id), if_(Try(node_id, _, _, _, _))
+		# Scope(node_id), if_(Try(_, _, _, _, node_id))
+		# Scope(node_id), if_(ExceptHandler(node_id, _, _, _))
+
+	def rules_scope_no_filter_child_nodes():
+		# InScope(ancs_id, desc_id): node with id desc_id is at the top level of the scope of node with id ancs_id. 
+		# only consider scopes of for-loops, with statements, exception statements (try, except, finally), function definitions, class definitions, and if-else statments.
+		InScope(parent_id, child_id), if_(For(parent_id, _, _, bodyid, _),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(With(parent_id, _, bodyid),	
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(FunctionDef(parent_id, _, _, bodyid, _, _),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(ClassDef(parent_id, _, _, _, bodyid, _),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(If(parent_id, _, bodyid, _),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(If(parent_id, _, _, orelse),
+										Member(orelse, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, bodyid, _, _, _),
+										Member(bodyid, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, _, handlers_list_id, _, _),
+										Member(handlers_list_id, handler_id, _),
+										ExceptHandler(handler_id, _, _, handler_body_id),
+										Member(handler_body_id, child_id, _))
+		InScope(parent_id, child_id), if_(Try(parent_id, _, _, _, finally_body_id),
+										Member(finally_body_id, child_id, _))
+
+
+	def rules_duplicateClassSameFile():
+		# these rules are for analyzing the class definitions using the same class name with other classe definitions in the same file.
+		
+		# InScopeInherit(ancs_id, desc_id): node with id desc_id is within the scope of node with id ancs_id.
+		# only consider scopes of for-loops , with statements, exception statements (try, except, finally), function definitions, class definitions, and if-else statments.
+		# This can be seen as the transitive closure of InScope facts.
+		InScopeInherit(ancs_id, desc_id), if_(InScope(ancs_id, desc_id))
+
+		# InScopeInherit(ancs_id, desc_id), if_(InScope(ancs_id, parent_id),
+		# 								InScopeInherit(parent_id, desc_id))
+
+
+		# same_class_name_if(c, c_id, if_id): class defintion with class name c and with node id c_id is defined in the scope of an if's body or an elif's body with node id if_id.
+		same_class_name_if_else(c, c_id, if_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											If(if_id, _, _, _),
+											InScopeInherit(if_id, c_id))
+
+		# same_class_name_if_else(c, c_id, if_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		# 									If(if_id, _, _, orelse),
+		# 									Member(orelse, c_id, _)
+		# 									)
+
+		# same_class_name_class(c, c_id, class_id): class defintion with class name c and with node id c_id is defined in the scope of another class definition's body with node id class_id.
+		same_class_name_class(c, c_id, class_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											ClassDef(class_id, _, _, _, _, _),
+											InScopeInherit(class_id, c_id))
+
+		# same_class_name_function(c, c_id, func_id): class defintion with class name c and with node id c_id is defined in the scope of a function definition's body with node id func_id.
+		same_class_name_function(c, c_id, func_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											FunctionDef(func_id, _, _, _, _, _),
+											InScopeInherit(func_id, c_id))
+
+		# same_class_name_module(c, c_id, module_id): class defintion with class name c and with node id c_id is defined in the scope of a module's body with node id module_id.
+		same_class_name_module(c, c_id, module_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											Module(module_id, bodyid),
+											Member(bodyid, c_id, _))
+
+		# same_class_name_exception(c, c_id, try_id): class defintion with class name c and with node id c_id is defined in the scope of a try's body, an except's body, or a finally's body with node id try_id.
+		same_class_name_exception(c, c_id, try_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											Try(try_id, _, _, _, _),
+											InScopeInherit(try_id, c_id))
+
+		# same_class_name_exception(c, c_id, try_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		# 									Try(try_id, _, handlers_list_id, _, _),
+		# 									Member(handlers_list_id, handler_id, _),
+		# 									ExceptHandler(handler_id, _, _, handler_body_id),
+		# 									MemberInherit(handler_body_id, c_id))
+
+		# same_class_name_exception(c, c_id, try_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		# 									Try(try_id, _, _, _, finally_body_id),
+		# 									MemberInherit(finally_body_id, c_id))
+
+		# same_class_name_with(c, c_id, with_id): class defintion with class name c and with node id c_id is defined in the scope of a with's body with node id with_id.
+		same_class_name_with(c, c_id, with_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											With(with_id, _, _),
+											InScopeInherit(with_id, c_id))
+
+		# same_class_name_for(c, c_id, for_id): class defintion with class name c and with node id c_id is defined in the scope of a for-loop's body with node id for_id.
+		same_class_name_for(c, c_id, for_id), if_(duplicate_class_same_file_with_id(c, c_id),
+											For(for_id, _, _, _, _),
+											InScopeInherit(for_id, c_id))
+
+		
