@@ -98,7 +98,7 @@ def view_file(path, outputDir, prefix):
     extension = os.path.splitext(path)[1]
     print(extension, path)
     if extension == '.py':
-        pyast = ast.parse(open(path).read(), filename=path)
+        pyast = ast.parse(open(path, encoding = 'utf8').read(), filename=path)
         # pprint(pyast)
         name = os.path.basename(path)
         purenmae = os.path.splitext(name)[0]
@@ -135,7 +135,13 @@ if not os.path.exists(dbFolder):
 
 def dump_facts(datafolder, varname, data):
     print('dumping '+ varname)
-    pickle.dump(data,open(os.path.join(datafolder,pickleFolder,varname),'wb'))
+    if varname != 'ValueDict123' and varname != "ValueIdDict123":
+        pickle.dump(data,open(os.path.join(datafolder,pickleFolder,varname),'wb'))
+        if not os.path.exists(os.path.join(datafolder,'text-rep')):
+            os.mkdir(os.path.join(datafolder,'text-rep'))
+        text_out = open(os.path.join(datafolder,'text-rep',varname),'w', encoding='utf8')
+        text_out.write(str(data))
+        text_out.close()
 
 specialTag = {'is_Sub', 'Member','Context','ListLen'}
 ignoreAttr = {'lineno', 'col_offset'}
