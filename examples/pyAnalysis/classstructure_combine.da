@@ -40,46 +40,328 @@ ASTNodes = {#'AST','mod',
 class DAGAnalyzer(Analyzer):
 	
 	def query_classstructure_combine(self):
+		# output files for diffrent analyses
 		output_class_inheritance_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_class_inheritance.txt'
 		output_duplicate_class_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_duplicate_class_names.txt'
 		out_most_extended_class_file = './output/DAGAnalyzer-classstructure/' + self.ValueDict[2] + '_most_extended_class.txt'
 		
+		# get the node ids for some useful types
 		module_ids = setof(module_id, (module_id,_) in self.Module)
 		try_ids = setof(try_id, (try_id, _, _, _, _) in self.Try)
 		if_ids = setof(if_id, (if_id, _, _, _) in self.If)
+		name_ids = setof(name_id, (name_id, _, _) in self.Name)
+		attribute_ids = setof(attr_id, (attr_id, _, _, _) in self.Attribute)
+		for_ids = setof(for_id, (for_id, _, _, _, _) in self.For)
+		func_ids = setof(func_id, (func_id, _, _, _, _, _) in self.FunctionDef)
+		with_ids = setof(with_id, (with_id, _, _) in self.With)
+		classDef_ids = setof(classDef_id, (classDef_id, _, _, _, _, _) in self.ClassDef)
+		considered_scope_ids = try_ids | if_ids | for_ids | func_ids | with_ids | classDef_ids
+
+		# ============================================================================================================
+		# BASE CLASS EXPRESSION ANALYSIS
+
+		class_base_list_ids = setof((base_list_id, class_id), (class_id, _, base_list_id, _, _, _) in self.ClassDef)
+		class_base_ids = setof((base_id, class_id), (base_list_id, class_id) in class_base_list_ids, (base_list_id, base_id, _) in self.Member)
+		name_node_base_ids = setof((name_id, class_id), (name_id, class_id) in class_base_ids, (name_id, _, _) in self.Name)
+		not_name_node_base_ids = setof((base_id, class_id), (base_id, class_id) in class_base_ids, (base_id, class_id) not in name_node_base_ids)
+
+		base_class_exp_nodes_type_list = listof(type(self.ValueDict[base_class_id[0]]), base_class_id in not_name_node_base_ids)
+		base_class_exp_nodes_type_set = setof(type, type in base_class_exp_nodes_type_list)
+
+		output_base_class_test_file_subscript_call = './output/DAGAnalyzer-classstructure/subscript_call_base_class_exp.txt'
+		output_base_class_test_file_attribute = './output/DAGAnalyzer-classstructure/attribute_base_class_exp.txt' 
+		output_base_class_summary = './output/DAGAnalyzer-classstructure/output_base_class_summary_results.txt' 
+		
+
+		with open(output_base_class_summary, 'a') as f_bc, open(output_base_class_test_file_subscript_call, 'a') as test_sc_f, open(output_base_class_test_file_attribute, 'a') as test_a_f:
+			test_sc_f.write('Application: ' + self.ValueDict[2] + '\n\n')
+			test_a_f.write('Application: ' + self.ValueDict[2] + '\n\n')
+			f_bc.write('Application: ' + self.ValueDict[2] + '\n\n')
+
+			f_bc.write('Number of base class expression ids that are members of bases lists in class defs = ' + str(len(setof(node_id, (node_id, _) in class_base_ids))) + '\n')
+			f_bc.write('Number of base-class expression mentioned above that are Name nodes = ' + str(len(setof(node_id, (node_id, _) in name_node_base_ids))) + '\n')
+			f_bc.write('Number of base-class expression mentioned above that are not Name nodes = ' + str(len(setof(node_id, (node_id, _) in not_name_node_base_ids))) + '\n')
+			f_bc.write('Number of node types of base-class expressions other than Name type = ' + str(len(base_class_exp_nodes_type_set)) + '\n')
+			f_bc.write('	These node types are: ' + str(base_class_exp_nodes_type_set) + '\n')
+			for node_type in base_class_exp_nodes_type_set:
+				f_bc.write('	Node type: ' + str(node_type) +  '\n')
+				f_bc.write('	- Number of base-class exp of these types: ' + str(lenof(n_type, n_type in base_class_exp_nodes_type_list, n_type == node_type)) + '\n')
+		
+			attribute_base_class_exp = set()
+			other_base_class_exp = set()
+			for item in not_name_node_base_ids:
+				if 'ast.Attribute' not in str(type(self.ValueDict[item[0]])):
+					other_base_class_exp.add(item)
+				else:
+					attribute_base_class_exp.add(item)
+
+			other_base_class_exp_str = setof((next(line for line in to_source(self.ValueDict[attr_id]).split('\n') if len(line) != 0), class_id), (attr_id, class_id) in other_base_class_exp)
+			other_base_class_names = setof(bc_name, (bc_name, _) in other_base_class_exp_str)
+			grouped_other_base_cass_exp = listof((base_class_str, setof(class_id, (bc_str, class_id) in other_base_class_exp_str, bc_str == base_class_str)), base_class_str in other_base_class_names)
+			for item in grouped_other_base_cass_exp:
+				test_sc_f.write('	base class exp: ' +  item[0] + '\n')
+				test_sc_f.write('	number of class defs using this exp: ' + str(len(item[1])) + '\n')
+				test_sc_f.write('	The class defs are following: \n')
+				for class_id in item[1]:
+					class_node = self.ValueDict[class_id]				
+					test_sc_f.write('	class def: \"' + next(line for line in to_source(class_node).split('\n') if len(line) != 0 and '@' not in line) + '\"\n')
+					test_sc_f.write('	file: ' + self.ValueDict[self.FileDict[class_id]] + '\n')
+					test_sc_f.write('	-----------------------\n')
+				test_sc_f.write('\n')
+
+			# check if all attributes and values of an attribute base class expression are Name.
+			sub_attribute_facts = infer(rule=self.rules_subAttribute, queries=['sub_attribute'])
+			non_class_name_attribute_base_class_exp = set()
+
+			for item in attribute_base_class_exp:
+				sub_attributes = setof(a, (item[0], a) in sub_attribute_facts)
+				sub_attributes.add(item[0])
+				values = setof(v, a_id in sub_attributes, (a_id, v, _, _) in self.Attribute)
+				attributes = setof(attr, a_id in sub_attributes, (a_id, _, attr, _) in self.Attribute)
+				for e in values | attributes:
+					if not isinstance(self.ValueDict[e], str) and e not in name_ids and e not in attribute_ids:
+						non_class_name_attribute_base_class_exp.add(item)
+
+			class_name_attribute_base_class_exp = setof((base_id, class_id), (base_id, class_id) in attribute_base_class_exp, (base_id, class_id) not in non_class_name_attribute_base_class_exp)
+			f_bc.write('Number of Attribute base-class expressions whose all attributes and values are names = ' + str(len(setof(node_id, (node_id, _) in class_name_attribute_base_class_exp))) + '\n')
+			f_bc.write('Number of Attribute base-class expressions whose at least one attribute or value is not a name = ' + str(len(setof(node_id, (node_id, _) in non_class_name_attribute_base_class_exp))) + '\n')
+			
+			for item in non_class_name_attribute_base_class_exp:
+				test_a_f.write('	type: ' +  str(type(self.ValueDict[item[0]])) + '\n')
+				class_node = self.ValueDict[item[1]]				
+				test_a_f.write('	class def: \"' + next(line for line in to_source(class_node).split('\n') if len(line) != 0 and '@' not in line) + '\"\n')
+				test_a_f.write('	file: ' + self.ValueDict[self.FileDict[item[1]]] + '\n')
+				test_a_f.write('	-----------------------\n')
+
+			attribute_base_class_exp_str = setof((next(line for line in to_source(self.ValueDict[attr_id]).split('\n') if len(line) != 0), class_id), (attr_id, class_id) in attribute_base_class_exp)
+			attribute_last_class_names = setof(path.split('.')[-1], (path, _) in attribute_base_class_exp_str)
+
+			defined_class_names_set = setof(self.ValueDict[c_name], (_, c_name, _, _, _, _) in self.ClassDef)
+
+			f_bc.write('Number of distinct attributes that are used as base class expressions = ' + str(len(setof(bc_str, (bc_str, _) in attribute_base_class_exp_str))) + '\n')
+			f_bc.write('Number of last class names in attribute paths = ' + str(len(attribute_last_class_names)) + '\n')
+			f_bc.write('Number of last class names in attribute paths that also got defined in a class definition of the program = ' + str(len(setof(c_name, c_name in attribute_last_class_names, c_name in defined_class_names_set))) + '\n')
+
+			test_a_f.write('Number of distinct attributes that are used as base class expressions = ' + str(len(setof(bc_str, (bc_str, _) in attribute_base_class_exp_str))) + '\n')
+			test_a_f.write('Set of attributes that are used as base class expressions: \n')
+			
+			attr_names_set = setof(attr_name, (attr_name, _) in attribute_base_class_exp_str)
+			num_attr_name = listof((a_name, len(setof(c_id, (attr_name, c_id) in attribute_base_class_exp_str, attr_name == a_name)), len(setof(self.FileDict[c_id], (attr_name, c_id) in attribute_base_class_exp_str, attr_name == a_name))), a_name in attr_names_set)
+
+			num_attr_name = sorted(num_attr_name, key = lambda x: x[1], reverse = True)
+			for item in num_attr_name:
+				test_a_f.write('	attribute: ' + item[0] + '\n')
+				test_a_f.write('	number of class defs using this attribute: ' + str(item[1]) + '\n')
+				test_a_f.write('	number of files that the attribute is defined in: ' + str(item[2]) + '\n')
+				test_a_f.write('	------------------------------------\n')
+
+			test_sc_f.write('\n\n')
+			test_a_f.write('\n\n')
+			f_bc.write('\n\n')
+		# ============================================================================================================
+		# END OF BASE CLASS EXPRESSIONS ANALYSIS
+
+		# ============================================================================================================
+		# CODES FOR CLASS INHERITANCE ANALYSIS, INCLUDING CODES FOR MULTIPLY DEFINED CLASS NAMES ANALYSIS
 		
 		with open(output_class_inheritance_file, 'w') as f, open(output_duplicate_class_file, 'w') as f_dc, open(out_most_extended_class_file, 'w') as f_me:
 			f.write('Number of generated AST nodes = ' + str(sumof(len(getattr(self, node_name, set())), node_name in ASTNodes)) + '\n')
 
 			f.write('Number of files = ' + str(len(setof(self.FileDict[f], f in self.FileDict))) + '\n')
-			extends, class1, internal_class, ancestor, descendant = infer(rule=self.rules_inheritinfo, queries=['extends', 'class1', 'internal_class', 'ancestor', 'descendant'])
-			loner_class = setof(c1, c1 in internal_class, (not some((c2, _) in extends, has = (c2, c1) in extends)) and (not some((_, c2) in extends, has = (c1, c2) in extends)))
-			f.write('Number of class definitions in the analyzed source code = ' + str(len(internal_class)) + '\n')
-
-			f.write('Number of "extends" facts = ' + str(len(extends)) + '\n++++++++++++++++++++++\n\n')
-
-			duplicate_name_class = setof(c1, (id1 , c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2))) 
-			f.write('Number of multiply defined class names = ' + str(len(duplicate_name_class)) + '\n')
-			f_dc.write('Number of multiply defined class names = ' + str(len(duplicate_name_class)) + '\n')
+			extends, class1, internal_class = infer(rule=self.rules_inheritinfo, queries=['extends', 'class1', 'internal_class'])
+			len_ori_extends = len(extends)
+			# filter extends facts that the child and parent class have the same name (e.g. class Tree(BaseTree.Tree)) 
+			extends = setof((c, p), (c, p) in extends, c != p)
+			len_remove_duplicate_extends = len(extends)
 			
+			# filter extends facts that the child and parent class extends each other 
+			extends = setof((c, p), (c, p) in extends, not some((c1, c2) in extends, has = c1 == p and c2 == c))
+			len_final_duplicate_extends = len(extends)
+			loner_class = setof(c1, c1 in internal_class, (not some((c2, _) in extends, has = (c2, c1) in extends)) and (not some((_, c2) in extends, has = (c1, c2) in extends)))
+			f.write('Number of different class names in class definitions in the analyzing source code = ' + str(len(internal_class)) + '\n')
+			f.write('Number of "extends" facts before filtering = ' + str(len_ori_extends) + '\n')
+			f.write('Number of "extends" facts of the same class name = ' + str(len_ori_extends - len_remove_duplicate_extends) + '\n')
+			f.write('Number of "extends" facts that has the two classes names extend each other = ' + str(len_remove_duplicate_extends - len_final_duplicate_extends) + '\n')
+			f.write('Number of final "extends" facts = ' + str(len_final_duplicate_extends) + '\n++++++++++++++++++++++\n\n')
+			# test_case_id = -1
+			# for item in extends:
+			# 	if self.ValueDict[item[0]] == 'TestCase':
+			# 		test_case_id = item[0]
+			# 		break
+			# print('Class Defs with TestCase')
+			# for item in self.ClassDef:
+			# 	if item[1] == test_case_id:
+			# 		print('FILE: ' + self.ValueDict[self.FileDict[item[0]]])
+
+
+			
+			# ============================================================================================================
+			# CODES FOR MULTIPLY DEFINED CLASS NAMES ANALYSIS
+			# GENERAL MULTIPLE DEFINE CLASSES ANALYZING
+			duplicate_name_class_with_id = setof((c1, id1), (id1 , c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2))) 
+			f_dc.write('GENERAL MULTIPLY DEFINED CLASSES ANALYZING: ======================================\n')
+			duplicate_class_names =  setof(c, (c,_) in duplicate_name_class_with_id)
+			f_dc.write('Number of multiply defined class names = ' + str(len(duplicate_class_names)) + '\n')
+			f_dc.write('Number of multiply defined classes = ' + str(len(duplicate_name_class_with_id)) + '\n')
+			if len(duplicate_class_names) != 0:
+				f_dc.write('Average number of class defs per multiply defined class name = ' + str(len(duplicate_name_class_with_id) / len(duplicate_class_names))+ '\n')
+			else:
+				f_dc.write('Average number of class defs per multiply defined class name = -\n')
+			
+			num_duplicate_classes = setof((c1, len(setof(c2, (c, c2) in duplicate_name_class_with_id, c == c1))), c1 in duplicate_class_names)
+			num_duplicate_classes = sorted(list(num_duplicate_classes), key = lambda x: x[1], reverse = True)
+			output_most_defined_classes = set()
+			if len(num_duplicate_classes) < 4:
+				output_most_defined_classes = num_duplicate_classes
+			else:
+				output_most_defined_classes |= {num_duplicate_classes[i] for i in range(0,3)}
+			
+			historgram_num_duplicate_classes = self.get_histogram_num_class(num_duplicate_classes)
+			f_dc.write('Histogram_num_duplicate_classes  \n-------------------\n')
+			f_dc.write(str(self.set_to_sorted_list(historgram_num_duplicate_classes)) + '\n\n')
+
+			# compute the immediate scope of the class definitions
+			same_class_name_if_else, same_class_name_class, same_class_name_function, same_class_name_module, same_class_name_exception, same_class_name_for, same_class_name_with, in_scope_facts  = infer(rule = self.rules_duplicateClassScope, bindings = [('duplicate_class_with_id', duplicate_name_class_with_id)], queries=['same_class_name_if_else', 'same_class_name_class', 'same_class_name_function', 'same_class_name_module', 'same_class_name_exception', 'same_class_name_for', 'same_class_name_with', 'InScope'])
+			
+			all_duplicate_classes_with_scopes = same_class_name_if_else | same_class_name_class | same_class_name_function | same_class_name_exception | same_class_name_for | same_class_name_with
+
+			# filter InScope facts of the related files
+			related_files = setof(self.FileDict[c_id], (c, c_id) in duplicate_name_class_with_id) # ids of the files that contain multiply defined classes.
+
+			in_scope_related_files = setof((parent_id, child_id), (parent_id, child_id) in in_scope_facts, self.FileDict[parent_id] in related_files, parent_id in considered_scope_ids and child_id in considered_scope_ids)
+			
+			count_total_scopes = 0
+			scope_ids = []
+			multiple_scopes_classes = []
+			max_class_def = None
+			for item in all_duplicate_classes_with_scopes:
+				str_query = 'InScopeInherit(_,' + str(item[2]) + ')'
+				scope_ids.append(item[2])
+				in_scopes_ids  = infer(rule = self.rules_InScopeInherit, bindings = [('InScope', in_scope_related_files)], queries=[str_query])	
+				scope_ids += [s_id for s_id in in_scopes_ids]
+				count_total_scopes += len(in_scopes_ids) + 1
+				if len(in_scopes_ids) > 0:
+					multiple_scopes_classes.append(item)
+					
+			f_dc.write('Number of classes that are defined in the top level scope of a file (module) = ' + str(len(same_class_name_module)) + '\n')
+			f_dc.write('Number of if-else scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _, _) in self.If))) + '\n')
+			f_dc.write('Number of class definition scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _, _, _, _) in self.ClassDef))) + '\n' )
+			f_dc.write('Number of function definition scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _, _, _, _) in self.FunctionDef))) + '\n')
+			f_dc.write('Number of try-except-finally scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _, _, _) in self.Try))) + '\n')
+			f_dc.write('Number of with scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _) in self.With))) + '\n')
+			f_dc.write('Number of for scopes = ' + str(len(listof(s_id, s_id in scope_ids, (s_id, _, _, _, _) in self.For))) + '\n')
+
+			f_dc.write('Total number of scopes count (excluding module ones) that classes are defined within = ' + str(count_total_scopes) + '\n')
+			
+			if len(all_duplicate_classes_with_scopes) != 0:
+				f_dc.write('Average number of scopes which a class is defined within = ' + str(count_total_scopes / len(all_duplicate_classes_with_scopes)) + '\n')
+			else:
+				f_dc.write('Average number of scopes which a class is defined within = - \n')
+			
+			
+			
+			f_dc.write('\nImmediate scopes results: \n')
+			f_dc.write('number of classes that are defined in the top level scope of an if-else = ' + str(len(same_class_name_if_else)) + '\n')
+			f_dc.write('number of classes that are defined in the top level scope of a class definition = ' + str(len(same_class_name_class)) + '\n')
+			f_dc.write('number of classes that are defined in the top level scope of a function definition = ' + str(len(same_class_name_function)) + '\n')
+			f_dc.write('number of classes that are defined in the top level scope of a try-except-finally = ' + str(len(same_class_name_exception)) + '\n')
+			f_dc.write('number of classes that are defined in the top level scope of a with = ' + str(len(same_class_name_with)) + '\n')
+			f_dc.write('number of classes that are defined in the top level scope of a for = ' + str(len(same_class_name_for)) + '\n')
+			
+			f_dc.write('\nModules analysis: \n')
+			f_dc.write('Number of multiply defined classes that are defined in test-related folders = ' + str(len(setof((c_id), (c, c_id) in duplicate_name_class_with_id, ('test' in self.ValueDict[self.FileDict[c_id]])))) + '\n')
+			f_dc.write('Number of multiply defined classes that are not defined in test-related folders = ' + str(len(setof((c_id), (c, c_id) in duplicate_name_class_with_id, ('test' not in self.ValueDict[self.FileDict[c_id]])))) + '\n')
+			
+			duplicate_class_different_files_with_id = setof((c1, id1), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and  not self.is_same_file(id1, id2))) 
+			duplicate_class_same_file_with_id = setof((c1, id1), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and self.is_same_file(id1, id2))) 
+			
+			duplicate_class_names_different_files = setof(c, (c, _) in duplicate_class_different_files_with_id)
+			duplicate_class_names_same_files = setof(c, (c, _) in duplicate_class_same_file_with_id)
+
+			f_dc.write('Number of class names that are defined in different files = ' + str(len(duplicate_class_names_different_files)) + '\n')
+			f_dc.write('Number of class names that are defined in the same file = ' + str(len(duplicate_class_names_same_files)) + '\n' )
+			f_dc.write('Number of class names that are both defined in the same file and different files = ' + str((len(duplicate_class_names_different_files) + len(duplicate_class_names_same_files)) - len(duplicate_class_names)) + '\n')
+
+			f_dc.write('\nModules analysis of multiply defined class names defined in different files: \n')
+			same_folder_count = 0
+			sub_folder_count = 0
+			for class_name in setof(c, (c,_) in duplicate_class_different_files_with_id):
+				class_defs = setof(c_id, (c, c_id) in duplicate_class_different_files_with_id, c == class_name)
+				#f_dc.write('\nClass name: ' + self.ValueDict[class_name] +'\n')
+				file_paths = []
+				for class_id in class_defs:
+					file_path = self.ValueDict[self.FileDict[class_id]]
+					file_paths.append(file_path.split('\\')[:-1])
+					#f_dc.write('		file: ' + file_path + '\n')
+					#f_dc.write('		---------------\n')
+				
+				same_folder = True
+				shortest_path = file_paths[0]
+				for i in range(1, len(file_paths)):
+					if file_paths[i] != file_paths[i-1]:
+						same_folder = False
+					if len(file_paths[i]) < len(shortest_path):
+						shortest_path = file_paths[i]
+				if same_folder:
+					same_folder_count += 1
+				else:
+					sub_folder = True
+					for path in file_paths:
+						if shortest_path != path[:len(shortest_path)]:
+							sub_folder = False
+							break 
+					if sub_folder:
+						sub_folder_count += 1
+
+			f_dc.write('Number of duplicate class names that have classes defined in the same folder = ' + str(same_folder_count) + '\n')
+			f_dc.write('Number of duplicate class names that have classes defined in the same folder or sub folder of the shortest path = ' + str(sub_folder_count) + '\n')
+
+
+			f_dc.write('\nList of classes that are defined in multiple scopes:\n ')
+			for item in multiple_scopes_classes:
+				class_node = self.ValueDict[item[1]]
+				f_dc.write('		class name: ' + self.ValueDict[item[0]] + '\n')
+				f_dc.write('		file: ' + self.ValueDict[self.FileDict[item[1]]] + '\n')
+				f_dc.write('		class def line number: ' + str(class_node.lineno) + '\n		-----------------\n')
+
+			f_dc.write('\n\nClass names that are most defined: \n')
+			for item in output_most_defined_classes:
+				f_dc.write('class name: ' + self.ValueDict[item[0]] + ' , num_defs = ' + str(item[1]) + '\n')
+				class_defs_set = setof(c_id, (c, c_id) in duplicate_name_class_with_id, c == item[0])
+				f_dc.write('class defs: \n')
+				for class_def in class_defs_set:
+					f_dc.write('		file: ' + self.ValueDict[self.FileDict[class_def]] + '\n')
+					f_dc.write('		class def line number: ' + str(self.ValueDict[class_def].lineno) + '\n		-----------------\n')
+
+			
+			# ============================================================================================================
+			# END OF GENERAL MULTIPLY DEFINED CLASS ANALYSIS
+			
+			'''
+			# ============================================================================================================
+			# THIS SECTION CONTAINS THE CODE FOR OUR PREVIOUS APPROACH OF ANALYZING MULTIPLY DEFINED CLASS NAMES: ANALYZING THOSE 
+			# CLASS NAMES THAT HAVE DEFINITIONS IN THE SAME FILE AND THOSE THAT HAVE DEFINITIONS IN DIFFERENT FILES SEPARATELY 
+
+			# SEPARATE MULTIPLY DEFINED CLASSES ANALYZING IN DIFFERENT FILES AND SAME FILE 
 			duplicate_class_different_files_with_id = setof((c1, id1), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and  not self.is_same_file(id1, id2))) 
 			
 			duplicate_class_same_file_with_id = setof((c1, id1), (id1, c1, _, _, _, _) in self.ClassDef, some((id2, c2, _, _, _, _) in self.ClassDef, has = (c1 == c2) and (id1 != id2) and self.is_same_file(id1, id2))) 
 			
-			# MULTIPLY DEFINE CLASSES ANALYZING
+			
 
 			f_dc.write('MULTIPLY DEFINE CLASSES IN DIFFERENT FILES ANALYZING: ======================================\n')
 			duplicate_class_names_different_files = setof(c, (c, _) in duplicate_class_different_files_with_id)
 			f_dc.write('Number of class names that are defined multiple times in different files = ' + str(len(duplicate_class_names_different_files)) + '\n')
 			f.write('Number of class names that are defined multiple times in different files = ' + str(len(duplicate_class_names_different_files)) + '\n')
-			f_dc.write('Number of classes that are defined multiple time in different files = ' + str(len(duplicate_class_different_files_with_id)) + '\n')
-			f.write('Number of classes that are defined multiple time in different files =  ' + str(len(duplicate_class_different_files_with_id)) + '\n')
+			f_dc.write('Number of classes that are defined multiple times in different files = ' + str(len(duplicate_class_different_files_with_id)) + '\n')
+			f.write('Number of classes that are defined multiple times in different files =  ' + str(len(duplicate_class_different_files_with_id)) + '\n')
+			
 			
 
 			f_dc.write('\n\nRESULTS WITHOUT TEST-RELATED FILES: \n')
 
 			duplicate_class_different_files_with_id_no_test = setof((c, c_id), (c, c_id) in duplicate_class_different_files_with_id, ('test' not in self.ValueDict[self.FileDict[c_id]]))
-			f_dc.write('Number of classes that are defined multiple time in different files = ' + str(len(duplicate_class_different_files_with_id_no_test)) + '\n')
+			f_dc.write('Number of classes that are defined multiple times in different files = ' + str(len(duplicate_class_different_files_with_id_no_test)) + '\n')
 			same_folder_count = 0
 			sub_folder_count = 0
 			duplicate_with_test_count = 0
@@ -118,11 +400,10 @@ class DAGAnalyzer(Analyzer):
 			f_dc.write('Number of duplicate class names that have one class defined in non test-related folder, and others are defined in test-related folder = ' + str(duplicate_with_test_count) + '\n')
 
 
-
 			f_dc.write('\n\nRESULTS WITH TEST-RELATED FILES: \n')
 
 			duplicate_class_different_files_with_id_with_test = setof((c, c_id), (c, c_id) in duplicate_class_different_files_with_id, ('test' in self.ValueDict[self.FileDict[c_id]]))
-			f_dc.write('Number of classes that are defined multiple time in different files = ' + str(len(duplicate_class_different_files_with_id_with_test)) + '\n')
+			f_dc.write('Number of classes that are defined multiple times in different files = ' + str(len(duplicate_class_different_files_with_id_with_test)) + '\n')
 			same_folder_count = 0
 			sub_folder_count = 0
 			duplicate_with_test_count = 0
@@ -161,14 +442,14 @@ class DAGAnalyzer(Analyzer):
 			f_dc.write('Number of duplicate class names that have one class defined in test-related folder, and others are defined in non test-related folder = ' + str(duplicate_with_test_count) + '\n')
 
 
-
+		
 
 			f_dc.write('\n\nMULTIPLY DEFINE CLASSES IN THE SAME FILE ANALYZING: ======================================\n')
 			duplicate_class_names_same_file = setof(c, (c, _) in duplicate_class_same_file_with_id)
 			f_dc.write('Number of class names that are defined multiple times in the same file = ' + str(len(duplicate_class_names_same_file)) + '\n')
 			f.write('Number of class names that are defined multiple times in the same file = ' + str(len(duplicate_class_names_same_file)) + '\n')
 
-			same_class_name_if_else, same_class_name_class, same_class_name_function, same_class_name_module, same_class_name_exception, same_class_name_for, same_class_name_with  = infer(rule = self.rules_duplicateClassSameFile, bindings = [('duplicate_class_same_file_with_id', duplicate_class_same_file_with_id)], queries=['same_class_name_if_else', 'same_class_name_class', 'same_class_name_function', 'same_class_name_module', 'same_class_name_exception', 'same_class_name_for', 'same_class_name_with'])
+			same_class_name_if_else, same_class_name_class, same_class_name_function, same_class_name_module, same_class_name_exception, same_class_name_for, same_class_name_with  = infer(rule = self.rules_duplicateClassScope, bindings = [('duplicate_class_with_id', duplicate_class_same_file_with_id)], queries=['same_class_name_if_else', 'same_class_name_class', 'same_class_name_function', 'same_class_name_module', 'same_class_name_exception', 'same_class_name_for', 'same_class_name_with'])
 			f_dc.write('Number of classes that are defined multiple time in the same file = ' + str(len(duplicate_class_same_file_with_id)) + '\n')
 			f.write('Number of classes that are defined multiple time in the same file = ' + str(len(duplicate_class_same_file_with_id)) + '\n')
 			
@@ -288,17 +569,26 @@ class DAGAnalyzer(Analyzer):
 					f_dc.write('	if statement: \"' + next(line for line in to_source(self.ValueDict[if_id]).split('\n') if len(line) != 0) + '\"\n')
 					f_dc.write('	-----------------------\n')
 				f_dc.write('\n\n')
-	
-			# ----
 
 			duplicate_name_extends_class = setof(c1, c1 in duplicate_name_class, (some((c2, _) in extends, has = (c2, c1) in extends)) or (some((_, c2) in extends, has = (c1, c2) in extends)))
 			f.write('Number of multiply defined class names in extends relation = ' + str(len(duplicate_name_extends_class)) + '\n++++++++++++++++++++++\n\n')
 			
+			# ============================================================================================================
+			# END OF MULTIPLY DEFINED CLASS NAMES THAT ANALYZE CLASS NAMES THAT HAVE DEFINITIONS IN THE SAME FILE AND CLASS NAMESE THAT HAVE DEFINITIONS IN DIFFERENT FILES SEPARATELY 
+
+			'''
+
+			# ============================================================================================================
+			# CONTINUE WITH CLASS INHERITANCE ANALYSIS
+
+
 			if len(extends) == 0:
 				f.write('THERE IS NO CLASS INHERITANCE IN THIS PROGRAM!')
 				f_me.write('THERE IS NO CLASS INHERITANCE IN THIS PROGRAM!')
 				sys.exit()
 
+			
+			sys.exit()
 			root_class, leaf_class = self.get_root_leaf_classes(extends, class1)
 			external_class  = class1 - internal_class
 			f.write('Number of leaf classes = ' + str(len(leaf_class))+ "\n")
@@ -307,12 +597,31 @@ class DAGAnalyzer(Analyzer):
 			f.write('Number of loner classes = ' + str(len(loner_class)) + '\n')
 			f.write('Total number of class names (include class names defined in the program and external extended class names) = ' + str(len(class1)) + '\n++++++++++++++++++++++\n\n')
 
+			# self.check_cycle(extends, class1)
+			# print('DONE CHECKING CYCLE TEST')
+			# sys.exit()
+
+
+			# compute descendant and ancester on batches of sub-trees determined by the root class names
+			ancestor = set()
+			descendant = set()
+			for r in root_class:
+				sub_extends = self.get_extends_from_root(r, extends)
+				sub_ancestor, sub_descendant = infer(rule = self.rules_deepinheritinfo, bindings = [('sub_extends', sub_extends)], queries=['ancestor', 'descendant'])
+				ancestor |= sub_ancestor
+				descendant |= sub_descendant
+
 			height = self.get_height(loner_class, leaf_class, extends, class1)
 			f.write('Maximum height = ' + str(maxof(h, (_, h) in height)) + '\n')
-			f.write('Average node height (exclude loner classes) = ' + str(sumof(h, (_, h) in height) / len(height)) + '\n')
+			if len(height) != 0:
+				f.write('Average node height (exclude loner classes) = ' + str(sumof(h, (_, h) in height) / len(height)) + '\n')
+			else:
+				f.write('Average node height (exclude loner classes) = -\n')
 			tree_height = setof((c, h), (c, h) in height, c in root_class)
-			f.write('Average tree height (exclude loner classes) = ' + str(sumof(h, (_, h) in tree_height) / len(tree_height)) + '\n')
-
+			if len(tree_height) != 0:
+				f.write('Average tree height (exclude loner classes) = ' + str(sumof(h, (_, h) in tree_height) / len(tree_height)) + '\n')
+			else:
+				f.write('Average tree height (exclude loner classes) = -\n')
 			depth = self.get_depth(loner_class, root_class, extends, class1)
 			f.write('Maximum depth = ' + str(maxof(d, (_, d) in depth)) + '\n')
 			f.write('Average node depth (exclude loner classes) = ' + str(sumof(d, (_, d) in depth) / len(depth)) + '\n')
@@ -323,6 +632,7 @@ class DAGAnalyzer(Analyzer):
 			num_desc = self.get_num_desc(descendant, class1, loner_class)
 			num_ancs = self.get_num_ancs(ancestor, class1, external_class, loner_class)
 			
+			# ============================================================================================================
 			# MOST EXTENDED CLASS(ES) ANALYSIS
 			most_extended_class = setof(c, (c, nc) in num_children, nc == maxof(nc1, (c1, nc1) in num_children))
 			most_extended_class_with_file = setof((c1, self.FileDict[id1]), (id1, c1, _, _, _, _) in self.ClassDef, c1 in most_extended_class)
@@ -342,12 +652,19 @@ class DAGAnalyzer(Analyzer):
 					f_me.write('class: ' + self.ValueDict[child] + '\n')
 					f_me.write('file: ' + self.ValueDict[file] + '\n-----------------------')
 				f_me.write('----------------------------')
-			# ---
+			# ============================================================================================================
+			# END OF MOST EXTENDED CLASS(ES) ANALYSIS
 
 			tree_size = setof((c, s), (c, s) in num_desc, c in root_class)
-			f.write('Average number of leaf nodes in a tree (exclude loner classes) = ' + str(len(leaf_class)/len(root_class)) + '\n')
-			f.write('Average number of nodes in a tree (exclude loner classes) = ' + str(sumof(s, (_, s) in tree_size) / len(tree_size)) + '\n++++++++++++++++++++++\n\n')
+			if len(root_class) != 0:
+				f.write('Average number of leaf nodes in a tree (exclude loner classes) = ' + str(len(leaf_class)/len(root_class)) + '\n')
+			else:
+				f.write('Average number of leaf nodes in a tree (exclude loner classes) = -\n')
 			
+			if len(tree_size) != 0:
+				f.write('Average number of nodes in a tree (exclude loner classes) = ' + str(sumof(s, (_, s) in tree_size) / len(tree_size)) + '\n++++++++++++++++++++++\n\n')
+			else:
+				f.write('Average number of nodes in a tree (exclude loner classes) = -\n')
 			histogram_num_children = self.get_histogram_num_class(num_children)
 			historgram_num_parent = self.get_histogram_num_class(num_parent)
 
@@ -361,8 +678,9 @@ class DAGAnalyzer(Analyzer):
 			
 			f.write('Histogram_num_desc (exclude loner classes)  \n-------------------\n')
 			f.write(str(self.set_to_sorted_list(histogram_num_desc)) + '\n\n')
-			f.write('Histogram_num_ancs (exclude loner clases and external extended classes)  \n-------------------\n')
+			f.write('Histogram_num_ancs (exclude loner classes and external extended classes)  \n-------------------\n')
 			f.write(str(self.set_to_sorted_list(histogram_num_ancs)) + '\n++++++++++++++++++++++\n\n')
+
 
 
 	def output_multiply_defined_classes_in_scope(self, duplicate_classes, out_f, module_ids, try_ids):
@@ -402,6 +720,17 @@ class DAGAnalyzer(Analyzer):
 	def get_root_leaf_classes(self, extends, class1):
 		return setof(c1, (_, c1) in extends, not some((_, c2) in extends, has = (c1, c2) in extends)), setof(c1, (c1, _) in extends, not some((c2, _) in extends, has = (c2, c1) in extends))
 
+	def get_extends_from_root(self, root, extends):
+		results = set()
+		children = setof((c, r), (c, r) in extends, r == root)
+		if len(children) == 0:
+			return results
+		else:
+			results |= children
+		for child in children:
+			results |= self.get_extends_from_root(child[0], extends)
+		return results
+
 	def get_num_children(self, extends, class1, loner_class):
 		return setof((c1, len(setof(c2, (c2, c) in extends, c == c1))), c1 in class1, c1 not in loner_class)
 
@@ -426,6 +755,38 @@ class DAGAnalyzer(Analyzer):
 	def get_height(self, loner_class, leaf_class, extends, class1):
 		return setof((c, self.height(c, extends, leaf_class)), c in class1, c not in loner_class)
 
+	def check_cycle_helper(self, extends, visited_classes , c):
+		visited_classes.append(c)
+		children = setof(child, (child, parent) in extends, parent == c)
+		if self.ValueDict[c] == 'SimpleTestCase':
+			test_child_classes_str = [self.ValueDict[c_id] for c_id in children]
+			print('chidren of SimpleTestCase class are: ' + str(test_child_classes_str))
+		for child in children:
+			if child in visited_classes:
+				print('!!!!! DEBUG - Class name caused cycle : ' + str(self.ValueDict[child]))	
+				print('Parent Class Name: ' + str(self.ValueDict[c]))
+
+				visited_classes_str = [self.ValueDict[c_id] for c_id in visited_classes]
+				print('visited_classes list: ' + str(visited_classes_str))
+
+				child_classes_str = [self.ValueDict[c_id] for c_id in children]
+				print('children classes list: ' + str(child_classes_str))
+				sys.exit()
+			
+			self.check_cycle_helper(extends, visited_classes, child)
+		del visited_classes[-1]
+		return
+					
+		
+
+	def check_cycle(self, extends, class1):
+		for c in class1:
+			if self.ValueDict[c] != 'TestCase' and self.ValueDict[c] != 'SimpleTestCase' and self.ValueDict[c] != 'TransactionTestCase':
+				visited_classes = []
+				self.check_cycle_helper(extends, visited_classes, c)
+		sys.exit()
+
+
 	def depth(self, c, extends, root_class):
 		return 0 if c in root_class else 1 + maxof(self.depth(c2, extends, root_class), (c1, c2) in extends, c1 == c)
 
@@ -435,6 +796,16 @@ class DAGAnalyzer(Analyzer):
 	def set_to_sorted_list(self, s):
 		return sorted(list(s), key = lambda x: x[0])
 
+	
+
+	def rules_subAttribute():
+		# sub_attribute(a1, a2): Attribute node a2 is part of the value of Attribute node a1
+		sub_attribute(a1, a2), if_(Attribute(a1, a2, _, _),
+									Attribute(a2, _, _, _))
+		sub_attribute(a1, a2), if_(Attribute(a1, a3, _, _),
+									Attribute(a3, _, _, _),
+									sub_attribute(a3, a2))
+
 	def rules_inheritinfo():
 		# extends(c1, c2): class c1 extends class c2.
 		extends(c1,c2), if_(ClassDef(_, c1, baseid, _, _, _),
@@ -442,70 +813,88 @@ class DAGAnalyzer(Analyzer):
 								Name(nid, c2, _)
 								)
 
+		# extends(c1,c2), if_(ClassDef(_, c1, baseid, _, _, _),
+		# 						Member(baseid, aid, _),
+		# 						Attribute(aid, _, c2, _)
+		# 						)
+
+
 		# class1(c): class c is defined within the analyzing source codes, or class c is imported from an external libraries and is extended by a class which is defiend withtin the analyzing source codes. 
 		class1(c), if_(ClassDef(_, c, _, _, _, _))
 
-		class1(c2), if_(ClassDef(_, c1, baseid, _, _, _),
+		class1(c2), if_(ClassDef(_, _, baseid, _, _, _),
 								Member(baseid, nid, _),
 								Name(nid, c2, _))
+		# class1(c2), if_(ClassDef(_, _, baseid, _, _, _),
+		# 						Member(baseid, aid, _),
+		# 						Attribute(aid, _, c2, _))
 
 		# internal_class(c): class c is defined within the analyzing source codes.
 		internal_class(c), if_(ClassDef( _, c, _, _, _, _))
 
-		# ancestor(c): class c1 is an ancestor of class c2
-		ancestor(c1, c2), if_(extends(c2, c1))
 
-		ancestor(c1, c2), if_(extends(c2, c3),
+
+	def rules_deepinheritinfo():
+
+		# ancestor(c): class c1 is an ancestor of class c2
+		ancestor(c1, c2), if_(sub_extends(c2, c1))
+
+		ancestor(c1, c2), if_(sub_extends(c2, c3),
 								ancestor(c1, c3))
 
 		# descendant(c): class c1 is a descendant of class c2
-		descendant(c1, c2), if_(extends(c1, c2))
+		descendant(c1, c2), if_(sub_extends(c1, c2))
 
-		descendant(c1, c2), if_(extends(c1, c3),
+		descendant(c1, c2), if_(sub_extends(c1, c3),
 								descendant(c3, c2))
 
 
 
-	def rules_duplicateClassSameFile():
+	def rules_InScopeInherit():
+		# InScopeInherit(ancs_id, desc_id): node with id desc_id is within the scope of node with id ancs_id.
+		InScopeInherit(ancs_id, desc_id), if_(InScope(ancs_id, desc_id))
+		InScopeInherit(ancs_id, desc_id), if_(InScope(ancs_id, parent_id),
+											InScopeInherit(parent_id, desc_id))
+
+	def rules_duplicateClassScope():
 		# these rules are for analyzing the class definitions using the same class name with other classe definitions in the same file.
 
 		# same_class_name_if(c, c_id, if_id): class defintion with class name c and with node id c_id is defined in the scope of an if's body or an elif's body with node id if_id.
-		same_class_name_if_else(c, c_id, if_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_if_else(c, c_id, if_id), if_(duplicate_class_with_id(c, c_id),
 											If(if_id, _, _, _),
 											InScope(if_id, c_id))
 
 		# same_class_name_class(c, c_id, class_id): class defintion with class name c and with node id c_id is defined in the scope of another class definition's body with node id class_id.
-		same_class_name_class(c, c_id, class_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_class(c, c_id, class_id), if_(duplicate_class_with_id(c, c_id),
 											ClassDef(class_id, _, _, _, _, _),
 											InScope(class_id, c_id))
 
 		# same_class_name_function(c, c_id, func_id): class defintion with class name c and with node id c_id is defined in the scope of a function definition's body with node id func_id.
-		same_class_name_function(c, c_id, func_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_function(c, c_id, func_id), if_(duplicate_class_with_id(c, c_id),
 											FunctionDef(func_id, _, _, _, _, _),
 											InScope(func_id, c_id))
 
 		# same_class_name_module(c, c_id, module_id): class defintion with class name c and with node id c_id is defined in the scope of a module's body with node id module_id.
-		same_class_name_module(c, c_id, module_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_module(c, c_id, module_id), if_(duplicate_class_with_id(c, c_id),
 											Module(module_id, bodyid),
 											Member(bodyid, c_id, _))
 
 		# same_class_name_exception(c, c_id, try_id): class defintion with class name c and with node id c_id is defined in the scope of a try's body, an except's body, or a finally's body with node id try_id.
-		same_class_name_exception(c, c_id, try_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_exception(c, c_id, try_id), if_(duplicate_class_with_id(c, c_id),
 											Try(try_id, _, _, _, _),
 											InScope(try_id, c_id))
 
 		# same_class_name_with(c, c_id, with_id): class defintion with class name c and with node id c_id is defined in the scope of a with's body with node id with_id.
-		same_class_name_with(c, c_id, with_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_with(c, c_id, with_id), if_(duplicate_class_with_id(c, c_id),
 											With(with_id, _, _),
 											InScope(with_id, c_id))
 
 		# same_class_name_for(c, c_id, for_id): class defintion with class name c and with node id c_id is defined in the scope of a for-loop's body with node id for_id.
-		same_class_name_for(c, c_id, for_id), if_(duplicate_class_same_file_with_id(c, c_id),
+		same_class_name_for(c, c_id, for_id), if_(duplicate_class_with_id(c, c_id),
 											For(for_id, _, _, _, _),
 											InScope(for_id, c_id))
 
-		# InScope(ancs_id, desc_id): node with id desc_id is at the top level of the scope of node with id ancs_id. 
-		# only consider scopes of for-loops, with statements, exception statements (try, except, finally), function definitions, class definitions, and if-else statments.
+		# InScope(parent_id, child_id): node with id child_id is at the top level of the scope of node with id parent_id. 
 		InScope(parent_id, child_id), if_(For(parent_id, _, _, bodyid, _),
 										Member(bodyid, child_id, _))
 		InScope(parent_id, child_id), if_(With(parent_id, _, bodyid),
@@ -527,4 +916,3 @@ class DAGAnalyzer(Analyzer):
 		InScope(parent_id, child_id), if_(Try(parent_id, _, _, _, finally_body_id),
 										Member(finally_body_id, child_id, _))
 
-		
