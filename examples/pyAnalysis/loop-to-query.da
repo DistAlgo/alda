@@ -40,42 +40,197 @@ class GetVariable(ast.NodeVisitor):
 class LoopAnalyzer(Analyzer):
 
 	def query_candidate_rule(self):
-		candidate = infer(rule=self.rules_compCandidate, queries=['compCandidate'])
-		print('-------- number of candidate transformable loops:', len(candidate))
-		for c in candidate:
-			node = self.ValueDict[c]
-			print('========== %s: lineno: %s ==========%s' % (self.ValueDict[self.FileDict[c]], node.lineno, to_source(node)))
+		output_file = './output/LoopToQuery-candidate/' + self.ValueDict[2] + '-loop-index.txt'
+		with open(output_file, 'w') as f:
+			#query_inc_results = infer(rule=self.rules_incCandidate, queries=['CandidateIncPattern','For'])
+			#inc_candidate = query_inc_results[0]
+			loop_index_candidate = infer(rule=self.rules_loopIndexCandidate, queries=['CandidateLoopIndexPattern'])
+			#candidates = inc_candidate.union(loop_index_candidate)
+			candidates = loop_index_candidate
+			# f.write('-------- total number of candidate loops: ' + str(len(candidates)) + '\n')
+			# f.write('-------- number of candidate loops with inc patterns: ' + str(len(inc_candidate)) + '\n')
+			f.write('-------- number of candidate loops with loop index patterns: ' + str(len(loop_index_candidate)) + '\n---\n')
+			# f.write('-------- total number of for loop: ' + str(len(query_inc_results[1])) + '\n\n\n')
+			# print('-------- number of candidate loops: ' + str(len(loop_index_candidate)))
+			#print('query results: ' + str(candidates))
+			for c in candidates:
+				node = self.ValueDict[c]
+				f. write('========== %s: lineno: %s ==========%s\n' % (self.ValueDict[self.FileDict[c]], node.lineno, to_source(node)))
+				# print('========== %s: lineno: %s ==========%s' % (self.ValueDict[self.FileDict[c]], node.lineno, to_source(node)))
+	def rules_loopIndexCandidate():
+		# BinOpInherit(opparentid, opchildid): binary operation expression with node ID opchildid is nested at the top level of the binary opeartion expression opparentid. 
+		BinOpInherit(opparentid, opchildid), if_(
+			BinOp(opparentid, opchildid, _, _))
 
-	def rules_compCandidate():
+		BinOpInherit(opparentid, opchildid), if_(
+			BinOp(opparentid, _, _, opchildid))
+
+		# ForBodyLessThanFiveLines(forbodyid): the body, with the node ID forbodyid, of a for loop has less than or equal to 5 lines.
+		ForBodyLessThanFiveLines(forbodyid), if_(
+			For(forid, _, _, forbodyid, _),
+			ListLen(forbodyid, 1))
+
+		ForBodyLessThanFiveLines(forbodyid), if_(
+			For(forid, _, _, forbodyid, _),
+			ListLen(forbodyid, 2))
+
+		ForBodyLessThanFiveLines(forbodyid), if_(
+			For(forid, _, _, forbodyid, _),
+			ListLen(forbodyid, 3))
+
+		ForBodyLessThanFiveLines(forbodyid), if_(
+			For(forid, _, _, forbodyid, _),
+			ListLen(forbodyid, 4))
+
+		ForBodyLessThanFiveLines(forbodyid), if_(
+			For(forid, _, _, forbodyid, _),
+			ListLen(forbodyid, 5))
+
+		# BinOpRec(opancesterid, opdesid): binary operation expression with node ID opdesid is nested in the binary operation expression opancesterid. The rule is defined recursively with the BinOpInherit rule.
+		BinOpRec(opancesterid, opdesid), if_(
+			BinOpInherit(opancesterid, opdesid))
+
+		BinOpRec(opancesterid, opdesid), if_(
+			BinOpInherit(opancesterid, opchildid),
+			BinOpRec(opchildid, opdesid))
+
+
+		# ForIndexMatch(expid, forindexid): an expression with node ID expid uses a target variable, with node ID forindexid, of a for-loop as an index (first rule) or a component of a tuple used as an index (second rule). 
+		ForIndexMatch(expid, forindexid), if_(
+			Subscript(expid, _ , sliceid, _),
+			Index(sliceid,  indexid),
+			Name(indexid, value, _),
+			Name(forindexid, value, _))
+
+		ForIndexMatch(expid, forindexid), if_(
+			Subscript(expid, _ , sliceid, _),
+			Index(sliceid,  indexid),
+			Tuple(indexid, varid, _),
+			Member(varid, var, _),
+			Name(var, value, _),
+			Name(forindexid, value, _))
+
+		# OpIndexPattern(expid, forindexid): a nested binary operations expression with node ID expid uses a target variable, with node ID forindexed, of a for-loop as an index of an expression that is an operand of the binary operation.
+		OpIndexPattern(expid, forindexid), if_(
+			For(_, forindexid, _, _, _),
+			BinOpRec(expid, binopid),
+			ForIndexMatch(binopid, forindexid))
+
+		# FuncIndexPattern(funcid, forindexid): function call with node ID funcid has an argument that uses a target variable, with node ID forindexid, of a for-loop as an index (or a component of a tuple as index).
+		FuncIndexPattern(funcid, forindexid), if_(
+			For(_, forindexid, _, _, _),
+			Call(funcid, _, argsid, _),
+			Member(argsid, arg, _),
+			ForIndexMatch(arg, forindexid))
+
+		# Expression(stmtid, expid): expression with node ID expid in a statement with node ID stmid. The statment can be an augmented assignment (first rule), an assignment (second rule), or an expression statement (third rule). 
+		Expression(stmtid, expid), if_(
+			AugAssign(stmtid, _, _, expid))
+
+		Expression(stmtid, expid), if_(
+			Assign(stmtid, _, expid))
+
+		Expression(stmtid, expid), if_(
+			Expr(stmtid, expid))
+
+		# ForInherit(parentforid, childforid): for-loop with node ID childforid is in the top level of the scope of the for-loop with node ID parentforid. 
+		ForInherit(parentforid, childforid), if_(
+			For(parentforid, _, _, parentforbodyid, _),
+			For(childforid, _, _, _, _),
+			Member(parentforbodyid, childforid, _))
+
+		# ForRec(ancforid, desforid): for-loop with node ID desforid is within the scope of for-loop with node ID ancforid. The rule is defined recursively with ForInherit rule.
+		ForRec(ancforid, desforid), if_(
+			ForInherit(ancforid, desforid))
+
+		ForRec(ancforid, desforid), if_(
+			ForInherit(ancforid, childforid),
+			ForRec(childforid, desforid))
+
+        # LoopIndexPattern(forid): 
+        # 1. for-loop with node ID forid whose target variable is used as an index (or a component of a tuple as index) 
+        # of an expression that is an operand of a nested binary operations. The expression can be in the top level 
+        # of the scope of the for-loop with node ID forid (first rule) or in the scope of a for loop which is within 
+        # the scope of the for-loop with node ID forid (second rule) where the nested binary operations is the right 
+        # side of an assignment statement.
+        
+        # 2. for-loop with node ID forid whose target variable is used as an index (or a component of a tuple as index) 
+        # of an expression that is an argument of a call. The call can be in the top level of the scope of the for-loop 
+        # with node ID forid (third rule) or in the scope of a for loop which is within the scope of the for-loop with 
+        # node ID forid (fourth rule).
+
+		LoopIndexPattern(forid), if_(
+			For(forid, forindexid, _, forbodyid, _),
+			ForBodyLessThanFiveLines(forbodyid),
+			Member(forbodyid, bodystmtid, _),
+			Expression(bodystmtid, expid),
+			OpIndexPattern(expid, forindexid))
+
+		LoopIndexPattern(forid), if_(
+			ForRec(forid, childforid),
+			For(forid, forindexid, _, parentforbodyid, _),
+			ForBodyLessThanFiveLines(parentforbodyid),
+			For(childforid, _, _, forbodyid, _),
+			Member(forbodyid, bodystmtid, _),
+			Expression(bodystmtid, expid),
+			OpIndexPattern(expid, forindexid))
+
+		LoopIndexPattern(forid), if_(
+			For(forid, forindexid, _, forbodyid, _),
+			ForBodyLessThanFiveLines(forbodyid),
+			Member(forbodyid, bodystmtid, _),
+			Expression(bodystmtid, expid),
+			FuncIndexPattern(expid, forindexid))
+
+		LoopIndexPattern(forid), if_(
+			ForRec(forid, childforid),
+		 	For(forid, forindexid, _, parentforbodyid, _),
+		 	ForBodyLessThanFiveLines(parentforbodyid),
+			For(childforid, _, _, forbodyid, _),
+			Member(forbodyid, bodystmtid, _),
+			Expression(bodystmtid, expid),
+			FuncIndexPattern(expid, forindexid))
+
+		# CandidateLoopIndexPattern(id): candidate loopIndex pattern for improvement starting at node ID id. 
+		CandidateLoopIndexPattern(id), if_(For(id,_,_,_,_), LoopIndexPattern(id))
+
+	def rules_incCandidate():
 		# 1. r.append(y), r.add(y)
 		IncPattern(exprid),if_(Expr(exprid, bodyval),
 			Call(bodyval,funcid,argid,_), Attribute(funcid,_,_,_),
 			ListLen(argid,1))
-		# 2. augAssign: r += y, r -= y
+
+		# # 2. augAssign: r += y, r -= y
 		IncPattern(aaid),if_(AugAssign(aaid,_,_,_))
-		# 3. index assign: r[x] = y
-		IncPattern(aid), if_(Assign(aid, tarlistid,_), 
+
+		# # 3. index assign: r[x] = y
+		IncPattern(aid), if_(Assign(aid, tarlistid,_),
 			Member(tarlistid, resultid, _), Subscript(resultid,_,keyid,_))
-		# 4.1 if-else expr with IncPattern body and orbody
+		
+		# # 4.1 if-else expr with IncPattern body and orbody
 		IncPattern(ifid), if_(
 			If(ifid,_, bodyid, orbodyid),
-			ListLen(bodyid,1), 
+			ListLen(bodyid,1),
 			Member(bodyid,body,_), IncPattern(body),
-			ListLen(orbodyid,1), 
+			ListLen(orbodyid,1),
 			Member(orbodyid,orbody,_), IncPattern(orbody))
-		# 4.2 if expr with IncPattern body
+		
+		# # 4.2 if expr with IncPattern body
 		IncPattern(ifid), if_(
 			If(ifid,_, bodyid, orbody),
-			ListLen(bodyid,1), 
+			ListLen(bodyid,1),
 			Member(bodyid, body,_), IncPattern(body),
 			ListLen(orbody,0))
+
 		# 5. for-loops with IncPattern body
 		IncPattern(forid), if_(
 			For(forid,_,_, bodyid,_),
-			ListLen(bodyid,1), 
+			ListLen(bodyid,1),
 			Member(bodyid, body,_), IncPattern(body))
 
-		compCandidate(id), if_(For(id,_,_,_,_), IncPattern(id))
+		# CandidateIncPattern(id): candidate inc pattern for improvement starting at node ID id. 
+		CandidateIncPattern(id), if_(For(id,_,_,_,_), IncPattern(id))
+
 
 	def flattenTuple(self, node):
 		if isinstance(node, ast.Name):
