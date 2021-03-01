@@ -65,24 +65,24 @@ class LoopAnalyzer(Analyzer):
 		BinOpInherit(opparentid, opchildid), if_(
 			BinOp(opparentid, _, _, opchildid))
 
-		# ForBodyLessThanFiveLines(forbodyid): the body, with the node ID forbodyid, of a for loop has less than or equal to 5 lines.
-		ForBodyLessThanFiveLines(forbodyid), if_(
+		# ForBodyLenAtMostFive(forbodyid): the body, with the node ID forbodyid, of a for loop is a list of at most 5 AST nodes.
+		ForBodyLenAtMostFive(forbodyid), if_(
 			For(forid, _, _, forbodyid, _),
 			ListLen(forbodyid, 1))
 
-		ForBodyLessThanFiveLines(forbodyid), if_(
+		ForBodyLenAtMostFive(forbodyid), if_(
 			For(forid, _, _, forbodyid, _),
 			ListLen(forbodyid, 2))
 
-		ForBodyLessThanFiveLines(forbodyid), if_(
+		ForBodyLenAtMostFive(forbodyid), if_(
 			For(forid, _, _, forbodyid, _),
 			ListLen(forbodyid, 3))
 
-		ForBodyLessThanFiveLines(forbodyid), if_(
+		ForBodyLenAtMostFive(forbodyid), if_(
 			For(forid, _, _, forbodyid, _),
 			ListLen(forbodyid, 4))
 
-		ForBodyLessThanFiveLines(forbodyid), if_(
+		ForBodyLenAtMostFive(forbodyid), if_(
 			For(forid, _, _, forbodyid, _),
 			ListLen(forbodyid, 5))
 
@@ -161,7 +161,7 @@ class LoopAnalyzer(Analyzer):
 
 		LoopIndexPattern(forid), if_(
 			For(forid, forindexid, _, forbodyid, _),
-			ForBodyLessThanFiveLines(forbodyid),
+			ForBodyLenAtMostFive(forbodyid),
 			Member(forbodyid, bodystmtid, _),
 			Expression(bodystmtid, expid),
 			OpIndexPattern(expid, forindexid))
@@ -169,7 +169,7 @@ class LoopAnalyzer(Analyzer):
 		LoopIndexPattern(forid), if_(
 			ForRec(forid, childforid),
 			For(forid, forindexid, _, parentforbodyid, _),
-			ForBodyLessThanFiveLines(parentforbodyid),
+			ForBodyLenAtMostFive(parentforbodyid),
 			For(childforid, _, _, forbodyid, _),
 			Member(forbodyid, bodystmtid, _),
 			Expression(bodystmtid, expid),
@@ -177,7 +177,7 @@ class LoopAnalyzer(Analyzer):
 
 		LoopIndexPattern(forid), if_(
 			For(forid, forindexid, _, forbodyid, _),
-			ForBodyLessThanFiveLines(forbodyid),
+			ForBodyLenAtMostFive(forbodyid),
 			Member(forbodyid, bodystmtid, _),
 			Expression(bodystmtid, expid),
 			FuncIndexPattern(expid, forindexid))
@@ -185,7 +185,7 @@ class LoopAnalyzer(Analyzer):
 		LoopIndexPattern(forid), if_(
 			ForRec(forid, childforid),
 		 	For(forid, forindexid, _, parentforbodyid, _),
-		 	ForBodyLessThanFiveLines(parentforbodyid),
+		 	ForBodyLenAtMostFive(parentforbodyid),
 			For(childforid, _, _, forbodyid, _),
 			Member(forbodyid, bodystmtid, _),
 			Expression(bodystmtid, expid),
