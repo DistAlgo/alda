@@ -1,0 +1,152 @@
+from analyzer import Analyzer
+from da.compiler.utils import to_source
+import sys
+import pickle
+
+ASTNodes = {#'AST','mod',
+			'Module','Interactive','Expression','Suite',
+			#'stmt',
+			'FunctionDef','AsyncFunctionDef','ClassDef',
+			'Return','Delete','Assign','AugAssign','AnnAssign',
+			'For','AsyncFor','While','If','With','AsyncWith',
+			'Raise','Try','Assert','Import','ImportFrom',
+			'Global','Nonlocal','Expr','Pass','Break','Continue',
+			#'expr',
+			'BoolOp','BinOp','UnaryOp','Lambda','IfExp',
+			'Dict','Set','ListComp','SetComp','DictComp','GeneratorExp',
+			'Await','Yield','YieldFrom','Compare','Call',
+			'Num','Str','FormattedValue','JoinedStr','Bytes','NameConstant',
+			'Ellipsis','Constant',
+			'Attribute','Subscript','Starred','Name','List','Tuple',
+			#'expr_context',
+			'Load','Store','Del','AugLoad','AugStore','Param',
+			#'slice',
+			'Slice','ExtSlice','Index',
+			#'boolop',
+			'And','Or',
+			#'operator',
+			'Add','Sub','Mult','MatMult','Div','Mod','Pow','LShift','RShift','BitOr','BitXor','BitAnd','FloorDiv',
+			#'unaryop',
+			'Invert','Not','UAdd','USub',
+			#'cmpop',
+			'Eq','NotEq','Lt','LtE','Gt','GtE','Is','IsNot','In','NotIn',
+			'comprehension',
+			#'excepthandler',
+			'ExceptHandler',
+			'arguments','arg','keyword','alias','withitem',
+			# util nodes
+			'is_Sub', 'Member','Context','ListLen',
+			}
+
+class FuncNumpyAnalyzer(Analyzer):
+	
+	def query_funcwithnumpy_combine(self):
+		# get the node ids of all numpy function calls
+		np_call_ids = setof(call_id, (call_id, func_id, _, _) in self.Call, \
+			some((_func_id, func_name_id, _, _) in self.Attribute, has = \
+				some((_func_name_id, name_id, _) in self.Name, has = \
+					self.ValueDict[name_id] == 'np' or \
+					self.ValueDict[name_id] == 'numpy')))
+
+		# print('NUMPY CALL IDS: ' + str(np_call_ids))
+
+		# compute IsChild facts, exlcude the fact ("'-1'", "'-1'")
+		is_child_facts = setof(is_child_fact, is_child_fact in infer(rule = self.rules_IsChild, queries = ['IsChild']), isinstance(is_child_fact[0], int))
+
+		# filter IsChild facts of the related files
+		related_files = setof(self.FileDict[np_call_id], np_call_id in np_call_ids) # ids of the files that contain np calls.
+		is_child_related_files = setof((child_id, parent_id), (child_id, parent_id) in is_child_facts, self.FileDict[parent_id] in related_files)
+		# print('IsChild FACTS: ' + str(is_child_related_files))
+		
+		# using InFn facts to check if the numpy function calls are defined within functions. return with the line number of the function definitions.
+		func_with_np_calls_ids = {}
+		for np_call_id in np_call_ids:
+			str_query = 'InFn(' + str(np_call_id) + ',_)'
+			# print('QUERY: ' + str_query)
+			fn_scope_ids = infer(rule = self.rules_InFn, bindings = [('IsChild', is_child_related_files)], queries = [str_query])
+			# print('QUERY RESULT: ' + str(fn_scope_ids))
+			# create a dict of func_np_id and list of np call ids.
+			for fn_scope_id in fn_scope_ids:
+				if fn_scope_id not in func_with_np_calls_ids:
+					func_with_np_calls_ids[fn_scope_id] = [np_call_id]
+				else:
+					func_with_np_calls_ids[fn_scope_id].append(np_call_id)
+		# print(func_with_np_calls_ids)
+
+		# output to files
+
+		output_func_with_np_calls = {}
+		for func_id in func_with_np_calls_ids:
+			np_call_linenos = setof(self.ValueDict[np_id].lineno, np_id in func_with_np_calls_ids[func_id])
+			updated_file_name = self.ValueDict[self.FileDict[func_id]].replace('\\', '/') + '.py'
+			if updated_file_name not in output_func_with_np_calls:
+				output_func_with_np_calls[updated_file_name] = [(self.ValueDict[func_id].lineno, list(np_call_linenos))]
+			else:
+				output_func_with_np_calls[updated_file_name].append((self.ValueDict[func_id].lineno, list(np_call_linenos)))
+
+		# output to txt file
+		out_file = './output/FuncAnalyzer-funcwithnumpy/' + self.ValueDict[2] + '_func_with_np_calls.txt'
+		with open(out_file, 'w') as f:
+			for file_name in output_func_with_np_calls:
+				f.write('file:' + file_name + '\n')
+				output_func_with_np_calls[file_name] = sorted(output_func_with_np_calls[file_name], key = lambda x:x[0])
+				for (func_lineno, np_calls_list) in output_func_with_np_calls[file_name]:
+					np_calls_list.sort()
+					f.write(str(func_lineno) + ':' + str(np_calls_list) + '\n')
+
+		# output to serializable file with .func_np extension.
+		out_pickle_file = './output/FuncAnalyzer-funcwithnumpy/' + self.ValueDict[2] + '_func_with_np_calls.func_np'
+		with open(out_pickle_file, 'wb') as func_np_f:
+			pickle.dump(output_func_with_np_calls, func_np_f)
+
+
+	def rules_InFn():
+		# InFn(node_id, fn_id): node with id node_id is in the function defined by node with id fn_id
+		InFn(node_id, node_id), if_(FunctionDef(node_id, _, _, _, _, _))
+		InFn(child_id, fn_id), if_(InFn(parent_id, fn_id),
+											IsChild(child_id, parent_id))
+
+	def rules_IsChild():
+		# IsChild(child_id, parent_id): node with id child_id is a child node of node with id parent_id
+		IsChild(child_id, parent_id), if_(Member(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(List(parent_id, child_id, _))
+
+		IsChild(child_id, parent_id), if_(For(parent_id, _, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(With(parent_id, _, child_id))
+
+		IsChild(child_id, parent_id), if_(FunctionDef(parent_id, _, _, child_id, _, _))
+
+		IsChild(child_id, parent_id), if_(ClassDef(parent_id, _, _, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(If(parent_id, _, child_id, _))
+		IsChild(child_id, parent_id), if_(If(parent_id, _, _, child_id))
+
+		IsChild(child_id, parent_id), if_(Try(parent_id, child_id, _, _, _))
+		IsChild(child_id, parent_id), if_(Try(parent_id, _, child_id, _, _))
+		IsChild(child_id, parent_id), if_(Try(parent_id, _, _, _, child_id))
+		IsChild(child_id, parent_id), if_(ExceptHandler(parent_id, _, _, child_id))
+		
+
+		IsChild(child_id, parent_id), if_(Assign(parent_id, _,child_id))
+
+		IsChild(child_id, parent_id), if_(AugAssign(parent_id, _,child_id))
+
+		IsChild(child_id, parent_id), if_(Expr(parent_id, child_id))
+
+		IsChild(child_id, parent_id), if_(BinOp(parent_id, child_id, _, _))
+		IsChild(child_id, parent_id), if_(BinOp(parent_id, _, _, child_id))
+		IsChild(child_id, parent_id), if_(UnaryOp(parent_id, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Call(parent_id, _, child_id, _))
+		IsChild(child_id, parent_id), if_(Call(parent_id, _, _, child_id))
+
+		IsChild(child_id, parent_id), if_(ListComp(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(SetComp(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(DictComp(parent_id, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Subscript(parent_id, child_id, _, _))
+		IsChild(child_id, parent_id), if_(Subscript(parent_id, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Return(parent_id, child_id))
+

@@ -5,14 +5,16 @@ DEFAULT_MODE = 'rule' # python, distalgo, combine, rule
 DEFAULT_ANALYZER = 'LoopAnalyzer'	# LoopAnalyzer, LoopToQuery, NumpyAnalyzer, ModuleAnalyzer, ClassAnalyzer
 HandlerRoute = {
 	'ruleLoopAnalyzer': ('loop_analyzer', 'LoopAnalyzer', 'loopdepth'),
-	'ruleLoopToQuery': ('loop-to-query', 'LoopAnalyzer', 'forToCompSimple'), # candidate, forToCompSimple
+	'ruleLoopToQuery': ('loop-to-query', 'LoopAnalyzer', 'candidate'), # candidate, forToCompSimple
 	'ruleNumpyAnalyzer': ('numpy_analyzer', 'NumpyAnalyzer', 'numpy'),
 	'ruleModuleAnalyzer': ('module_analyzer', 'ModuleAnalyzer', 'import'),
 	'pythonClassAnalyzer': ('subclass_python', 'ClassAnalyzer', 'subclass'),
 	'distalgoClassAnalyzer': ('subclass_distalgo', 'ClassAnalyzer', 'subclass'),
 	'ruleClassAnalyzer': ('subclass_rule', 'ClassAnalyzer', 'subclass'),
 	'combineClassAnalyzer': ('subclass_combine', 'ClassAnalyzer', 'subclass'),
-	'combineDAGAnalyzer': ('classstructure_combine', 'DAGAnalyzer', 'classstructure')
+	'combineDAGAnalyzer': ('classstructure_combine', 'DAGAnalyzer', 'classstructure'),
+	'combineFuncForLoopAnalyzer': ('func_with_loop', 'FuncAnalyzer', 'funcwithloop'),
+	'combineFuncNumpyAnalyzer': ('func_with_numpy', 'FuncNumpyAnalyzer', 'funcwithnumpy')
 }
 
 def main():
