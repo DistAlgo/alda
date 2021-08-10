@@ -1,0 +1,196 @@
+from analyzer import Analyzer
+from da.compiler.utils import to_source
+import sys
+import pickle
+
+ASTNodes = {#'AST','mod',
+			'Module','Interactive','Expression','Suite',
+			#'stmt',
+			'FunctionDef','AsyncFunctionDef','ClassDef',
+			'Return','Delete','Assign','AugAssign','AnnAssign',
+			'For','AsyncFor','While','If','With','AsyncWith',
+			'Raise','Try','Assert','Import','ImportFrom',
+			'Global','Nonlocal','Expr','Pass','Break','Continue',
+			#'expr',
+			'BoolOp','BinOp','UnaryOp','Lambda','IfExp',
+			'Dict','Set','ListComp','SetComp','DictComp','GeneratorExp',
+			'Await','Yield','YieldFrom','Compare','Call',
+			'Num','Str','FormattedValue','JoinedStr','Bytes','NameConstant',
+			'Ellipsis','Constant',
+			'Attribute','Subscript','Starred','Name','List','Tuple',
+			#'expr_context',
+			'Load','Store','Del','AugLoad','AugStore','Param',
+			#'slice',
+			'Slice','ExtSlice','Index',
+			#'boolop',
+			'And','Or',
+			#'operator',
+			'Add','Sub','Mult','MatMult','Div','Mod','Pow','LShift','RShift','BitOr','BitXor','BitAnd','FloorDiv',
+			#'unaryop',
+			'Invert','Not','UAdd','USub',
+			#'cmpop',
+			'Eq','NotEq','Lt','LtE','Gt','GtE','Is','IsNot','In','NotIn',
+			'comprehension',
+			#'excepthandler',
+			'ExceptHandler',
+			'arguments','arg','keyword','alias','withitem',
+			# util nodes
+			'is_Sub', 'Member','Context','ListLen',
+			}
+
+class FuncLibAnalyzer(Analyzer):
+	
+	def query_funcwithlib_combine(self):
+		libs_list = ['numpy', 'scipy', 'matplotlib'] 
+		# lib_file = './libs_list.txt'
+		# with open(lib_file, 'r'):
+
+		# process import statements
+		import_lib_facts = infer(rule = self.rules_ImportName, queries = ['ImportName'])
+		import_func_facts = infer(rule = self.rules_ImportFunc, queries = ['ImportFunc'])
+
+		# create 2 dictionaries from import_libs_facts and import_func_facts, only consider libraries in the libs_list.
+		import_lib_dict = {}
+		import_func_dict = {}
+		for fact in import_lib_facts:
+			if self.ValueDict[fact[1]].split('.')[0] in libs_list:
+				if self.ValueDict[fact[0]] == None:
+					import_lib_dict[self.ValueDict[fact[1]]] = None
+				else:
+					import_lib_dict[self.ValueDict[fact[0]]] = self.ValueDict[fact[1]]
+
+		for fact in import_func_facts:
+			if self.ValueDict[fact[1]].split('.')[0] in libs_list:
+				import_func_dict[self.ValueDict[fact[0]]] = self.ValueDict[fact[1]]
+
+		# get the node ids of all function calls from the list of considered libraries
+		lib_call_ids = setof(call_id, (call_id, func_id, _, _) in self.Call, \
+			some((_func_id, func_name_id, _, _) in self.Attribute, has = \
+				some((_func_name_id, name_id, _) in self.Name, has = \
+					self.ValueDict[name_id] in import_lib_dict.keys()))) \
+			| \
+						setof(call_id, (call_id, func_id, _, _) in self.Call, \
+			some((_func_id, func_name_id, _) in self.Name, has = \
+				self.ValueDict[func_name_id] in import_func_dict.keys()))
+
+
+		# compute IsChild facts, exlcude the fact ("'-1'", "'-1'")
+		is_child_facts = setof(is_child_fact, is_child_fact in infer(rule = self.rules_IsChild, queries = ['IsChild']), isinstance(is_child_fact[0], int))
+
+		# filter IsChild facts of the related files
+		related_files = setof(self.FileDict[lib_call_id], lib_call_id in lib_call_ids) # ids of the files that contain lib calls.
+		is_child_related_files = setof((child_id, parent_id), (child_id, parent_id) in is_child_facts, self.FileDict[parent_id] in related_files)
+		# print('IsChild FACTS: ' + str(is_child_related_files))
+		
+		# using InFn facts to check if the lib function calls are defined within functions. return with the line number of the function definitions.
+		func_with_lib_calls_ids = {}
+		for lib_call_id in lib_call_ids:
+			str_query = 'InFn(' + str(lib_call_id) + ',_)'
+			fn_scope_ids = infer(rule = self.rules_InFn, bindings = [('IsChild', is_child_related_files)], queries = [str_query])
+			
+			for fn_scope_id in fn_scope_ids:
+				if fn_scope_id not in func_with_lib_calls_ids:
+					func_with_lib_calls_ids[fn_scope_id] = [lib_call_id]
+				else:
+					func_with_lib_calls_ids[fn_scope_id].append(lib_call_id)
+
+		# output to files
+
+		output_func_with_lib_calls = {}
+		for func_id in func_with_lib_calls_ids:
+			lib_call_linenos = setof(self.ValueDict[lib_id].lineno, lib_id in func_with_lib_calls_ids[func_id])
+			updated_file_name = self.ValueDict[self.FileDict[func_id]].replace('\\', '/') + '.py'
+			if updated_file_name not in output_func_with_lib_calls:
+				output_func_with_lib_calls[updated_file_name] = [(self.ValueDict[func_id].lineno, list(lib_call_linenos))]
+			else:
+				output_func_with_lib_calls[updated_file_name].append((self.ValueDict[func_id].lineno, list(lib_call_linenos)))
+
+		# output to txt file
+		out_file = './output/FuncAnalyzer-funcwithlib/' + self.ValueDict[2] + '_func_with_lib_calls.txt'
+		with open(out_file, 'w') as f:
+			for file_name in output_func_with_lib_calls:
+				f.write('file:' + file_name + '\n')
+				output_func_with_lib_calls[file_name] = sorted(output_func_with_lib_calls[file_name], key = lambda x:x[0])
+				for (func_lineno, lib_calls_list) in output_func_with_lib_calls[file_name]:
+					lib_calls_list.sort()
+					f.write(str(func_lineno) + ':' + str(lib_calls_list) + '\n')
+
+		# output to serialization file with .func_lib extension.
+		out_pickle_file = './output/FuncAnalyzer-funcwithlib/' + self.ValueDict[2] + '_func_with_lib_calls.func_lib'
+		with open(out_pickle_file, 'wb') as func_lib_f:
+			pickle.dump(output_func_with_lib_calls, func_lib_f)
+
+		# output the serialization files for the import_lib_dict and import_func_dict
+		out_pickle_import_lib_file = './output/FuncAnalyzer-funcwithlib/' + self.ValueDict[2] + '_imported_libs.import'
+		with open(out_pickle_import_lib_file, 'wb') as import_lib_f:
+			pickle.dump(import_lib_dict, import_lib_f)
+
+		out_pickle_import_func_file = './output/FuncAnalyzer-funcwithlib/' + self.ValueDict[2] + '_imported_funcs.import'
+		with open(out_pickle_import_func_file, 'wb') as import_func_f:
+			pickle.dump(import_func_dict, import_func_f)
+
+	def rules_ImportName():
+		# ImportName(lib_name_id, alias_name_id): lib_name_id is the id of the imported library's names and alias_name_id is the id of the corresponding alias names.
+		ImportName(alias_name_id, lib_name_id), if_(Import(_, names_list_id),
+											Member(names_list_id, name_id, _),
+											alias(name_id, lib_name_id, alias_name_id))
+
+	def rules_ImportFunc():
+		# ImportFunc(lib_name_id, func_name_id): lib_name_id is the id of the imported library's path and func_name_id is the id of the imported function.
+		ImportFunc(func_name_id, lib_name_id), if_(ImportFrom(_, lib_name_id, names_list_id, _),
+											Member(names_list_id, name_id, _),
+											alias(name_id, func_name_id, _))
+
+
+
+	def rules_InFn():
+		# InFn(node_id, fn_id): node with id node_id is in the function defined by node with id fn_id
+		InFn(node_id, node_id), if_(FunctionDef(node_id, _, _, _, _, _))
+		InFn(child_id, fn_id), if_(InFn(parent_id, fn_id),
+											IsChild(child_id, parent_id))
+
+	def rules_IsChild():
+		# IsChild(child_id, parent_id): node with id child_id is a child node of node with id parent_id
+		IsChild(child_id, parent_id), if_(Member(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(List(parent_id, child_id, _))
+
+		IsChild(child_id, parent_id), if_(For(parent_id, _, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(With(parent_id, _, child_id))
+
+		IsChild(child_id, parent_id), if_(FunctionDef(parent_id, _, _, child_id, _, _))
+
+		IsChild(child_id, parent_id), if_(ClassDef(parent_id, _, _, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(If(parent_id, _, child_id, _))
+		IsChild(child_id, parent_id), if_(If(parent_id, _, _, child_id))
+
+		IsChild(child_id, parent_id), if_(Try(parent_id, child_id, _, _, _))
+		IsChild(child_id, parent_id), if_(Try(parent_id, _, child_id, _, _))
+		IsChild(child_id, parent_id), if_(Try(parent_id, _, _, _, child_id))
+		IsChild(child_id, parent_id), if_(ExceptHandler(parent_id, _, _, child_id))
+		
+
+		IsChild(child_id, parent_id), if_(Assign(parent_id, _,child_id))
+
+		IsChild(child_id, parent_id), if_(AugAssign(parent_id, child_id, _, _))
+		IsChild(child_id, parent_id), if_(AugAssign(parent_id, _, _, child_id))
+
+		IsChild(child_id, parent_id), if_(Expr(parent_id, child_id))
+
+		IsChild(child_id, parent_id), if_(BinOp(parent_id, child_id, _, _))
+		IsChild(child_id, parent_id), if_(BinOp(parent_id, _, _, child_id))
+		IsChild(child_id, parent_id), if_(UnaryOp(parent_id, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Call(parent_id, _, child_id, _))
+		IsChild(child_id, parent_id), if_(Call(parent_id, _, _, child_id))
+
+		IsChild(child_id, parent_id), if_(ListComp(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(SetComp(parent_id, child_id, _))
+		IsChild(child_id, parent_id), if_(DictComp(parent_id, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Subscript(parent_id, child_id, _, _))
+		IsChild(child_id, parent_id), if_(Subscript(parent_id, _, child_id, _))
+
+		IsChild(child_id, parent_id), if_(Return(parent_id, child_id))
+

@@ -14,7 +14,8 @@ HandlerRoute = {
 	'combineClassAnalyzer': ('subclass_combine', 'ClassAnalyzer', 'subclass'),
 	'combineDAGAnalyzer': ('classstructure_combine', 'DAGAnalyzer', 'classstructure'),
 	'combineFuncForLoopAnalyzer': ('func_with_loop', 'FuncAnalyzer', 'funcwithloop'),
-	'combineFuncNumpyAnalyzer': ('func_with_numpy', 'FuncNumpyAnalyzer', 'funcwithnumpy')
+	'combineFuncNumpyAnalyzer': ('func_with_numpy', 'FuncNumpyAnalyzer', 'funcwithnumpy'),
+	'combineFuncLibAnalyzer': ('func_with_lib', 'FuncLibAnalyzer', 'funcwithlib')
 }
 
 def main():
