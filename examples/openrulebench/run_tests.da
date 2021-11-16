@@ -1,0 +1,34 @@
+import os, importlib, argparse, re, pickle, collections
+
+def read_facts(infile):
+  if not os.path.isfile(os.path.join('data_pickle',infile)):
+    if not os.path.isfile(os.path.join('data_raw',infile)):
+      raise Exception("File not found: %s" % infile)    
+    with open(os.path.join('data_raw',infile), "r") as f:
+      facts = collections.defaultdict(list)
+      for l in f:
+        l = re.split('[(,]',l.strip()[:-2])
+        facts[l[0]].append(tuple(map(lambda x: x.strip("'"),l[1:])))
+      pickle.dump(facts, open(os.path.join('data_pickle',infile), "wb"))
+      return facts
+  return pickle.load(open(os.path.join('data_pickle',infile), "rb"))
+
+def run(testsuite, query, infile):
+  r = importlib.import_module(testsuite)
+  utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+  facts = read_facts(infile)
+  utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+  print('fact read\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+  getattr(r,query)(facts)
+  utime3, stime3, cutime3, cstime3, elapsed_time3 = os.times()
+  print('only query\t%s\t%s' % (elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
+  print('total eval\t%s\t%s' % (elapsed_time3-elapsed_time1, utime3-utime1 + stime3-stime1 + cutime3-cutime1 + cstime3-cstime1))
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--testsuite', type= str)
+  parser.add_argument('--query', type= str, default='query')
+  parser.add_argument('--data', type= str)
+  args=parser.parse_args()
+
+  run(args.testsuite, args.query, args.data)

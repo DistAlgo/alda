@@ -1,0 +1,12 @@
+def rules_join2():
+  ra(A, B, C, D, E), if_(p(A),p(B),p(C),p(D),p(E))
+  rb(A, B, C, D, E), if_(p(A),p(B),p(C),p(D),p(E))
+  r(A, B, C, D, E), if_(ra(A, B, C, D, E),rb(A, B, C, D, E))
+  q(A), if_(r(A, _, _, _, _))
+  q(B), if_(r(_, B, _, _, _))
+  q(C), if_(r(_, _, C, _, _))
+  q(D), if_(r(_, _, _, D, _))
+  q(E), if_(r(_, _, _, _, E))
+
+def query(facts):
+  return infer(rule=rules_join2, bindings=[(pred, facts[pred]) for pred in facts], queries=['q'])

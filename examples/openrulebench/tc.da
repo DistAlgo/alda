@@ -1,0 +1,12 @@
+def rules_tc():
+  tc(x,y), if_(par(x,y))
+  tc(x,y), if_(par(x,z), tc(z,y))
+
+def query(facts):
+  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc'])
+
+def query_bf(facts):
+  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc(1,_)'])
+
+def query_fb(facts):
+  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc(_,1)'])

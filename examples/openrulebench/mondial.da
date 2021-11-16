@@ -1,0 +1,9 @@
+def rules_mondial():
+  isa('prov', Y, X, 'provi'), if_(p(_, _, X, Y))
+  att('prov', Y, X, 'number', A), if_(p(A, _, X, Y))
+  att('prov', Y, X, 'number2', D), if_(p(_, D, X, Y))
+  p(A, D, X, Y), if_(province(Y, X, D, _, _, _),city(_, X, Y, A, _, _))
+  queryrule(X, A, D), if_(isa('prov', X, 'cn', 'provi'),att('prov', X, 'cn', 'number', A),att('prov', X, 'cn', 'number2', D))
+
+def query(facts):
+  return infer(rule=rules_mondial, bindings=[(pred, facts[pred]) for pred in facts], queries=['queryrule'])

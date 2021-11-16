@@ -1,0 +1,14 @@
+def rules_nonsg():
+  sg(X, X), if_(par(X, _))
+  sg(X, X), if_(par(_, X))
+  sg(X, X), if_(sib(X, _))
+  sg(X, X), if_(sib(_, X))
+  sg(X, Y), if_(sib(X, Y))
+  sg(X, Y), if_(par(X, Z),sg(Z, Z1),par(Y, Z1))
+  ans(X, Y), if_(par(X, Y))
+  ans(X, Y), if_(par(X, Z),ans(Z, Y))
+  nonsg(X, Y), if_(ans(X, Y))
+  nonsg(X, Y), if_(ans(Y, X))
+
+def query(facts):
+  return infer(rule=rules_nonsg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg']) - infer(rule=rules_nonsg, bindings=[(pred, facts[pred]) for pred in facts], queries=['nonsg'])

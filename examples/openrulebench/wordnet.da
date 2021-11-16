@@ -1,0 +1,73 @@
+def rules_wordnet():
+  sameSynsets(Word1, Word2), if_(s(Synset_id, _, Word1, _, _, _),s(Synset_id, _, Word2, _, _, _))
+  gloss(Word1, Gloss), if_(s(Synset_id, _, Word1, _, _, _),g(Synset_id, Gloss))
+  directHypernym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),hyp(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  hypernymSynsets(S1, S2), if_(hyp(S1, S2))
+  hypernymSynsets(S1, S2), if_(hyp(S1, S3),hypernymSynsets(S3, S2))
+  hypernym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),hypernymSynsets(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  directHyponym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),hyp(Synset_id2, Synset_id1),s(Synset_id2, _, Word2, _, _, _))
+  hyponymSynsets(S2, S1), if_(hyp(S2, S1))
+  hyponymSynsets(S2, S1), if_(hyp(S3, S1),hyponymSynsets(S2, S3))
+  hyponym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),hyponymSynsets(Synset_id2, Synset_id1),s(Synset_id2, _, Word2, _, _, _))
+  directMeronym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),mm(Synset_id2, Synset_id1),s(Synset_id2, _, Word2, _, _, _))
+  meronymSynsets(S2, S1), if_(mm(S2, S1))
+  meronymSynsets(S2, S1), if_(mm(S3, S1),meronymSynsets(S2, S3))
+  meronym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),meronymSynsets(Synset_id2, Synset_id1),s(Synset_id2, _, Word2, _, _, _))
+  directHolonym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),mm(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  holonymSynsets(S1, S2), if_(mm(S1, S2))
+  holonymSynsets(S1, S2), if_(mm(S1, S3),holonymSynsets(S3, S2))
+  holonym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),holonymSynsets(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  directTroponym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),ent(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  troponymSynsets(S1, S2), if_(ent(S1, S2))
+  troponymSynsets(S1, S2), if_(ent(S1, S3),troponymSynsets(S3, S2))
+  troponym(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),troponymSynsets(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  directAdjectiveClusters(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),sim(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  adjectiveClusterSynsets(S1, S2), if_(sim(S1, S2))
+  adjectiveClusterSynsets(S1, S2), if_(sim(S1, S3),adjectiveClusterSynsets(S3, S2))
+  adjectiveClusters(Word1, Word2), if_(s(Synset_id1, _, Word1, _, _, _),adjectiveClusterSynsets(Synset_id1, Synset_id2),s(Synset_id2, _, Word2, _, _, _))
+  antonym(Word1, Word2), if_(s(Synset_id1, W_num1, Word1, _, _, _),ant(Synset_id1, W_num1, Synset_id2, W_num2),s(Synset_id2, W_num2, Word2, _, _, _))
+
+def query_sameSynsets(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['sameSynsets'])
+
+def query_gloss(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['gloss'])
+
+def query_directHypernym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHypernym'])
+
+def query_hypernym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hypernym'])
+
+def query_directHyponym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHyponym'])
+
+def query_hyponym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hyponym'])
+
+def query_directMeronym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directMeronym'])
+
+def query_meronym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['meronym'])
+
+def query_directHolonym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHolonym'])
+
+def query_holonym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['holonym'])
+
+def query_directTroponym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directTroponym'])
+
+def query_troponym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['troponym'])
+
+def query_directAdjectiveClusters(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directAdjectiveClusters'])
+
+def query_adjectiveClusters(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['adjectiveClusters'])
+
+def query_antonym(facts):
+  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['antonym'])

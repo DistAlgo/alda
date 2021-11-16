@@ -1,0 +1,16 @@
+def rules_sg():
+  sg(X, X), if_(par(X, _))
+  sg(X, X), if_(par(_, X))
+  sg(X, X), if_(sib(X, _))
+  sg(X, X), if_(sib(_, X))
+  sg(X, Y), if_(sib(X, Y))
+  sg(X, Y), if_(par(X, Z),sg(Z, Z1),par(Y, Z1))
+
+def query(facts):
+  return infer(rule=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg'])
+
+def query_bf(facts):
+  return infer(rule=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg(1,_)'])
+
+def query_fb(facts):
+  return infer(rule=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg(_,1)'])

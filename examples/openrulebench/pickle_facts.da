@@ -1,0 +1,18 @@
+import os, importlib, argparse, re, pickle, collections
+
+def pickle_facts(infile):
+  if not os.path.isfile(os.path.join('data_pickle',infile)):
+    if not os.path.isfile(os.path.join('data_raw',infile)):
+      raise Exception("File not found: %s" % infile)    
+    with open(os.path.join('data_raw',infile), "r") as f:
+      facts = collections.defaultdict(list)
+      for l in f:
+        l = re.split('[(),.]',l)
+        facts[l[0]].append(tuple(map(lambda x: x.strip("'"),l[1:-2])))
+      pickle.dump(facts, open(os.path.join('data_pickle',infile), "wb"))
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--data', type= str)
+  args=parser.parse_args()
+  pickle_facts(args.data)
