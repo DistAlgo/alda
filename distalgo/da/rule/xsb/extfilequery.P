@@ -1,12 +1,12 @@
-:- export external_file_query/2.
+:- export external_file_query/3.
 :- import halt/1, tell/1, told/0, writeq/1, nl/0  from standard.
 :- import term_variables/2 from setof.
 :- import concat_atom/2 from string.
 :- import rm/1 from shell.
 
-external_file_query(FileBase,Query) :-
-    concat_atom([FileBase,'.rules'],RuleFile),
-    concat_atom([FileBase,'.facts'],FactFile),
+external_file_query(RuleBase,FactBase,Query) :-
+    concat_atom([RuleBase,'.rules'],RuleFile),
+    concat_atom([FactBase,'.facts'],FactFile),
     (file_exists(RuleFile)
      ->	true
      ;	writeln(warning('No Rule file.'))

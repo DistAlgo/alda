@@ -112,7 +112,10 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		queries = self.create_expr(dast.ListExpr,
 								   subexprs=[self.create_expr(dast.ConstantExpr, value=v.name) for v in derived])
 		stmt = self.create_expr(dast.AssignmentStmt)
-		stmt.targets = [self.gen_name(v) for v in derived]
+		if len(derived) <= 1:
+			stmt.targets = [self.gen_name(v) for v in derived]
+		else:
+			stmt.targets = [self.create_expr(dast.TupleExpr, subexprs=[self.gen_name(v) for v in derived])]
 		stmt.value = self.gen_infer_call(rule_set, user_binding, queries)
 		for v in rule_set.bounded_derived:
 			v.add_assignment(stmt)
@@ -295,7 +298,7 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 																		 # self.get_bind_name(v)]) 
 																		 self.gen_inline_if(userDict, v, ruleset)])
 											  for v in ruleset.base])
-		# assign the list to varialbe bindings
+		# assign the list to variable bindings
 		assignBinding = self.create_expr(dast.AssignmentStmt)
 		assignBinding.targets = [user_binding]
 		assignBinding.value = bindings
@@ -388,7 +391,7 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		self.moduleName = os.path.splitext(os.path.basename(self.filename))[0]
 
 	def add_flag_vars(self, var):
-		""" add a update flag variable correponding to var
+		""" add a update flag variable corresponding to var
 		"""
 		(ctx, (loc, _)) = var._indexes[0]
 		assert ctx is dast.AssignmentCtx

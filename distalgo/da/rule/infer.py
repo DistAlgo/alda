@@ -9,6 +9,10 @@ xsb_path = PurePath.joinpath(PurePath(__file__).parent,'xsb')
 if os.name == 'nt':
     xsb_path = str(xsb_path).replace('\\','\\\\')
 
+import uuid
+def gen_unique_id():
+    return str(uuid.uuid4())[:8]
+
 def eval_logicVar(v):
     return eval(v) if v.isdigit() else \
               None if v == "'None'" else \
@@ -38,6 +42,7 @@ def gen_fact(pred, val):
 def _infer(rule, arity, bindings, queries):
     # generate facts
     xsb_facts = ""
+    rule_filename = rule+'_'+gen_unique_id()
     for key, val in bindings:
         # when b is an empty predicate, generate a place holder where all logic vars are -1
         if len(val) == 0:
@@ -49,7 +54,7 @@ def _infer(rule, arity, bindings, queries):
                 xsb_facts += gen_fact(key, v)+'.\n'
     
     utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-    write_file(rule+'.facts', xsb_facts)
+    write_file(rule_filename+'.facts', xsb_facts)
     utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()    # timing: i/o: write input
 
     # generate queries, a list of tuple (out_file_name, query)
@@ -58,21 +63,22 @@ def _infer(rule, arity, bindings, queries):
         # when queries are passed with only names, complete the query in form of pred(_,...,_)
         if q.find('(') < 0:
             qstr = q +'(' + ','.join('_'*arity[q]) + ')'
-            _queries.append([PurePath.joinpath(rule_path,rule+'.'+q).as_posix(), UniqueLowerCasePrefix+qstr])
+            _queries.append([PurePath.joinpath(rule_path,rule_filename+'.'+q).as_posix(), UniqueLowerCasePrefix+qstr])
 
         # when queries are passed in full, convert each logic variables to valid format as XSB
         else:
             pred = q.split('(')[0]
             var = q.split('(')[1].split(')')[0]
-            _queries.append([PurePath.joinpath(rule_path,rule+'.'+pred).as_posix(), 
+            _queries.append([PurePath.joinpath(rule_path,rule_filename+'.'+pred).as_posix(), 
                              gen_fact(pred, var.strip().split(','))])
                           
 
     rule_path_rule = PurePath.joinpath(rule_path,rule)
+    rule_path_fact = PurePath.joinpath(rule_path,rule_filename)
     if os.name == 'nt':
         rule_path_rule = str(rule_path_rule).replace('\\','\\\\')
 
-    xsb_query = "extfilequery:external_file_query('{}',{}).".format(rule_path_rule, 
+    xsb_query = "extfilequery:external_file_query('{}','{}',{}).".format(rule_path_rule, rule_path_fact,
                     "[%s]" % ",".join("['%s',%s]" % (qfile,qstr) for qfile, qstr in _queries))
     # print(xsb_query)
     output = subprocess.run(["xsb",'--nobanner', '--quietload', '--noprompt', 
@@ -96,7 +102,7 @@ def _infer(rule, arity, bindings, queries):
     lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
     print('\tnum_fact\tfile_size')
     print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
-                                os.path.getsize(PurePath.joinpath(rule_path,rule+'.facts'))))
+                                os.path.getsize(PurePath.joinpath(rule_path,rule_filename+'.facts'))))
     print('timing\telapse\tcpu')
     print('write_input\t%s\t%s'%(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
     print('subprocess_xsb\t%s\t%s'%(elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
