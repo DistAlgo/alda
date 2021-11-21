@@ -151,7 +151,12 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
         os.mkdir('timing')
     open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
     if pyast is not None:
-        open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
+        outname = os.path.join('__pycache__',os.path.basename(filename)+'.py')
+        with open(outname,'w') as outfd:
+            global OutputSize
+            OutputSize += to_file(pyast, outfd)
+            stderr.write("Written compiled file %s.\n"% outname)
+        # open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:
         return None
