@@ -1,0 +1,53 @@
+"""
+1. Files in this directory
+
+original RBAC
+- coreRBAC.CoreRBAC
+- hierRBAC.GeneralHierRBAC extends above
+- allRBAC imports both above and defines 7 classes starting from one of them
+
+for running/testing/timing different variants of GeneralHireRBAC
+- RBACrun.RBACrun extends hierRBAC.GeneralHierRBAC --- to add the run method
+- RBACpy.RBACpy, RBACda.RBACda, RBACunion.RBACunion, 
+  RBACallloc.RBACallloc, RBACnonloc.RBACnonloc extends above --- for variants
+
+2. Running tests
+
+- import any of 5 versions: RBACpy, RBACda, RBACunion, RBACallloc, RBACnonloc,
+- put workload in run method of RBACrun.da
+- pass data in main below (make unused sets empty) and run this file
+
+"""
+
+from allRBAC import *
+
+#from RBACpy import RBACpy as RBAC
+#from RBACda import RBACda as RBAC
+#from RBACunion import RBACunion as RBAC
+#from RBACallloc import RBACallloc as RBAC
+from RBACnonloc import RBACnonloc as RBAC
+
+def main():
+    objs = set()
+    ops = set()  
+    users = {1,2,3}
+    roles = {91,92}
+    pr = set()
+    ur = {(1,91),(2,92),(3,92)}
+    sessions = set()
+    su = set()
+    sr = set()
+    rh = {(91,92)}
+  
+    ssdnames = set()
+    ssdnr = set()
+    ssdnc = set()
+
+    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh])
+
+## ran with no problems:
+##    RBAC = GeneralHierRBACwithSSD
+##    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh,
+##                      ssdnames,ssdnr,ssdnc])
+
+    start(rbac)
