@@ -1,0 +1,152 @@
+# author: annie liu, programed based on ANSI RBAC.
+
+class CoreRBAC(process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR): pass
+        # an operation-object pair is called a permission
+        # PR subset (OPS * OBJS) * ROLES, for PA in std
+        # UR subset USERS * ROLES,        for UA in std
+        # SU subset SESSIONS * USERS
+        # SR subset SESSIONS * ROLES
+
+    def run(): pass
+
+# administrative commands
+
+    def AddUser(user):
+        assert user not in USERS
+        USERS.add(user)
+
+    def DeleteUser(user):
+        assert user in USERS
+        UR -= set((user,r) for r in ROLES)       # maintain UR
+        for s in set(s for s in SESSIONS if (s,user) in SU):
+            DeleteSession(user,s)                # maintain SESSIONS
+        USERS.remove(user)                       # delete user last  -yl
+
+    def AddRole(role):
+        assert role not in ROLES
+        ROLES.add(role)
+
+    def DeleteRole(role):
+        assert role in ROLES
+        PR -= set(((op,obj),role) for op in OPS for obj in OBJS)
+        UR -= set((u,role) for u in USERS)       # maintain PR and UR
+        for (s,u) in set((s,u) for s in SESSIONS for u in USERS
+                         if (s,u) in SU and (s,role) in SR):
+            DeleteSession(u,s)                   # maintain SESSIONS
+        ROLES.remove(role)                       # delete role last  -cw
+
+    def AssignUser(user, role):
+        assert user in USERS
+        assert role in ROLES
+        assert (user,role) not in UR
+        UR.add((user,role))
+
+    def DeassignUser(user, role):
+        assert user in USERS
+        assert role in ROLES
+        assert (user,role) in UR
+        for s in set(s for s in SESSIONS 
+                     if (s,user) in SU and (s,role) in SR):
+            DeleteSession(user,s)                # maintain SESSIONS
+        UR.remove((user,role))
+
+    def GrantPermission(operation, object, role):
+        assert operation in OPS and object in OBJS
+        assert role in ROLES
+        assert ((operation,object),role) not in PR # +
+        PR.add(((operation,object),role))
+
+    def RevokePermission(operation, object, role):
+        assert operation in OPS and object in OBJS
+        assert role in ROLES
+        assert ((operation,object),role) in PR
+        PR.remove(((operation,object),role))
+
+# supporting system functions
+
+    def CreateSession(user, session, ars):
+        assert user in USERS
+        assert session not in SESSIONS
+        assert ars.issubset(AssignedRoles(user))
+        SESSIONS.add(session)      # add first for subset constraints  -ag
+        SU.add((session,user))     # ok to do in any order if atomic   -yl
+        SR |= set((session,r) for r in ars)
+
+    def DeleteSession(user, session):
+        assert user in USERS
+        assert session in SESSIONS
+        assert (session,user) in SU
+        SU.remove((session,user))                # maintain SU
+        SR -= set((session,r) for r in ROLES)    # maintain SR
+        SESSIONS.remove(session)
+
+    def AddActiveRole(user, session, role):
+        assert user in USERS
+        assert session in SESSIONS
+        assert role in ROLES
+        assert (session,user) in SU
+        assert (session,role) not in SR
+        assert role in AssignedRoles(user)
+        SR.add((session,role))
+
+    def DropActiveRole(user, session, role):
+        assert user in USERS
+        assert session in SESSIONS
+        assert role in ROLES
+        assert (session,user) in SU
+        assert (session,role) in SR
+        SR.remove((session,role))
+
+    def CheckAccess(session, operation, object):
+        assert session in SESSIONS
+        assert operation in OPS
+        assert object in OBJS
+        return some(r in ROLES, has=             # use quantification
+                    (session,r) in SR and ((operation,object),r) in PR)
+
+# review functions
+
+    def AssignedUsers(role):
+        assert role in ROLES
+        return set(u for u in USERS if (u,role) in UR)
+
+    def AssignedRoles(user):
+        assert user in USERS
+        return set(r for r in ROLES if (user,r) in UR)
+
+# advanced review functions
+
+    def RolePermissions(role):
+        assert role in ROLES
+        return set((op,obj) for op in OPS for obj in OBJS 
+                   if ((op,obj),role) in PR)
+
+    def UserPermissions(user):
+        assert user in USERS
+        return set((op,obj) for r in ROLES
+                   for op in OPS for obj in OBJS
+                   if (user,r) in UR and ((op,obj),r) in PR)
+
+    def SessionRoles(session):
+        assert session in SESSIONS
+        return set(r for r in ROLES if (session,r) in SR)
+
+    def SessionPermissions(session):
+        assert session in SESSIONS
+        return set((op,obj) for r in ROLES
+                   for op in OPS for obj in OBJS
+                   if (session,r) in SR and ((op,obj),r) in PR)
+
+    def RoleOperationsOnObject(role, object):
+        assert role in ROLES 
+        assert object in OBJS
+        return set(op for op in OPS if ((op,object),role) in PR)
+
+    def UserOperationsOnObject(user, object):
+        assert user in USERS
+        assert object in OBJS
+        return set(op for r in ROLES for op in OPS
+                   if (user,r) in UR and ((op,object),r) in PR)
+
+# 151 lines; about half are asserts (47), spaces (22-1+4), or comments (4) only

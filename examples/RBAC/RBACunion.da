@@ -1,0 +1,20 @@
+from RBACrun import RBACrun
+
+class RBACunion(RBACrun, process):
+    def rules_trans_rs():
+        path(x,y), if_(edge(x,y))
+        path(x,y), if_(edge(x,z), path(z,y))
+  
+    def trans(E):  # use infer plus set query
+        return infer(rule=rules_trans_rs, bindings=[('edge',E)], 
+                     queries=['path']) | setof((r,r), r in ROLES)
+
+    # copied from hierRBAC.GeneralHierRBAC, 
+    # except trans(RH) is first lifted to a local variable
+    def AuthorizedUsers(role):
+        assert role in ROLES
+        transrh = trans(RH)         # lifted
+        return set(u for u in USERS for asc in ROLES 
+#std               if (asc,role) in RH and (u,asc) in UR)
+                   if (asc,role) in transrh and (u,asc) in UR)
+

@@ -1,0 +1,319 @@
+# author: annie liu, programed based on ANSI RBAC.
+
+from coreRBAC import CoreRBAC
+from hierRBAC import GeneralHierRBAC
+
+# hierarchical RBAC with limited role hierarchies
+class LimitedHierRBAC(GeneralHierRBAC, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, RH): pass
+
+# one administrative command refined: add check for single inheritance
+
+    def AddInheritance(asc, desc):
+#std-D  assert asc in ROLES
+#std-D  assert desc in ROLES
+#std-R  assert not bool(set(r for r in ROLES
+#std-R                      if (asc,r) in transred(RH)))
+        assert not some(r in ROLES, has= (asc,r) in RH)
+#std-D  assert (desc,asc) not in RH
+        GeneralHierRBAC.AddInheritance(asc,desc)
+
+
+# statically constrained RBAC
+class CoreRBACwithSSD(CoreRBAC, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, 
+              SsdNAMES,SsdNR,SsdNC): pass
+        # SsdNR subset SsdNAMES * ROLES
+        # SsdNC subset SsdNAMES * int
+        # forall n in SsdNAMES:
+        # 2 <= SsdRoleSetCardinality(n) <= len(SsdRoleSetRoles(n))
+
+    # SSD constraint
+    def checkSSD(SsdNR, SsdNC):
+        return not bool(set(True for u in USERS for (n,c) in SsdNC
+                            if not len(set(r for r in AssignedRoles(u)
+                                           if (n,r) in SsdNR))
+                            <= c-1))
+
+# administrative commands: one redefined, but just add check for SSD;
+# and five new ones defined, where non-deletion ones check SSD
+
+    def AssignUser(user, role):
+#std-D  assert user in USERS
+#std-D        assert role in ROLES
+#std-D  assert (user,role) not in UR
+        # check SSD, but calling checkSSD is no good
+        assert not bool(set(True for (n,c) in SsdNC
+                            if not len(set(r for r in ROLES
+                                           if (user,r) in UR|
+                                           set([(user,role)])
+                                           and (n,r) in SsdNR)) 
+                                  <= c-1))
+        CoreRBAC.AssignUser(user,role)
+
+    def CreateSsdSet(name, roles, c):
+        assert name not in SsdNAMES
+        assert roles.issubset(ROLES)
+        assert 2 <= c <= len(roles)
+        assert checkSSD(SsdNR | set((name,r) for r in roles),
+                             SsdNC | set([(name,c)]))
+        SsdNAMES.add(name)
+        SsdNR |= set((name,r) for r in roles)
+        SsdNC.add((name,c))
+
+    def DeleteSsdSet(name):
+        assert name in SsdNAMES
+        SsdNR -= set((name,r) for r in SsdRoleSetRoles(name))
+        SsdNC.remove((name,SsdRoleSetCardinality(name)))
+        SsdNAMES.remove(name)                      # delete ssd name last
+
+    def AddSsdRoleMember(name, role):
+        assert name in SsdNAMES
+        assert role in ROLES
+        assert role not in SsdRoleSetRoles(name)
+        assert checkSSD(SsdNR | set([(name,role)]),SsdNC)
+        SsdNR.add((name,role))
+
+    def DeleteSsdRoleMember(name, role):
+        assert name in SsdNAMES
+        assert role in SsdRoleSetRoles(name)
+        assert \
+        SsdRoleSetCardinality(name) <= len(SsdRoleSetRoles(name))-1
+        SsdNR.remove((name,role))
+
+    def SetSsdSetCardinality(name, c):
+        assert name in SsdNAMES
+        assert 2 <= c <= len(SsdRoleSetRoles(name))
+        assert checkSSD(SsdNR,
+                             SsdNC
+                             - set((name,SsdRoleSetCardinality(name)))
+                             | set([(name,c)]))
+        SsdNC.remove((name,SsdRoleSetCardinality(name)))
+        SsdNC.add((name,c))
+
+# review functions: three new ones defined
+
+    def SsdRoleSets():
+        return SsdNAMES
+
+    def SsdRoleSetRoles(name):
+        assert name in SsdNAMES
+        return set(r for (n,r) in SsdNR if n==name)
+#alt    return set(r for r in ROLES if (name,r) in SsdNR)
+
+    def SsdRoleSetCardinality(name):
+        assert name in SsdNAMES
+        return set(c for (n,c) in SsdNC if n==name).pop()
+
+
+class GeneralHierRBACwithSSD(GeneralHierRBAC, CoreRBACwithSSD, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, 
+              RH, SsdNAMES,SsdNR,SsdNC): pass
+
+    # SSD constraint, as in CoreRBACwithSSD, except to use AuthorizeRoles
+    def checkSSD(SsdNR, SsdNC):
+        return not bool(set(True for u in USERS for (n,c) in SsdNC
+                            if not len(set(r for r in AuthorizedRoles(u)
+                                           if (n,r) in SsdNR))
+                                   <= c-1))
+
+# administrative commands: AssignUser redefined, to use AuthorizedRoles;
+# AddInheritance also redefined, to add check for SSD;
+# and non-deletion ones redefined, to use AuthorizedRoles;
+# but use of AuthorizedRoles is automatic after checkSSD is redefined.
+
+    def AddInheritance(asc, desc):
+#std-D  assert asc in ROLES
+#std-D  assert desc in ROLES
+#std-D  assert (asc,desc) not in transred(RH)
+#std-D  assert (desc,asc) not in RH
+        # check SSD, but checkSSD(SsdNR,SsdNC) is no good
+        assert not bool(set(True for u in USERS for (n,c) in SsdNC
+                            if not len(set(r for r in ROLES
+                                           for a in ROLES 
+                                           if (u,a) in UR
+                                           and (a,r) in RH |
+                                           set((r1,r2)
+                                               for r1 in ROLES
+                                               for r2 in ROLES
+                                               if (r1,desc) in RH
+                                               if (asc,r2) in RH)
+                                           and (n,r) in SsdNR))
+                                   <= c-1))
+        GeneralHierRBAC.AddInheritance(asc,desc)
+
+
+# same as LimitedHierRBAC, except to add suffix withSSD to GeneralHierRBAC
+class LimitedHierRBACwithSSD(GeneralHierRBACwithSSD, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, 
+              RH, SsdNAMES,SsdNR,SsdNC): pass
+
+    def AddInheritance(asc, desc):
+#std-D  assert asc in ROLES
+#std-D  assert desc in ROLES
+#std-D        assert not bool(set(r for r in ROLES
+#std-D                            if (asc,r) in transred(RH)))
+#std-D  assert (desc,asc) not in RH
+        GeneralHierRBACwithSSD.AddInheritance(asc,desc)
+
+
+# dynamically constrained RBAC
+class CoreRBACwithDSD(CoreRBAC, process):
+    # same as in CoreRBACwithSSD, except to use Dsd instead of Ssd
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, 
+              DsdNAMES,DsdNR,DsdNC): pass
+        # DsdNR subset DsdNAMES * ROLES
+        # DsdNC subset DsdNAMES * int
+        # forall n in DsdNAMES
+        # 2 <= DsdRoleSetCardinality(n) <= len(DsdRoleSetRoles(n))
+
+    # DSD constraint, as in CoreRBACwithSSD and GeneralHierRBACwithSSD,
+    # except to use SESSIONS, SessionRoles, and use Dsd/DSD instead of Ssd/SSD
+    def checkDSD(DsdNR, DsdNC):
+        return not bool(set(True for s in SESSIONS for (n,c) in DsdNC
+                            if not len(set(r for r in SessionRoles(s)
+                                           if (n,r) in DsdNR))
+                                   <= c-1))
+
+# administrative commands: 5 new ones added, where non-deletion ones check DSD,
+# same as in CoreRBACwithSSD, except to use Dsd/DSD instead of Ssd/SSD
+
+    def CreateDsdSet(name, roles, c):
+        assert name not in DsdNAMES
+        assert roles.issubset(ROLES)
+        assert 2 <= c <= len(roles)
+        assert checkDSD(DsdNR | set((name,r) for r in roles),
+                             DsdNC | set([(name,c)]))
+        DsdNAMES.add(name)
+        DsdNR |= set((name,r) for r in roles)
+        DsdNC.add((name,c))
+
+    def DeleteDsdSet(name):
+        assert name in DsdNAMES
+        DsdNR -= set((name,r) for r in DsdRoleSetRoles(name))
+        DsdNC.remove((name,DsdRoleSetCardinality(name)))
+        DsdNAMES.remove(name)                      # delete dsd name last
+
+    def AddDsdRoleMember(name, role):
+        assert name in DsdNAMES
+        assert role in ROLES
+        assert role not in DsdRoleSetRoles(name)
+        assert checkDSD(DsdNR | set([(name,role)]),DsdNC)
+        DsdNR.add((name,role))
+
+    def DeleteDsdRoleMember(name, role):
+        assert name in DsdNAMES
+        assert role in DsdRoleSetRoles(name)
+        assert \
+        DsdRoleSetCardinality(name) <= len(DsdRoleSetRoles(name))-1
+        DsdNR.remove((name,role))
+
+    def SetDsdSetCardinality(name, c):
+        assert name in DsdNAMES
+        assert 2 <= c <= len(DsdRoleSetRoles(name))
+        assert checkDSD(DsdNR,
+                             DsdNC
+                             - set((name,DsdRoleSetCardinality(name)))
+                             | set([(name,c)]))
+        DsdNC.remove((name,DsdRoleSetCardinality(name)))
+        DsdNC.add((name,c))
+
+# supporting system functions: 2 redefined, but same as in CoreRBAC, except
+# to add check for DSD
+
+    def CreateSession(user, session, ars):
+#std-D        assert user in USERS
+#std-D        assert session not in SESSIONS
+#std-D  assert ars.issubset(AssignedRoles(user))
+        # check DSD, but checkDSD(DsdNR,DsdNC) is no good
+        assert not bool(set(True for s in SESSIONS
+                            for (n,c) in DsdNC
+                            if not len(set(r for r in ROLES
+                                           if (s,r) in SR |
+                                           set((session,r) for r in ars)
+                                           and (n,r) in DsdNR))
+                                   <= c-1))
+        CoreRBAC.CreateSession(user,session,ars)
+
+    def AddActiveRole(user, session, role):
+#std-D  assert user in USERS
+#std-D  assert session in SESSIONS
+#std-D  assert role in ROLES
+#std-D  assert (session,user) in SU
+#std-D  assert (session,role) not in SR
+#std-D  assert role in AssignedRoles(user)
+        # check DSD, but call no good, as in CreateSession except to | one pair
+        assert not bool(set(True for s in SESSIONS
+                            for (n,c) in DsdNC
+                            if not len(set(r for r in ROLES
+                                           if (s,r) in SR |
+                                           set([(session,role)])
+                                           and (n,r) in DsdNR))
+                                   <= c-1))
+        CoreRBAC.AddActiveRole(user, session, role)
+
+# review functions: three new ones defined, same as in CoreRBACwithSSD, except
+# to use Dsd instead of Ssd
+
+    def DsdRoleSets():
+        return DsdNAMES
+
+    def DsdRoleSetRoles(name):
+        assert name in DsdNAMES
+        return set(r for (n,r) in DsdNR if n==name)
+
+    def DsdRoleSetCardinality(name):
+        assert name in DsdNAMES
+        return set(c for (n,c) in DsdNC if n==name).pop()
+
+
+class GeneralHierRBACwithDSD(GeneralHierRBAC, CoreRBACwithDSD, process):
+    # same as in GeneralRBACwithSSD, except to use DSD instead of SSD
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR,
+              RH, DsdNAMES,DsdNR,DsdNC): pass
+
+# supporting system functions: two redefined, but same as in CoreRBACwithSSD,
+# except to use AuthorizedRoles and use GeneralHierRBAC instead of CoreRBAC
+
+    def CreateSession(user, session, ars):
+#std-D        assert user in USERS
+#std-D        assert session not in SESSIONS
+#std-D        assert ars.issubset(AuthorizedRoles(user))
+        # check DSD, but checkDSD(DsdNR,DsdNC) is no good
+        assert not bool(set(True for s in SESSIONS
+                            for (n,c) in DsdNC
+                            if not len(set(r for r in ROLES
+                                           if (s,r) in SR |
+                                           set((session,r) for r in ars)
+                                           and (n,r) in DsdNR))
+                                   <= c-1))
+        GeneralHierRBAC.CreateSession(user,session,ars)
+
+    def AddActiveRole(user, session, role):
+#std-D  assert user in USERS
+#std-D  assert session in SESSIONS
+#std-D  assert role in ROLES
+#std-D  assert (session,user) in SU
+#std-D  assert (session,role) not in SR
+#std-D  assert role in AuthorizedRoles(user)
+        # check DSD, call no good, as in CreateSession except to | one pair
+        assert not bool(set(True for s in SESSIONS
+                            for (n,c) in DsdNC
+                            if not len(set(r for r in ROLES
+                                           if (s,r) in SR |
+                                           set([(session,role)])
+                                           and (n,r) in DsdNR))
+                                   <= c-1))
+        GeneralHierRBAC.AddActiveRole(user,session,role)
+
+
+class LimitedHierRBACwithDSD(GeneralHierRBACwithDSD, process):
+    # same as in LimitedHierRBAC, except to add suffix withDSD to name RBAC
+    # same as in LimitedRBACwithSSD, except to use DSD instead of SSD
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR,
+              RH, DsdNAMES,DsdNR,DsdNC): pass
+
+# only one administrative command redefined: to be same as in LimitedHierRBAC
+
+    def AddInheritance(asc, desc):
+        LimitedHierRBAC.AddInheritance(asc,desc)

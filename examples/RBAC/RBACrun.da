@@ -1,0 +1,25 @@
+from hierRBAC import GeneralHierRBAC
+
+class RBACrun(GeneralHierRBAC, process):
+    def run():
+        print(AuthorizedUsers(91))
+        print(AuthorizedUsers(92))
+        AddUser(4)
+        AddUser(5)
+        AddRole(94)
+        AddRole(95)
+        AssignUser(4,94)
+        AssignUser(5,95)
+        AddInheritance(94,95)
+        AddUser(6)
+        AddRole(96)
+        AssignUser(6,96)
+        AddInheritance(95,96)
+        AddRole(97)
+        print(AuthorizedUsers(95))
+        print(AuthorizedUsers(96))
+        DeleteInheritance(91,92)
+        print(AuthorizedUsers(91))
+        print(AuthorizedUsers(92))
+        DeleteRole(96)
+        print(AuthorizedUsers(95))

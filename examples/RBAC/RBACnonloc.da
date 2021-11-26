@@ -1,0 +1,246 @@
+"""
+## the one import and one class below are exact contents of file hierRBAC.da
+
+from coreRBAC import CoreRBAC
+
+# hierarchical RBAC with general role hierarchies
+class GeneralHierRBAC(CoreRBAC, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR,
+              RH):  
+        super().setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR)
+        # RH subset ROLES * ROLES, where asc inh desc 
+
+    # transitive-reflexive closure of a relation E and ROLES
+    def transclo(E):
+        T = set(E)
+        W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
+        while bool(W):
+            T.add(W.pop())
+            W = set((x,d) for (x,y) in T for (a,d) in E if y==a) - T
+        return T | set((r,r) for r in ROLES)
+
+#std    # transitive reduction of a relation E, unique for acyclic graphs
+#std    def transred(E):
+#std        T = set(E)
+#std        W = set((a,d) for (a,d) in T 
+#std                if (a,d) in transclo(T - set([(a,d)])))
+#std        while bool(W):
+#std            T.remove(W.pop())
+#std            W = set((a,d) for (a,d) in T 
+#std                    if (a,d) in transclo(T - set([(a,d)])))
+#std        return W
+
+    def trans(E): return transclo(E)
+
+# administrative commands: four new ones defined
+
+    def AddInheritance(asc, desc):
+        assert asc in ROLES
+        assert desc in ROLES
+#std-R  assert (asc,desc) not in transred(RH)
+#std    assert (desc,asc) not in RH
+        assert (asc,desc) not in RH               #+
+        RH.add((asc,desc))
+#std    RH |= set((r1,r2) for r1 in ROLES for r2 in ROLES
+#std               if (r1,desc) in RH and (asc,r2) in RH)
+
+    def DeleteInheritance(asc,desc):
+        assert asc in ROLES
+        assert desc in ROLES
+#std    assert (asc,desc) in transred(RH)
+        RH.remove((asc,desc))
+#std    RH = transclo(transred(RH) - set([(asc,desc)]))
+
+    def AddAsccendant(asc,desc):
+        AddRole(asc)
+        AddInheritance(asc,desc)    
+           
+    def AddDescendant(asc,desc):
+        AddRole(desc)
+        AddInheritance(asc,desc)
+
+# supporting system functions: two redefined, but same as in CoreRBAC except
+# that, in the precondition, AssignedRoles is replaced with AuthorizedRoles
+
+    def CreateSession(user, session, ars):
+        assert user in USERS
+        assert session not in SESSIONS
+        assert ars.issubset(AuthorizedRoles(user))
+        SESSIONS.add(session)
+        SU.add((session,user))
+        SR |= set((session,r) for r in ars)
+
+    def AddActiveRole(user, session, role):
+        assert user in USERS
+        assert session in SESSIONS
+        assert role in ROLES
+        assert (session,user) in SU
+        assert (session,role) not in SR
+        assert role in AuthorizedRoles(user)
+        SR.add((session,role))
+
+# review functions: two new ones defined, but same as AssignedUsers and
+# AssignedRoles in CoreRBAC except for adding use of asc and RH
+
+    def AuthorizedUsers(role):
+        assert role in ROLES
+        return set(u for u in USERS for asc in ROLES 
+#std               if (asc,role) in RH and (u,asc) in UR)
+                   if (asc,role) in trans(RH) and (u,asc) in UR)
+
+    def AuthorizedRoles(user):
+        assert user in USERS
+        return set(r for r in ROLES for asc in ROLES 
+#std               if (user,asc) in UR and (asc,r) in RH)
+                   if (user,asc) in UR and (asc,r) in trans(RH))
+                
+# advanced review functions: four redefined, but same as in CoreRBAC except
+# for adding use of acs and/or desc and RH
+
+    def RolePermissions(role):
+        assert role in ROLES
+        return set((op,obj) for desc in ROLES 
+                   for op in OPS for obj in OBJS 
+#std               if (role,desc) in RH and ((op,obj),desc) in PR)
+                   if (role,desc) in trans(RH) and ((op,obj),desc) in PR)
+
+    def UserPermissions(user):
+        assert user in USERS
+        return set((op,obj) for asc in ROLES for desc in ROLES
+                   for op in OPS for obj in OBJS 
+#std               if (user,asc) in UR and (asc,desc) in RH
+                   if (user,asc) in UR and (asc,desc) in trans(RH)
+                   and ((op,obj),desc) in PR)
+
+    def RoleOperationsOnObject(role, object):
+        assert role in ROLES
+        assert object in OBJS
+        return set(op for desc in ROLES for op in OPS 
+#std               if (role,desc) in RH and ((op,object),desc) in PR)
+                   if (role,desc) in trans(RH) and ((op,object),desc) in PR)
+
+    def UserOperationsOnObject(user, object):
+        assert user in USERS
+        assert object in OBJS
+        return set(op for asc in ROLES for desc in ROLES 
+                   for op in OPS 
+#std               if(user,asc) in UR and (asc,desc) in RH 
+                   if(user,asc) in UR and (asc,desc) in trans(RH)
+                   and ((op,object),desc) in PR)
+
+
+## the one import and one class below are exact contents of file RBACrun.da
+
+## from hierRBAC import GeneralHierRBAC
+
+class RBACrun(GeneralHierRBAC, process):
+    def run():
+        print(AuthorizedUsers(91))
+        print(AuthorizedUsers(92))
+        AddUser(4)
+        AddUser(5)
+        AddRole(94)
+        AddRole(95)
+        AssignUser(4,94)
+        AssignUser(5,95)
+        AddInheritance(94,95)
+        AddUser(6)
+        AddRole(96)
+        AssignUser(6,96)
+        AddInheritance(95,96)
+        AddRole(97)
+        print(AuthorizedUsers(95))
+        print(AuthorizedUsers(96))
+        DeleteInheritance(91,92)
+        print(AuthorizedUsers(91))
+        print(AuthorizedUsers(92)) 
+        DeleteRole(96)
+        print(AuthorizedUsers(95))
+"""
+
+
+from RBACrun import RBACrun
+
+class RBACnonloc(RBACrun, process):
+    def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, RH):
+        self.transRH = None
+
+    def rules_HRBAC_transRH_rules():
+        transRH(x,y), if_(RH(x,y))
+        transRH(x,y), if_(RH(x,z), transRH(z,y))
+        transRH(x,x), if_(ROLES(x)) # with this base case, don't need first rule
+
+    ## the two methods below are copied from hierRBAC.GeneralHierRBAC,
+    ## without which updates to transRH is not triggered when RH is updated;
+    ## however, strangely, 
+    ## updates to transRH is correctly triggered when ROLES is updated.
+    ## Also,
+    ## this copying is not needed if the two classes are in this file,
+    ## even if CoreRBAC is not in this file, and ROLES is updated in there.
+    ## Also,,
+    ## having only one of the two classes in this file doesn't solve the problem
+    def AddInheritance(asc, desc):
+        assert asc in ROLES
+        assert desc in ROLES
+#std-R  assert (asc,desc) not in transred(RH)
+#std    assert (desc,asc) not in RH
+        assert (asc,desc) not in RH               #+
+        RH.add((asc,desc))
+#std    RH |= set((r1,r2) for r1 in ROLES for r2 in ROLES
+#std               if (r1,desc) in RH and (asc,r2) in RH)
+
+    def DeleteInheritance(asc,desc):
+        assert asc in ROLES
+        assert desc in ROLES
+#std    assert (asc,desc) in transred(RH)
+        RH.remove((asc,desc))
+#std    RH = transclo(transred(RH) - set([(asc,desc)]))
+
+    # rest copied from hierRBAC.GeneralHierRBAC, 
+    # except with trans(RH) replaced by transRH,
+    # and in the first only, transRH is first lifted to a local variable
+    def AuthorizedUsers(role):
+        assert role in ROLES
+        print('====', USERS, ROLES, UR, '----', transRH)
+        transrh = transRH         # lifted
+        return set(u for u in USERS for asc in ROLES 
+#std               if (asc,role) in RH and (u,asc) in UR)
+#                   if (asc,role) in transRH and (u,asc) in UR)
+                   if (asc,role) in transrh and (u,asc) in UR)
+
+    def AuthorizedRoles(user):
+        assert user in USERS
+        return set(r for r in ROLES for asc in ROLES 
+#std               if (user,asc) in UR and (asc,r) in RH)
+                   if (user,asc) in UR and (asc,r) in transRH)
+
+    def RolePermissions(role):
+        assert role in ROLES
+        return set((op,obj) for desc in ROLES 
+                   for op in OPS for obj in OBJS 
+#std               if (role,desc) in RH and ((op,obj),desc) in PR)
+                   if (role,desc) in transRH and ((op,obj),desc) in PR)
+
+    def UserPermissions(user):
+        assert user in USERS
+        return set((op,obj) for asc in ROLES for desc in ROLES
+                   for op in OPS for obj in OBJS 
+#std               if (user,asc) in UR and (asc,desc) in RH
+                   if (user,asc) in UR and (asc,desc) in transRH
+                   and ((op,obj),desc) in PR)
+
+    def RoleOperationsOnObject(role, object):
+        assert role in ROLES
+        assert object in OBJS
+        return set(op for desc in ROLES for op in OPS 
+#std               if (role,desc) in RH and ((op,object),desc) in PR)
+                   if (role,desc) in transRH and ((op,object),desc) in PR)
+
+    def UserOperationsOnObject(user, object):
+        assert user in USERS
+        assert object in OBJS
+        return set(op for asc in ROLES for desc in ROLES 
+                   for op in OPS 
+#std               if(user,asc) in UR and (asc,desc) in RH 
+                   if(user,asc) in UR and (asc,desc) in transRH
+                   and ((op,object),desc) in PR)
