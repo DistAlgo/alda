@@ -245,6 +245,25 @@ class NameScope(DistNode):
         else:
             return None
 
+    def rename(self, old, new, local=False):
+        """ rename a name in the symbol table.
+        """
+        assert isinstance(old, str)
+        assert isinstance(new, str)
+
+        entity = self._names.get(old)
+        if entity is not None:
+            entity.name = new
+            self._names[new] = entity
+            self._names.pop(old)
+            return entity
+        elif local:
+            return None
+        elif self.parent_scope is not None:
+            return self.parent_scope.rename(old, new)
+        else:
+            return None
+
     def add_name(self, name):
         """Adds a name to this scope if it doesn't yet exist.
 

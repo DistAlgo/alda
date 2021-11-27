@@ -8,6 +8,8 @@ from pprint import pprint
 # from .resolver import RuleResolver
 
 KW_RULES = "rules_"
+KW_RULE_FUNC = 'rules'
+KW_RULE_FUNC_NAME = 'name'
 KW_COND = "if_"
 KW_INFER = "_infer"
 
@@ -343,8 +345,12 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 	def visit_Function(self, node):
 		""" replace the definition of function rules_xxx to a function the can be called with 2 parameters: bindings and queries
 		"""
-		if node.name.startswith(KW_RULES):# if node.name == KW_RULES:
+		if node.name.startswith(KW_RULES) or node.name == KW_RULE_FUNC:# if node.name == KW_RULES:
 			ruleset = RuleParser(self.filename, self).visit(node)
+			# when the function is defined with the syntax def rules(name=RULENAME) or def rules(RULENAME)
+			# 	rename the function name to RULENAME
+			if ruleset and node.name != ruleset.decls:
+				self.current_scope.rename(node.name, ruleset.decls)
 			if not hasattr(self.current_scope, 'rulesets'):
 				self.current_scope.rulesets = dict()
 			self.current_scope.rulesets[ruleset.decls] = ruleset
@@ -383,6 +389,8 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 		return res
 
 class RuleParser(NodeVisitor, CompilerMessagePrinter):
+	""" parse the dast into rule ast
+	"""
 	def __init__(self, filename="", _parent=None):
 		CompilerMessagePrinter.__init__(self, filename, _parent=_parent)
 		NodeVisitor.__init__(self)
@@ -400,10 +408,80 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		flag_var = scope.add_name(flag_var_name)
 		var.flag_var = flag_var
 
+	def visit_Arguments(self, node):
+		""" valid arguments
+		def rules(NameOfRuleSet)
+		def rules(name='NameOfRuleSet')
+		def rules(name=NameOfRuleSet)
+
+		1. if there exists a first parameter without default value, 
+			the rule is valid, the other parameters are ignored.
+		2. else if name parameter presents with default value, 
+			the rule is valid, the other parameters are ignored.
+		"""
+		args = []
+		idx = 0
+		defaults = list(reversed(node.defaults))
+		invalid = []
+		rule_name = None
+		for a in reversed(node.args):
+			if idx < len(defaults):
+				d = defaults[idx]
+				if isinstance(d, dast.NameExpr):
+					d = d.subexprs[0].name
+				elif isinstance(d, dast.ConstantExpr):
+					d = d.subexprs[0]
+				else:
+					invalid.append(a.name, d)
+					continue
+				args.append((a.name, d))
+			else:
+				args.append(a.name)
+			idx += 1
+		
+		if len(args) == 0:
+			return None
+		args = list(reversed(args))
+		
+		if isinstance(args[0], str):
+			rule_name = args[0]
+			for a in args[1:]:
+				invalid.append(a)
+		else:
+			for a in args:
+				if isinstance(a, tuple) and a[0] == 'name' and rule_name is None:
+					rule_name = a[1]
+				else:
+					invalid.append(a)
+
+		if rule_name is not None:
+			if len(invalid) > 0:
+				self.warn('Invalid parameter(s) /%s/, ignored' % self.invalid_par_tostring(invalid), node)
+			return rule_name
+		else:
+			return None
+
+	def invalid_par_tostring(self, invalid):
+		output = []
+		for i in invalid:
+			if isinstance(i, str):
+				output.append(i)
+			elif isinstance(i, tuple) and len(i) >= 2:
+				output.append('%s=%s' % (i[0], i[1]))
+		return ', '.join(output)
+	
 	def visit_Function(self, node):
-		if node.name.startswith(KW_RULES): # if node.name == KW_RULES:
+		if node.name.startswith(KW_RULES) or node.name == KW_RULE_FUNC: # if node.name == KW_RULES:
 			self.current_rule = ruleast.RuleSet(node.parent, node.ast)
-			self.current_rule.decls = node.name
+			if node.name.startswith(KW_RULES):
+				self.current_rule.decls = node.name
+			else:
+				rule_name = self.visit(node.args)
+				if not rule_name:
+					self.error("Invalid formalization of rule set: \
+					function definition is not allowed in the scope of rule set", node.name)
+					return
+				self.current_rule.decls = rule_name
 			if get_docstring(node._ast):
 				node.body = node.body[1:]
 			self.current_rule.rules = [self.visit(r.expr) for r in node.body]
@@ -749,7 +827,6 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 				scope = scope.parent_scope
 			if not (isinstance(whereinfer, dast.ImportFromStmt) and whereinfer.module == 'da.rule.infer'):
 				return self.generic_visit(node)
-		
 			rule_name = None
 			user_binding = None
 			user_query = None
@@ -757,6 +834,11 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if node.keywords:
 				for key, val in node.keywords:
 					if key == 'rule':
+						# When the rules are defined with the def rules syntax
+						# 	the rule name refereed by infer function should be re-discovered
+						# 	and change to the updated NamedVar
+						new_val = scope.find_name(val.name)
+						val.value = new_val
 						rule_var = val
 					elif key == 'bindings':
 						user_binding = val
@@ -766,7 +848,6 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 						self.warn('Invalid argument %s in call of infer, ignored' % key, node)
 			if not rule_var:
 				self.error('Infer function requires keyword argument: rule', node)
-			
 			rulecall = self.gen_rule_func_call(rule_var, user_binding, user_query)
 			return rulecall
 		else:
@@ -787,11 +868,11 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if ele is stmt:	# and ruleset.all_initialized_by(ele):
 				parent.body.insert(i+1, inferstmt)
 
-	def gen_infer_simpified(self, node, func_name=None, rulesets=None):
+	def gen_infer_simplified(self, node, func_name=None, rulesets=None):
 		""" simplified processing of infer 
 		for functions that already exist in scope, 
 			add all infers at the end of the function
-		for functions that need to overriden, 
+		for functions that need to overridden, 
 			generate functions whose bodies are of the following form:
 				super().func_name(...)
 				infer(...)
@@ -871,14 +952,14 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if isinstance(node, dast.Process) and func_name == "setup" or \
 			   isinstance(node, dast.ClassStmt) and func_name == "__init__":
 				rls = set.union(*[rs for _,rs in val.items()])
-				self.gen_infer_simpified(node, func_name, rls)
+				self.gen_infer_simplified(node, func_name, rls)
 				continue
 
 			# if the function inherits multiple functions, then simplify to a super call and infer
 			funcs = {c for c,_,_ in val}
 			if len(funcs) > 1:
 				rls = set.union(*[rs for _,rs in val.items()])
-				self.gen_infer_simpified(node, func_name, rls)
+				self.gen_infer_simplified(node, func_name, rls)
 				continue
 			
 			# override regular function
@@ -957,4 +1038,4 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			if override_dict:
 				self.gen_infer_override(node, override_dict)
 			if setup_init:
-				self.gen_infer_simpified(node)
+				self.gen_infer_simplified(node)
