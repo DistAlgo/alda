@@ -699,9 +699,9 @@ class PythonGenerator(NodeVisitor):
         else:
             if sys.version_info < (3, 9):
                 idx = Index(self.visit(node.index))
+                propagate_attributes([idx.value], idx)
             else:
                 idx = self.visit(node.index)
-            propagate_attributes([idx.value], idx)
         self.current_context = ctx
         return pySubscr(val, idx, ctx())
 

@@ -45,8 +45,6 @@ from .common import (builtin, internal, name_split_host, name_split_node,
 from .transport import ChannelCaps, TransportManager, HEADER_SIZE, \
     TransportException, AuthenticationException
 
-from .constraint import query as constraint_query
-
 logger = logging.getLogger(__name__)
 
 class DistProcessExit(BaseException):
@@ -554,10 +552,6 @@ class DistProcess():
         """
         self._register_async_event(Command.EndAck, seqno=0)
         self._sync_async_event(Command.EndAck, seqno=0, srcs=self._id)
-
-    @builtin
-    def query(self, constraint, **args):
-        return constraint_query(self=self._state.__dict__, constraint=constraint, **args)
 
     @builtin
     def crash(self, procs):

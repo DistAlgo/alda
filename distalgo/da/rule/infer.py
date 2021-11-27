@@ -81,6 +81,19 @@ def _infer(rule, arity, bindings, queries):
     xsb_query = "extfilequery:external_file_query('{}','{}',{}).".format(rule_path_rule, rule_path_fact,
                     "[%s]" % ",".join("['%s',%s]" % (qfile,qstr) for qfile, qstr in _queries))
     # print(xsb_query)
+
+    # check if xsb command can be run
+    status, output = subprocess.getstatusoutput('xsb -h')
+    if status != 0:
+        if 'xsb: command not found' in output:
+            print('** ERROR! Rule Engine Not Found. Please Check Your Installation. **')
+        else:
+            print('** ERROR! %s **' % output)
+        if len(_queries) == 1:
+            return []
+        else:
+            return (None,) * len(_queries)
+
     output = subprocess.run(["xsb",'--nobanner', '--quietload', '--noprompt', 
                             '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query],
                             stdout=subprocess.PIPE,text=True)
