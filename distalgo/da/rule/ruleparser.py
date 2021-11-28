@@ -622,7 +622,7 @@ class XSBTranslator(NodeVisitor):
 		assrtn = self.visit(node.pred) + '(' + \
 				','.join(self.visit(arg) for arg in node.args) + ')'
 		if hasattr(node, 'negation') and node.negation:
-			return 'not(%s)' % assrtn
+			return 'tnot(%s)' % assrtn
 		return assrtn
 	
 	def visit_LogicVar(self, node):
