@@ -410,6 +410,20 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		flag_var = scope.add_name(flag_var_name)
 		var.flag_var = flag_var
 
+	def visit_LogicalExpr(self, node):
+		print('.'*50, 'visit_LogicalExpr')
+		pprint(vars(node))
+		if node.operator is dast.NotOp:
+			if len(node.subexprs) > 1:
+				self.error("Invalid formalization of rule set", node)
+				return
+			assrtn = self.visit(node.subexprs[0])
+			assrtn.negation = True
+			return assrtn
+		else:
+			self.error("Invalid formalization of rule set, logic operator %s not allowed" % node.op.__name__, node)
+		return
+
 	def visit_Arguments(self, node):
 		""" valid arguments
 		def rules(NameOfRuleSet)
@@ -605,8 +619,11 @@ class XSBTranslator(NodeVisitor):
 	
 	def visit_Assertion(self, node):
 		# print(node.args)
-		return self.visit(node.pred) + '(' + \
+		assrtn = self.visit(node.pred) + '(' + \
 				','.join(self.visit(arg) for arg in node.args) + ')'
+		if hasattr(node, 'negation') and node.negation:
+			return 'not(%s)' % assrtn
+		return assrtn
 	
 	def visit_LogicVar(self, node):
 		if node.name == '_':
