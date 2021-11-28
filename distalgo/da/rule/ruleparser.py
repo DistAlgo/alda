@@ -350,7 +350,9 @@ class Parser(NodeTransformer, CompilerMessagePrinter):
 			# when the function is defined with the syntax def rules(name=RULENAME) or def rules(RULENAME)
 			# 	rename the function name to RULENAME
 			if ruleset and node.name != ruleset.decls:
-				self.current_scope.rename(node.name, ruleset.decls)
+				decl = self.current_scope.add_name(ruleset.decls)
+				decl.set_scope(self.current_scope)
+				node.rename(ruleset.decls)
 			if not hasattr(self.current_scope, 'rulesets'):
 				self.current_scope.rulesets = dict()
 			self.current_scope.rulesets[ruleset.decls] = ruleset
