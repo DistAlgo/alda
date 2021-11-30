@@ -1,0 +1,36 @@
+class Win(process):
+    def setup():
+        move1 = {(1,0)}
+        move2 = {(0,0)}
+        move3 = {(1,2),(0,0)}
+        self.move = move3
+
+        self.win = None
+        self.lose = None
+#        self.true_win = None
+#        self.true_lose = None
+        self.draw = None
+
+    def rules(win_rs):
+        win(x), if_(move(x,y), not win(y))
+#        lose(x), if_(not win(x))  # return  {'_h473'}
+#        lose(x), if_(move(x,_), not win(x))
+#        lose(x), if_(move(_,x), not win(x))
+        position(x), if_(move(x,_))
+        position(x), if_(move(_,x))
+        lose(x), if_(position(x), not win(x))
+
+#        true_win(X), if_(win(X), not lose(X))  # return as win
+#        true_lose(X), if_(lose(X), not win(X))  # return as lose
+        draw(X), if_(win(X), lose(X))
+
+    def run():
+        true_win = win - lose
+        true_lose = lose - win
+        print(win)
+        print(lose)
+        print(true_win)
+        print(true_lose)
+        print(draw)
+
+def main(): start(new(Win,[]))
