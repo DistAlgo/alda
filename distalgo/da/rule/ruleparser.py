@@ -411,8 +411,6 @@ class RuleParser(NodeVisitor, CompilerMessagePrinter):
 		var.flag_var = flag_var
 
 	def visit_LogicalExpr(self, node):
-		print('.'*50, 'visit_LogicalExpr')
-		pprint(vars(node))
 		if node.operator is dast.NotOp:
 			if len(node.subexprs) > 1:
 				self.error("Invalid formalization of rule set", node)

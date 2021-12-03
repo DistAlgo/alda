@@ -1,0 +1,10 @@
+def rules_magicset():
+  fb(X), if_(magicfb(X), d(X), not ab(X), h(X, Y), ab(Y))
+  ab(X), if_(magicab(X), g(X))
+  ab(X), if_(magicab(X), b(X,Y), ab(Y))
+  magicab(Y), if_(magicab(X), b(X, Y))
+  magicab(Y), if_(magicfb(X), d(X), not ab(X), h(X,Y))
+  magicab(X), if_(magicfb(X), d(X))
+
+def query(facts):
+  return infer(rule=rules_magicset, bindings=[(pred, facts[pred]) for pred in facts], queries=['fb'])

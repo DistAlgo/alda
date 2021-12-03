@@ -76,7 +76,18 @@ python3.7 -m da --rule run_tests.da --testsuite wordnet --data wordnet --query h
 python3.7 -m da --rule run_tests.da --testsuite wordnet --data wordnet --query troponym >> ~/alda_results.txt
 # Table 16
 python3.7 -m da --rule run_tests.da --testsuite wine --data wine >> ~/alda_results.txt
-# Table 17 (win-not-win not included yet)
-python3.7 -m da --rule run_tests.da --testsuite nonsg --data nonsg_d500_parsize5000_sibsize1000 >> ~/alda_results.txt
-python3.7 -m da --rule run_tests.da --testsuite nonsg --data nonsg_d500_parsize20000_sibsize4000 >> ~/alda_results.txt
-# Table 18 (non-stratified not included yet)˜
+# Table 17
+python3.7 -m da --rule run_tests.da --testsuite nonsg_rules --data nonsg_d500_parsize5000_sibsize1000 >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite nonsg_rules --data nonsg_d500_parsize20000_sibsize4000 >> ~/alda_results.txt
+
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper50000 >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper250000 >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper1000000 >> ~/alda_results.txt
+# Table 18 
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper50000_cycle >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper250000_cycle >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite win_not_win --data win_upper1000000_cycle >> ~/alda_results.txt
+
+python3.7 -m da --rule run_tests.da --testsuite magicset --data ms_d1000_relsize10000 >> ~/alda_results.txt
+python3.7 -m da --rule run_tests.da --testsuite magicset --data ms_d1000_relsize250000 >> ~/alda_results.txt
+
