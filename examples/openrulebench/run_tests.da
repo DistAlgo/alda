@@ -27,8 +27,8 @@ def run(testsuite, query, infile):
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--testsuite', type= str)
-  parser.add_argument('--query', type= str, default='query')
+  parser.add_argument('--query', type= str, default='')
   parser.add_argument('--data', type= str)
   args=parser.parse_args()
 
-  run(args.testsuite, args.query, args.data)
+  run(args.testsuite, 'query' if not args.query else 'query_' + args.query, args.data)

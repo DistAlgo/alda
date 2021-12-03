@@ -1,25 +1,4 @@
-import functools
-
-#1
-#2 ext 3
-#4 ext 5
-#5 ext 6
-ClassDef = {
-    (0, 1,0, 0,0,0),
-    (0, 2,22, 0,0,0),
-    (0, 4,55, 0,0,0),
-    (0, 5,66, 0,0,0),
-}
-Member = {
-    (22,30,1),
-    (55,50,1),
-    (66,60,1),
-}
-Name = {
-    (30,3,0),
-    (50,5,0),
-    (60,6,0),
-}
+import functools, sys, pickle
 
 class PA(process):
     def setup(ClassDef, Member, Name):
@@ -33,7 +12,7 @@ class PA(process):
 #    def rules(class_extends_rs):
     def rules_class_extends_rs():
         defined(c), if_(ClassDef(_, c,_, _,_,_))
-        extending(c,b), if_(ClassDef(_, c,baselist, __,_,_),
+        extending(c,b), if_(ClassDef(_,c,baselist,_,_,_),
                             Member(baselist,base, _), Name(base,b, _))
     
     @functools.lru_cache(maxsize=None)
@@ -68,5 +47,29 @@ class PA(process):
 
 def main():
     pa = new(PA)
+    #1
+    #2 ext 3
+    #4 ext 5
+    #5 ext 6
+    ClassDef = {
+        (0, 1,0, 0,0,0),
+        (0, 2,22, 0,0,0),
+        (0, 4,55, 0,0,0),
+        (0, 5,66, 0,0,0),
+    }
+    Member = {
+        (22,30,1),
+        (55,50,1),
+        (66,60,1),
+    }
+    Name = {
+        (30,3,0),
+        (50,5,0),
+        (60,6,0),
+    }
+    if len(sys.argv) > 1:
+        ClassDef = pickle.load(open(f'data/{sys.argv[1]}/_state/ClassDef','rb'))
+        Member = pickle.load(open(f'data/{sys.argv[1]}/_state/Member','rb'))
+        Name = pickle.load(open(f'data/{sys.argv[1]}/_state/Name','rb'))
     setup(pa,[ClassDef, Member, Name])
     start(pa)

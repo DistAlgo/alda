@@ -4,9 +4,3 @@ def rules_tc():
 
 def query(facts):
   return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc'])
-
-def query_bf(facts):
-  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc(1,_)'])
-
-def query_fb(facts):
-  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc(_,1)'])

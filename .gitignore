@@ -124,3 +124,5 @@ examples/points_to_analysis
 examples/others
 examples/trans/gen_input/input
 examples/trans_souffle
+
+.DS_Store
