@@ -144,7 +144,7 @@ def dump_facts(datafolder, varname, data):
         text_out.close()
 
 specialTag = {'is_Sub', 'Member','Context','ListLen'}
-ignoreAttr = {'lineno', 'col_offset'}
+ignoreAttr = {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
 def dump_vars(datafolder):
     factdict = dict()
     print('generating facts by node type...')
