@@ -1,0 +1,77 @@
+import functools, sys, pickle
+
+class PA(process):
+    def setup(ClassDef, Member, Name):
+        self.defined = None
+        self.extending = None
+        self.desc = None
+        self.roots = None
+    
+#    def rules(name = 'class_extends_rs'):
+#    def rules(name = class_extends_rs):
+    def rules(class_extends_rs):
+#    def rules_class_extends_rs():
+        defined(c), if_(ClassDef(_, c,_, _,_,_))
+        extending(c,b), if_(ClassDef(_, c,baselist, _,_,_),
+                            Member(baselist,base, _), Name(base,b, _))
+    
+    @functools.lru_cache(maxsize=None)
+    def height(c):
+        return 0 if not some((_,_c) in extending)\
+            else 1 + maxof(height(d), (d,_c) in extending)
+    
+    def rules(desc_rs):
+        desc(c,r), if_(roots(r), extending(c,r))
+        desc(c,r), if_(extending(c,b), desc(b,r))
+    
+    @functools.lru_cache(maxsize=None)
+    def num_desc(r):
+        return lenof(c, (c,_r) in desc)
+    
+    def run():
+        num_defined = len(defined)
+        num_extending = len(extending)
+        avg_extending = num_extending/num_defined
+        roots = setof(c, (_,c) in extending, not some((_c,_) in extending))
+        print(num_defined, num_extending, roots)
+        
+        max_height = maxof(height(r), r in roots)
+        roots_max_height = setof(r, r in roots, height(r) == max_height)
+        print(max_height, roots_max_height)
+        
+        max_desc = maxof(num_desc(r), r in roots)
+        roots_max_desc = setof(r, r in roots, num_desc(r) == max_desc)
+        print(max_desc, roots_max_desc)
+
+def main():
+    pa = new(PA)
+
+    if len(sys.argv) > 1:
+        db = sys.argv[1]
+        ClassDef = pickle.load(open(f'{db}/_state/ClassDef','rb'))
+        Member = pickle.load(open(f'{db}/_state/Member','rb'))
+        Name = pickle.load(open(f'{db}/_state/Name','rb'))
+    else:
+        #1
+        #2 ext 3
+        #4 ext 5
+        #5 ext 6
+        ClassDef = {
+            (0, 1,0, 0,0,0),
+            (0, 2,22, 0,0,0),
+            (0, 4,55, 0,0,0),
+            (0, 5,66, 0,0,0),
+        }
+        Member = {
+            (22,30,1),
+            (55,50,1),
+            (66,60,1),
+        }
+        Name = {
+            (30,3,0),
+            (50,5,0),
+            (60,6,0),
+        }
+
+    setup(pa,[ClassDef, Member, Name])
+    start(pa)

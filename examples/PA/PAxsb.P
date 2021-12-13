@@ -1,0 +1,63 @@
+:- import length/2 from lists.
+:- import max_list/2 from lists.
+:- import load_dync/2 from consult.
+:- auto_table.
+
+defined(C) :- pClassDef(_,C,_,_,_,_).
+extending(C,B) :- pClassDef(_,C,BaseList,_,_,_), 
+                    pMember(BaseList,Base,_), pName(Base, B, _).
+
+numDefined(N) :- setof(D, defined(D), S), length(S, N).
+numExtending(N) :- setof((E1,E2), extending(E1,E2), S), length(S, N).
+avgExtending(Avg) :- numDefined(DCount), numExtending(ECount), 
+                    Avg is DCount / ECount.
+
+root(C) :- extending(_,C), not(extending(C,_)).
+roots(S) :- setof(R, root(R), S).
+
+height(C,0) :- not(extending(_,C)).
+height(C,H) :- findall(H1, (extending(D,C), height(D,H1)), S), 
+                    max_list(S,H2), H is H2+1.
+
+maxHeight(H) :- findall(H1, (root(R), height(R,H1)),S), max_list(S,H). 
+rootsMaxHeight(S) :- setof(R, (root(R), maxHeight(H), height(R,H)), S).
+
+desc(C,R) :- root(R), extending(C,R).
+desc(C,R) :- desc(B,R), extending(C,B).
+
+numDesc(R, Count) :- findall(_, desc(_,R), S), length(S, Count).
+maxDesc(C0) :- findall(C,(root(R), numDesc(R,C)),S), max_list(S,C0). 
+rootsMaxDesc(S) :- setof(R, (root(R), maxDesc(C), numDesc(R,C)), S).
+
+
+measureTime(Q, T, WT) :-
+        walltime(WT0),
+        cputime(T0),
+        call(Q),
+        cputime(T1),
+        walltime(WT1),
+        T is T1 - T0,
+        WT is WT1 - WT0.
+
+xsbtest(Filename) :-
+        open('xsb_result.txt', append, Output),
+        measureTime(load_dync(Filename,a), LoadT, LoadWT),
+        write(Output, 'loading cputime:  '), writeln(Output, LoadT),
+        write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
+        flush_output(Output),
+        measureTime((numDefined(N1), numExtending(N2), roots(RS)),AT1,AWT1),
+        writeln(Output,f(N1,N2,RS)),
+        write(Output, 'computing cputime:  '), writeln(Output, AT1),
+        write(Output, 'computing walltime: '), writeln(Output, AWT1),
+        flush_output(Output),
+        measureTime((maxHeight(H), rootsMaxHeight(RHS)),AT2,AWT2),
+        writeln(Output,f(H,RHS)),
+        write(Output, 'computing cputime:  '), writeln(Output, AT2),
+        write(Output, 'computing walltime: '), writeln(Output, AWT2),
+        flush_output(Output),
+        measureTime((maxDesc(D), rootsMaxDesc(RDS)),AT3,AWT3),
+        writeln(Output,f(D,RDS)),
+        write(Output, 'computing cputime:  '), writeln(Output, AT3),
+        write(Output, 'computing walltime: '), writeln(Output, AWT3),
+        flush_output(Output),
+        close(Output).
