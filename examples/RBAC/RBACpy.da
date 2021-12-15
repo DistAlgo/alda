@@ -9,12 +9,12 @@ class RBACpy(RBACrun, process):
       W = {(x,y) for (x,z) in T for (z2,y) in E if z2==z} - T
     return T | {(r,r) for r in ROLES}
 
-    # copied from hierRBAC.GeneralHierRBAC, 
-    # except trans(RH) is first lifted to a local variable
-    def AuthorizedUsers(role):
-        assert role in ROLES
-        transrh = trans(RH)         # lifted
-        return set(u for u in USERS for asc in ROLES 
+  # copied from hierRBAC.GeneralHierRBAC, 
+  # except trans(RH) is first lifted to a local variable
+  def AuthorizedUsers(role):
+      assert role in ROLES
+      transrh = trans(RH)         # lifted
+      return set(u for u in USERS for asc in ROLES 
 #std               if (asc,role) in RH and (u,asc) in UR)
-                   if (asc,role) in transrh and (u,asc) in UR)
+                  if (asc,role) in transrh and (u,asc) in UR)
 

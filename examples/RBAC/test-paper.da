@@ -1,0 +1,49 @@
+"""
+1. Files in this directory
+
+original RBAC
+- coreRBAC.CoreRBAC
+- hierRBAC.GeneralHierRBAC extends above
+- allRBAC imports both above and defines 7 classes starting from one of them
+
+for running/testing/timing different variants of GeneralHireRBAC
+- RBACrun.RBACrun extends hierRBAC.GeneralHierRBAC --- to add the run method
+- RBACpy.RBACpy, RBACda.RBACda, RBACunion.RBACunion, 
+  RBACallloc.RBACallloc, RBACnonloc.RBACnonloc extends above --- for variants
+
+2. Running tests
+
+- import any of 5 versions: RBACpy, RBACda, RBACunion, RBACallloc, RBACnonloc,
+- put workload in run method of RBACrun.da
+- pass data in main below (make unused sets empty) and run this file
+
+"""
+import sys, pickle, importlib
+from allRBAC import *
+
+def main():
+    objs = set()
+    ops = set()  
+    users = set(range(5000))
+    roles = set(range(500))
+    pr = set()
+    ur = pickle.load(open('input/UR_500','rb'))
+    sessions = set()
+    su = set()
+    sr = set()
+    rh = pickle.load(open('input/RH_500','rb'))
+  
+    ssdnames = set()
+    ssdnr = set()
+    ssdnc = set()
+    
+    rbacClass = importlib.import_module(sys.argv[1])
+    RBAC = eval('rbacClass.'+sys.argv[1])
+    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh])
+
+## ran with no problems:
+##    RBAC = GeneralHierRBACwithSSD
+##    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh,
+##                      ssdnames,ssdnr,ssdnc])
+
+    start(rbac)
