@@ -1,18 +1,13 @@
 :- import length/2 from lists.
 :- import max_list/2 from lists.
 :- import load_dync/2 from consult.
-:- index(pName/3,[1,2]).
-:- index(pMember/3,[1,2]).
-:- index(pClassDef/6,[2,3]).
 :- auto_table.
-
+:- table height/2.
+:- table numDesc/2.
 
 defined(C) :- pClassDef(_,C,_,_,_,_).
 extending(C,B) :- pClassDef(_,C,BaseList,_,_,_), 
                     pMember(BaseList,Base,_), pName(Base, B, _).
-
-extending_fb(C,B) :- 
-                    pName(Base, B, _), pMember(BaseList,Base,_), pClassDef(_,C,BaseList,_,_,_).
 
 numDefined(N) :- setof(D, defined(D), S), length(S, N).
 numExtending(N) :- setof((E1,E2), extending(E1,E2), S), length(S, N).
@@ -22,19 +17,19 @@ avgExtending(Avg) :- numDefined(DCount), numExtending(ECount),
 root(C) :- extending(_,C), not(extending(C,_)).
 roots(S) :- setof(R, root(R), S).
 
-height(C,0) :- not(extending_fb(_,C)).
-height(C,H) :- findall(H1, (extending_fb(D,C), height(D,H1)), S), 
+height(C,0) :- not(extending(_,C)).
+height(C,H) :- findall(H1, (extending(D,C), height(D,H1)), S), 
                     max_list(S,H2), H is H2+1.
 
 maxHeight(H) :- findall(H1, (root(R), height(R,H1)),S), max_list(S,H). 
-rootsMaxHeight(S) :- setof(R, (maxHeight(H), root(R), height(R,H)), S).
+rootsMaxHeight(S) :- setof(R, (root(R), maxHeight(H), height(R,H)), S).
 
-desc(C,R) :- root(R), extending_fb(C,R).
-desc(C,R) :- desc(B,R), extending_fb(C,B).
+desc(C,R) :- root(R), extending(C,R).
+desc(C,R) :- desc(B,R), extending(C,B).
 
 numDesc(R, Count) :- findall(_, desc(_,R), S), length(S, Count).
 maxDesc(C0) :- findall(C,(root(R), numDesc(R,C)),S), max_list(S,C0). 
-rootsMaxDesc(S) :- setof(R, (maxDesc(C), root(R), numDesc(R,C)), S).
+rootsMaxDesc(S) :- setof(R, (root(R), maxDesc(C), numDesc(R,C)), S).
 
 
 measureTime(Q, T, WT) :-

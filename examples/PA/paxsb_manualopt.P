@@ -2,6 +2,10 @@
 :- import max_list/2 from lists.
 :- import load_dync/2 from consult.
 :- auto_table.
+:- table extending/2 as subsumptive.
+:- table root/1.
+:- table height/2.
+:- table numDesc/2.
 
 defined(C) :- pClassDef(_,C,_,_,_,_).
 extending(C,B) :- pClassDef(_,C,BaseList,_,_,_), 
@@ -28,7 +32,6 @@ desc(C,R) :- desc(B,R), extending(C,B).
 numDesc(R, Count) :- findall(_, desc(_,R), S), length(S, Count).
 maxDesc(C0) :- findall(C,(root(R), numDesc(R,C)),S), max_list(S,C0). 
 rootsMaxDesc(S) :- setof(R, (root(R), maxDesc(C), numDesc(R,C)), S).
-
 
 measureTime(Q, T, WT) :-
         walltime(WT0),
@@ -61,3 +64,4 @@ xsbtest(Filename) :-
         write(Output, 'computing walltime: '), writeln(Output, AWT3),
         flush_output(Output),
         close(Output).
+
