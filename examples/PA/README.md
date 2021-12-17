@@ -13,7 +13,7 @@ To run experiments, do these two steps:
 
 2. Analyze the generated database using queries in file `PA.da`, by running
 
-      `python -m da --message-buffer-size=409600000 --rule PA.da data/<DATABASE>`
+      `python -m da --message-buffer-size=409600000 --rule launcher.da --data data/<DATABASE> --module PA`
 
    in the `PA` directory, where `<DATABASE>` is the directory under `data` 
    that contains the generated facts.
@@ -58,6 +58,8 @@ have `git` installed, you could also do the following:
  * Run "python pyast_views.py" in the data_prep directory.
  * If you want a single repo out of all repos listed, you can run: "python pyast_views.py reponame".
  * After the data is generated, run the following in the 'PA' directory:
-python -m da --message-buffer-size=409600000 --rule PA.da data/repo_name
+python -m da --message-buffer-size=409600000 --rule launcher.da --data data/repo_name --module PA
 
 You may need to play with the buffer size.
+
+In order to use the optimized version, use --module PA_opt instead.
