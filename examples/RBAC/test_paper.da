@@ -8,17 +8,17 @@ RBACallloc, RBACnonloc as the first argument
 - put workload in run method of RBACrun.da
 
 Sample command:
-python3.9 -m da --message-buffer-size=40960000 --rule test_paper.da --querycount 100 --querymode random --mode RBACpy
+python3.9 -m da --message-buffer-size=40960000 --rule test_paper.da --workloadcount 100 --workloadmode random --mode RBACpy
 
 """
 import sys, pickle, importlib, argparse, os
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--querycount', type= int, default= 50)  
-parser.add_argument('--querymode', type= str, default= 'random')
+parser.add_argument('--workloadcount', type= int, default= 50)  
+parser.add_argument('--workloadmode', type= str, default= 'random')
 parser.add_argument('--mode', type= str, default= 'RBACda')
 args=parser.parse_args()
-queries = pickle.load(open(os.path.join('queries', f'query_{args.querymode}_{args.querycount}'), 'rb'))
+workload = pickle.load(open(os.path.join('workloads', f'workload_{args.workloadmode}_{args.workloadcount}'), 'rb'))
 
 def main():
     objs = set()

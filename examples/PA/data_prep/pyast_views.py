@@ -1,4 +1,4 @@
-""" generate pickled facts for the input module: folder or file,
+""" generate pickled facts for the input module: 'folder or file,
 and a user readable version by file.
 """
 
@@ -27,7 +27,7 @@ class Generator:
         self.ValueDict = dict()      # ValueDict[id] = node
         self.FileDict = dict()       # FileDict[id] = file_id
         self.is_Sub = set()
-        self.valueTag = set()        # type of values: int, float, str, bool, etc.
+        self.valueTag = set()        # type of values: 'int, float, str, bool, etc.
         self.allFacts = set()
 
     
@@ -193,10 +193,16 @@ class Generator:
         dump_vars(projectFolder)
         print('value types:',self.valueTag)
 
+
 if __name__ == '__main__':
+    paper = True
+
     def run_repo(repo):
-        print(repo)
-        os.system(f'git clone --depth=1 {repo_map[repo]}')
+        if paper:
+            os.system(f'git clone {repo_map[repo]}')
+            os.system(f'cd {repo} && git checkout {repo_branch[repo]}')
+        else:
+            os.system(f'git clone --depth=1 {repo_map[repo]}')
         g.reset()
         g.gen_facts(repo)    
     
@@ -213,7 +219,18 @@ if __name__ == '__main__':
     repo_map = {}
     for repo in repos:
         repo_map[repo.split('/')[-1]] = repo
-    
+
+    repo_branch = { 'blender' : '56ff9540307e0dee7478bbc4241d5e024ba1d8b3'
+     ,'django' : '97e9a84d2746f76a635455c13bd512ea408755ac'
+     ,'matplotlib': '59732ace84f3e4a0fb94084ee11598c655467d62'
+     ,'numpy' : '0e10696f55576441fd820279d9ec10cd9f2a4c5d'
+     ,'pandas' : '9db55a75243adbb1acaf49d2ce76cbd89a89c2e5'
+     ,'pytorch' : '7142b0b033dfdc5821fb4ac47103df60a2ed14d4'
+     ,'scikit-learn' : '594b1f70fcdb0fa7143c681dad1ffc1b24755dbd'
+     ,'scipy' : '9a504cd27ad6f7b3c0590f2c7fef9f329ef56508'
+     ,'sympy' : '4489b4c7c51a65966b1a95f2af6f7e0c8c461794'
+    }
+
     g = Generator()
     if len(sys.argv) > 1:
         run_repo(sys.argv[1])
