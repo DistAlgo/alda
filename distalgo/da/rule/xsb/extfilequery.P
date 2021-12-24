@@ -15,7 +15,7 @@ external_file_query(RuleBase,FactBase,Query) :-
     statistics(runtime,[_,_]),
     consult(RuleFile),
     (file_exists(FactFile)
-     ->	load_dyn(FactFile)
+     ->	load_dync(FactFile)
      ;	true
     ),
     statistics(walltime,[_,W1]),
