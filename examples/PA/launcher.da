@@ -1,0 +1,39 @@
+import pickle, argparse, importlib
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data', type= str, default= None) 
+    parser.add_argument('--module', type= str, default= 'PA')
+    args=parser.parse_args()
+    
+    paClass = importlib.import_module(args.module)
+    pa = new(eval('paClass.PA'))
+    
+    if args.data:
+        ClassDef = pickle.load(open(f'{args.data}/_state/ClassDef','rb'))
+        Member = pickle.load(open(f'{args.data}/_state/Member','rb'))
+        Name = pickle.load(open(f'{args.data}/_state/Name','rb'))
+    else:
+        #1
+        #2 ext 3
+        #4 ext 5
+        #5 ext 6
+        ClassDef = {
+            (0, 1,0, 0,0,0),
+            (0, 2,22, 0,0,0),
+            (0, 4,55, 0,0,0),
+            (0, 5,66, 0,0,0),
+        }
+        Member = {
+            (22,30,1),
+            (55,50,1),
+            (66,60,1),
+        }
+        Name = {
+            (30,3,0),
+            (50,5,0),
+            (60,6,0),
+        }
+
+    setup(pa,[ClassDef, Member, Name])
+    start(pa)
