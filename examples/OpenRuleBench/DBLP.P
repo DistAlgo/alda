@@ -1,0 +1,24 @@
+queryrule(X,T,Y,A,M) :- att(X,title,T),att(X,year,Y),att(X,author,A),att(X,month,M).
+
+measureTime(Q, T, WT) :-
+        walltime(WT0),
+	cputime(T0),
+	call(Q),
+	cputime(T1),
+	walltime(WT1),
+	T is T1 - T0,
+	WT is WT1 - WT0.
+
+test :- 
+     	open('result.txt', append, Output),
+%	measureTime(load_dyn('dblp_data.P'), LoadT, LoadWT),
+	measureTime(load_dyn('data_raw/dblp'), LoadT, LoadWT),
+	write(Output, 'loading cputime:  '), writeln(Output, LoadT),
+	write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
+	flush_output(Output),
+%	measureTime((queryrule(_,_,_,_,_), fail; true), T, WT),
+	measureTime((queryrule(X,T,Y,A,M), writeln(Output, [X,T,Y,A,M]), fail; true), T, WT),
+	write(Output, 'computing cputime:  '), writeln(Output, T),
+	write(Output, 'computing walltime: '), writeln(Output, WT),
+	flush_output(Output),
+	close(Output).
