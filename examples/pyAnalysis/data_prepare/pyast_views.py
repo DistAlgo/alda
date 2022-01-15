@@ -4,7 +4,7 @@ and a user readable version by file.
 
 import ast,os,sys,shutil,pickle
 from collections.abc import Collection
-from pprint import pprint
+from pprint import pprint, pformat
 
 ValueIdDict = dict()    # ValueIdDict[node] = id
 ValueDict = dict()      # ValueDict[id] = node
@@ -51,7 +51,7 @@ def viewDast(node, context=[]):
         else:
             valueTag.add(classname)
             return set()
-        
+
         own_view = (classname, getid(node), tuple((n,getid(c)) for n, c in children), tuple((a,getid(b)) if nodeflag else ((a,str(b)) if isinstance(b,str) else (a,b)) for a,b in attributes))
         ctxFact = {('Context', getid(node), ctx) for ctx in context[1:]}
         FileDict[getid(node)] = context[0]
@@ -99,7 +99,6 @@ def view_file(path, outputDir, prefix):
     print(extension, path)
     if extension == '.py':
         pyast = ast.parse(open(path, encoding = 'utf8').read(), filename=path)
-        # pprint(pyast)
         name = os.path.basename(path)
         purenmae = os.path.splitext(name)[0]
         _id = os.path.join(prefix, purenmae)
@@ -129,19 +128,16 @@ def view_directory(path, outputDir, prefix):
 
 pickleFolder = '_state'
 txtFolder = 'astFacts'
+txtRepFolder = 'text-rep'
 dbFolder = '../data'
 if not os.path.exists(dbFolder):
     os.mkdir(dbFolder)
 
 def dump_facts(datafolder, varname, data):
     print('dumping '+ varname)
-    if varname != 'ValueDict123' and varname != "ValueIdDict123":
-        pickle.dump(data,open(os.path.join(datafolder,pickleFolder,varname),'wb'))
-        if not os.path.exists(os.path.join(datafolder,'text-rep')):
-            os.mkdir(os.path.join(datafolder,'text-rep'))
-        text_out = open(os.path.join(datafolder,'text-rep',varname),'w', encoding='utf8')
-        text_out.write(str(data))
-        text_out.close()
+    pickle.dump(data,open(os.path.join(datafolder,pickleFolder,varname),'wb'))
+    with open(os.path.join(datafolder,'text-rep',varname),'w', encoding='utf8') as text_out:
+        text_out.write(pformat(data))
 
 specialTag = {'is_Sub', 'Member','Context','ListLen'}
 ignoreAttr = {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
@@ -166,7 +162,7 @@ def gen_folders(project):
     projectFolder = os.path.join(dbFolder,project)
     if not os.path.exists(projectFolder):
         os.mkdir(projectFolder)
-    for d in [pickleFolder, txtFolder]:
+    for d in [pickleFolder, txtFolder, txtRepFolder]:
         outDir = os.path.join(projectFolder, d)
         if os.path.exists(outDir):
             shutil.rmtree(outDir)
@@ -191,7 +187,7 @@ def gen_facts(filename):
     print('value types:',valueTag)
 
 if __name__ == '__main__':
-    filename = '/Users/COTTON/Downloads/numpy' if len(sys.argv) < 2 else sys.argv[1]
+    filename = '/Users/yitong/Downloads/numpy' if len(sys.argv) < 2 else sys.argv[1]
     gen_facts(filename)
 
 
