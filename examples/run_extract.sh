@@ -3,7 +3,7 @@
 # run this script in examples/
 
 # after all data files are in place, to run all benchmarks and then extract times to csv files:
-# cd examples/OpenRuleBench; ./run.sh; cd ../RBAC; ./run.sh; cd ../PA; ./run.sh; cd ..; ./run_extract.sh
+# cd OpenRuleBench; ./run.sh; cd ../RBAC; ./run.sh; cd ../PA; ./run.sh; cd ..; ./run_extract.sh
 
 # search for errors in output files, ignoring lines containing phrases like "compiled with no errors".
 grep -i error OpenRuleBench/out/*.txt PA/out/*.txt  RBAC/out/*.txt | grep -v compiled
