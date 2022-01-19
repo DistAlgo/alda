@@ -127,41 +127,12 @@ class GeneralHierRBAC(CoreRBAC, process):
 #std               if(user,asc) in UR and (asc,desc) in RH 
                    if(user,asc) in UR and (asc,desc) in trans(RH)
                    and ((op,object),desc) in PR)
-
-
-## the one import and one class below are exact contents of file RBACrun.da
-
-## from hierRBAC import GeneralHierRBAC
-
-class RBACrun(GeneralHierRBAC, process):
-    def run():
-        print(AuthorizedUsers(91))
-        print(AuthorizedUsers(92))
-        AddUser(4)
-        AddUser(5)
-        AddRole(94)
-        AddRole(95)
-        AssignUser(4,94)
-        AssignUser(5,95)
-        AddInheritance(94,95)
-        AddUser(6)
-        AddRole(96)
-        AssignUser(6,96)
-        AddInheritance(95,96)
-        AddRole(97)
-        print(AuthorizedUsers(95))
-        print(AuthorizedUsers(96))
-        DeleteInheritance(91,92)
-        print(AuthorizedUsers(91))
-        print(AuthorizedUsers(92)) 
-        DeleteRole(96)
-        print(AuthorizedUsers(95))
 """
 
 
-from RBACrun import RBACrun
+from hierRBAC import GeneralHierRBAC
 
-class RBACnonloc(RBACrun, process):
+class RBACnonloc(GeneralHierRBAC, process):
     def setup(OBJS,OPS,USERS, ROLES,PR,UR, SESSIONS,SU,SR, RH):
         self.transRH = None
 
@@ -201,7 +172,7 @@ class RBACnonloc(RBACrun, process):
     # and in the first only, transRH is first lifted to a local variable
     def AuthorizedUsers(role):
         assert role in ROLES
-        print('====', USERS, ROLES, UR, '----', transRH)
+#        print('====', USERS, ROLES, UR, '----', transRH)
         transrh = transRH         # lifted
         return set(u for u in USERS for asc in ROLES 
 #std               if (asc,role) in RH and (u,asc) in UR)

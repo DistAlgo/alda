@@ -1,6 +1,6 @@
-from RBACrun import RBACrun
+from hierRBAC import GeneralHierRBAC
 
-class RBACallloc(RBACrun, process):
+class RBACallloc(GeneralHierRBAC, process):
     def rules_trans_role_rs(): # with additional last rule
         path(x,y), if_(edge(x,y))
         path(x,y), if_(edge(x,z), path(z,y))

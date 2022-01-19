@@ -1,6 +1,6 @@
-from RBACrun import RBACrun
+from hierRBAC import GeneralHierRBAC
 
-class RBACpy(RBACrun, process):
+class RBACpy(GeneralHierRBAC, process):
     def trans(E):
         T = E.copy()
         W = {(x,y) for (x,z) in T for (z2,y) in E if z2==z} - T
@@ -15,6 +15,6 @@ class RBACpy(RBACrun, process):
         assert role in ROLES
         transrh = trans(RH)         # lifted
         return set(u for u in USERS for asc in ROLES 
-    #std               if (asc,role) in RH and (u,asc) in UR)
-                    if (asc,role) in transrh and (u,asc) in UR)
+#std               if (asc,role) in RH and (u,asc) in UR)
+                   if (asc,role) in transrh and (u,asc) in UR)
 

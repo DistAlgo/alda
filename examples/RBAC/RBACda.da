@@ -1,6 +1,6 @@
-from RBACrun import RBACrun
+from hierRBAC import GeneralHierRBAC
 
-class RBACda(RBACrun, process):
+class RBACda(GeneralHierRBAC, process):
     def trans(E):
         T = E.copy()
         while some((x,z) in T, (z,y) in E, has= (x,y) not in T):
