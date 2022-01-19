@@ -5,14 +5,14 @@
 :- import rm/1 from shell.
 
 external_file_query(RuleBase,FactBase,Query) :-
+    statistics(walltime,[_,_]),
+    statistics(runtime,[_,_]),
     concat_atom([RuleBase,'.rules'],RuleFile),
     concat_atom([FactBase,'.facts'],FactFile),
     (file_exists(RuleFile)
      ->	true
      ;	writeln(warning('No Rule file.'))
     ),
-    statistics(walltime,[_,_]),
-    statistics(runtime,[_,_]),
     consult(RuleFile),
     (file_exists(FactFile)
      ->	load_dync(FactFile)
