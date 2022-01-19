@@ -1,0 +1,41 @@
+/*
+ Tansitive closure program. Query all results (both arguments free).
+ 
+ To use trie index, modify ':- index(par/2, [1,2]).' to 
+ ':- index(par/2, trie).'
+
+ Test results will be recorded in file './tc_result.txt'
+
+ Times are recorded using xsb system functions: cputime/1 and walltime/1.
+*/
+
+:- index(par/2, [1,2]).
+:- use_subsumptive_tabling tc/2.
+
+
+tc(X,Y) :- par(X,Y).
+tc(X,Y) :- par(X,Z), tc(Z,Y).
+
+measureTime(Q, T, WT) :-
+        walltime(WT0),
+	cputime(T0),
+	call(Q),
+	cputime(T1),
+	walltime(WT1),
+	T is T1 - T0,
+	WT is WT1 - WT0.
+
+test(Filename) :- 
+	open('tc_result.txt', append, Output),
+	writeln(Output, Filename),
+	flush_output(Output),
+%%	measureTime(load_dyn(Filename), LoadT, LoadWT),
+	measureTime(load_dync(Filename), LoadT, LoadWT),
+	write(Output, 'loading cputime:  '), writeln(Output, LoadT),
+	write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
+	flush_output(Output),
+	measureTime((tc(_,_), fail; true),T1,WT1),
+	write(Output, 'computing cputime:  '), writeln(Output, T1),
+	write(Output, 'computing walltime: '), writeln(Output, WT1),
+	flush_output(Output),
+	close(Output).

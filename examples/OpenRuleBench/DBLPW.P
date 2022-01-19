@@ -12,13 +12,17 @@ measureTime(Q, T, WT) :-
 test :- 
 %%     	open('result.txt', append, Output),
      	open('dblp_result.txt', append, Output),
-%%	measureTime(load_dyn('dblp_data.P'), LoadT, LoadWT),
-	measureTime(load_dync('data_raw/dblp'), LoadT, LoadWT),
+     	open('dblp_answers.txt', append, Output2),  %% added for w version
+%%	measureTime(load_dyn('dblp_data.P'), LoadT, LoadWT),  %% original
+	measureTime(load_dync('data_raw/dblp'), LoadT, LoadWT),  %% updated
 	write(Output, 'loading cputime:  '), writeln(Output, LoadT),
 	write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
 	flush_output(Output),
-	measureTime((queryrule(_,_,_,_,_), fail; true), T, WT),
+%%	measureTime((queryrule(_,_,_,_,_), fail; true), T, WT),  %% original
+	measureTime((queryrule(A,B,C,D,E), writeln(Output2,[A,B,C,D,E]), fail; true), T, WT), %%
 	write(Output, 'computing cputime:  '), writeln(Output, T),
 	write(Output, 'computing walltime: '), writeln(Output, WT),
 	flush_output(Output),
-	close(Output).
+	flush_output(Output2),   %%
+	close(Output),
+	close(Output2).   %%

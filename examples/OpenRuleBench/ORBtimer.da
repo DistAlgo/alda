@@ -1,0 +1,63 @@
+import argparse, importlib, pickle, re, collections, time, os, gc
+
+def time_now():
+#  elptime = time.perf_counter(); cputime = time.process_time()
+#  utime, stime, cutime, cstime, elapsed = os.times()  # windows: last 3 = 0
+#  return (elptime, cputime, utime, stime, cutime, cstime, elapsed)
+  return os.times()
+
+def time_dur(t1,t2,name):
+#  elptime1, cputime1, u1, s1, cu1, cs1, e1 = t1
+#  elptime2, cputime2, u2, s2, cu2, cs2, e2 = t2
+  u1, s1, cu1, cs1, e1 = t1
+  u2, s2, cu2, cs2, e2 = t2
+#  print(f'{name}_tm_pf+pr\t{elptime2-elptime1}\t{cputime2-cputime1}')
+  print(f'{name}_os_total\t{e2-e1}\t{u2-u1 + s2-s1 + cu2-cu1 + cs2-cs1}')
+
+# read facts from data file under data_raw, and pickle dump to under data_pickle
+def pickle_facts(data):
+  gc.disable()
+
+  if not os.path.isfile(os.path.join('data_raw',data)):
+    raise Exception("File not found: %s" % data)    
+  t0 = time_now()
+  with open(os.path.join('data_raw',data), "r") as f:
+    facts = collections.defaultdict(set)
+    for line in f:
+      words = re.split('[(,]' if data!='dblp' else '\(\'|,(?=\')|\',', line.strip()[:-2])
+      facts[words[0]].add(tuple(map(lambda x: x.strip("'"),words[1:])))
+  t1 = time_now()
+  pickle.dump(facts, open(os.path.join('data_pickle',data), "wb"))
+  t2 = time_now()
+  time_dur(t0,t1,'init')
+  time_dur(t1,t2,'dump')
+
+# run bench program on pickled data for given query in the program, and time
+def run(bench, data, query):
+  gc.disable()
+
+  prog = importlib.import_module(bench)
+  t0 = time_now()
+
+  facts = pickle.load(open(os.path.join('data_pickle',data), "rb"))
+  t1 = time_now()
+  time_dur(t0,t1,'init')
+
+  if bench in ['TCpy','TCda']: getattr(prog,'trans')(facts['par'])
+  else: getattr(prog,query)(facts)
+  t2 = time_now()
+  time_dur(t1,t2,'query')
+  time_dur(t0,t2,'total')
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--bench', type= str, default='TC')  # program file
+  parser.add_argument('--query', type= str, default='')    # query bf pattern
+  parser.add_argument('--data', type= str, default='test')  # data file 
+#  parser.add_argument('--data', type= str, default='tc_d1000_par10000_xsb_cyc')
+  parser.add_argument('--mode', type= str, default='pickle')  # pickle or raw
+  args=parser.parse_args()
+
+  if args.mode == 'pickle':
+    run(args.bench, args.data, 'query_'+args.query if args.query else 'query')
+  else: pickle_facts(args.data)
