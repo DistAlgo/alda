@@ -1,0 +1,95 @@
+import argparse, importlib, pickle, time, os, gc
+
+def time_now():
+#  elptime = time.perf_counter(); cputime = time.process_time()
+#  utime, stime, cutime, cstime, elapsed = os.times()  # windows: last 3 = 0
+#  return (elptime, cputime, utime, stime, cutime, cstime, elapsed)
+  return os.times()
+
+def time_dur(t1,t2,name):
+#  elptime1, cputime1, u1, s1, cu1, cs1, e1 = t1
+#  elptime2, cputime2, u2, s2, cu2, cs2, e2 = t2
+  u1, s1, cu1, cs1, e1 = t1
+  u2, s2, cu2, cs2, e2 = t2
+#  print(f'{name}_tm_pf+pr\t{elptime2-elptime1}\t{cputime2-cputime1}')
+  print(f'{name}_os_total\t{e2-e1}\t{u2-u1 + s2-s1 + cu2-cu1 + cs2-cs1}')
+# print('%s_tm_pf+pr\t%s\t%s'% (name, elptime2-elptime1, cputime2-cputime1))
+# print('%s_os_total\t%s\t%s'% (name, e2-e1, u2-u1 + s2-s1 + cu2-cu1 + cs2-cs1))
+
+def timer(func):
+    def wrapper_function(*args, **kwargs):
+        gc.disable()
+
+        t1 = time_now()
+        func(*args, **kwargs)
+        t2 = time_now()
+        time_dur(t1,t2,'run')
+
+    return wrapper_function
+
+import PA
+class PA(process, PA.PA):
+    @timer
+    def run(): super().run()
+
+import PAopt
+class PAopt(process, PAopt.PA):
+    @timer
+    def run(): super().run()
+
+
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--bench', type= str, default= 'PA')
+    parser.add_argument('--data', type= str, default= None) 
+    args=parser.parse_args()
+    
+    classPA = eval(args.bench)
+    #file = importlib.import_module(args.bench)
+    #classPA = eval('file.PA')
+    #benches = [PA, PAopt] if args.bench == 'paper' else [classPA]
+    db = args.data
+    #dbs = ['numpy', 'django', 'sklearn', 'blender', 'pandas', 'mpl', 'scipy',
+    #       'sympy', 'pytorch'] if args.bench == 'paper' else [db] 
+
+    gc.disable()
+
+    t0 = time_now()
+    if db:
+        ClassDef = pickle.load(open(f'{db}/_state/ClassDef','rb'))
+        Member = pickle.load(open(f'{db}/_state/Member','rb'))
+        Name = pickle.load(open(f'{db}/_state/Name','rb'))
+#    else:
+#        #1
+#        #2 ext 3
+#        #4 ext 5
+#        #5 ext 6
+#        ClassDef = {
+#            (0, 1,0, 0,0,0),
+#            (0, 2,33, 0,0,0),
+#            (0, 4,55, 0,0,0),
+#            (0, 5,66, 0,0,0),
+#        }
+#        Member = {
+#            (33,30,1),
+#            (55,50,1),
+#            (66,60,1),
+#        }
+#        Name = {
+#            (30,3,0),
+#            (50,5,0),
+#            (60,6,0),
+#        }
+    t1 = time_now()
+
+    pa = new(classPA, [ClassDef, Member, Name])
+    start(pa)
+
+    time_dur(t0,t1,'init')
+#    t2 = time_now()
+#    time_dur(t2,t1,'start')
+    # tm_pf_pr: elapsed, cpu of the process (not chidlren procs)
+    # os_total, on windows: 0, cpu of proc
+    # os_total, on unix, which uses fork: elapsed, cpu of proc+children procs
+    # unix only has also resource.getrusage
