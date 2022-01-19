@@ -28,7 +28,9 @@ def flatten(x):
 def LogicVarToXSB(v):
     if isinstance(v, (list,tuple)):
         return ','.join(LogicVarToXSB(y) for x in v for y in flatten(x))
-    return str(v) if v == '_' or isinstance(v, int) or (isinstance(v,str) and v.isdigit()) else \
+#error if number is too large, yielding missed facts:
+#   return str(v) if v == '_' or isinstance(v, int) or (isinstance(v,str) and v.isdigit()) else \
+    return str(v) if v == '_' or isinstance(v, int) else \
          "'None'" if v is None or v == 'None' else \
         "'False'" if v is False or v == 'False' else \
          "'True'" if v is True or v == 'True'  else "'%s'" % v
@@ -39,54 +41,63 @@ def gen_fact(pred, val):
     else:
         return UniqueLowerCasePrefix+pred+'(%s)' % LogicVarToXSB(val)
 
+def time_dur(t1,t2,name):  # os.times t1 and t2, string name
+    u1, s1, cu1, cs1, elapsed1 = t1
+    u2, s2, cu2, cs2, elapsed2 = t2
+    print(f'{name}\t{elapsed2-elapsed1}\t{u2-u1 + s2-s1 + cu2-cu1 + cs2-cs1}')
+
 def _infer(rule, arity, bindings, queries):
+    t_start = os.times()
+
     # generate facts
     xsb_facts = ""
     rule_filename = rule+'_'+gen_unique_id()
-    for key, val in bindings:
-        # when b is an empty predicate, generate a place holder where all logic vars are -1
-        if len(val) == 0:
+    for key, val in bindings:  # pair of predicate name and tuple values
+        if len(val) == 0:  # val is an empty predicate
+            # generate a place holder where all logic vars are -1
             xsb_facts += gen_fact(key,['-1']*arity[key])+'.\n'
-        elif not isinstance(val, list) and not isinstance(val, set):    # when b is a single value
+        elif not isinstance(val, list) and not isinstance(val, set):  # val is a single value
             xsb_facts += gen_fact(key, val)+'.\n'
-        else:   # when b is a set/list
+        else:  # val is a set or list
             for v in val:
                 xsb_facts += gen_fact(key, v)+'.\n'
-    
-    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+
     write_file(rule_filename+'.facts', xsb_facts)
-    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()    # timing: i/o: write input
+    #print('\tnum_fact\tfile_size')
+    #print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')),
+    #     os.path.getsize(PurePath.joinpath(rule_path,rule_filename+'.facts'))))
+
+    t_facts = os.times()  # after prep and write facts
 
     # generate queries, a list of tuple (out_file_name, query)
     _queries = []
     for q in queries:
-        # when queries are passed with only names, complete the query in form of pred(_,...,_)
-        if q.find('(') < 0:
+        if q.find('(') < 0:  # if queries are passed with only prediate names
+            # complete the query in form of pred(_,...,_)
             qstr = q +'(' + ','.join('_'*arity[q]) + ')'
             _queries.append([PurePath.joinpath(rule_path,rule_filename+'.'+q).as_posix(), UniqueLowerCasePrefix+qstr])
-
-        # when queries are passed in full, convert each logic variables to valid format as XSB
-        else:
+        else:  # if queries are passed in full
+            # convert each logic variable to valid format for XSB
             pred = q.split('(')[0]
             var = q.split('(')[1].split(')')[0]
             _queries.append([PurePath.joinpath(rule_path,rule_filename+'.'+pred).as_posix(), 
                              gen_fact(pred, var.strip().split(','))])
-                          
 
     rule_path_rule = PurePath.joinpath(rule_path,rule)
     rule_path_fact = PurePath.joinpath(rule_path,rule_filename)
     if os.name == 'nt':
         rule_path_rule = str(rule_path_rule).replace('\\','\\\\')
+        rule_path_fact = str(rule_path_fact).replace('\\','\\\\')
 
     xsb_query = "extfilequery:external_file_query('{}','{}',{}).".format(rule_path_rule, rule_path_fact,
                     "[%s]" % ",".join("['%s',%s]" % (qfile,qstr) for qfile, qstr in _queries))
-    # print(xsb_query)
+    #print(xsb_query)
 
     # check if xsb command can be run
     status, output = subprocess.getstatusoutput('xsb -h')
     if status != 0:
         if 'xsb: command not found' in output:
-            print('** ERROR! Rule Engine Not Found. Please Check Your Installation. **')
+            print('** ERROR! Rule Engine Not Found. Check Your Installation. **')
         else:
             print('** ERROR! %s **' % output)
         if len(_queries) == 1:
@@ -94,41 +105,46 @@ def _infer(rule, arity, bindings, queries):
         else:
             return (None,) * len(_queries)
 
-    output = subprocess.run(["xsb",'--nobanner', '--quietload', '--noprompt', 
-                            '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query],
+    t_pre = os.times()  # before run xsb 
+
+    #output = subprocess.run(["xsb",
+    output = subprocess.run(['xsb','--nobanner', '--quietload', '--noprompt', 
+                             '-e', "add_lib_dir(a('{}')).".format(xsb_path), 
+                             '-e', xsb_query],
                             stdout=subprocess.PIPE,text=True)
-    # output = subprocess.run(["xsb", '-e', "add_lib_dir(a('{}')).".format(xsb_path), "-e", xsb_query],
-    #                         stdout=subprocess.PIPE,text=True)
-    utime3, stime3, cutime3, cstime3, elapsed_time3 = os.times()    # timing: xsb
+
+    t_post = os.times()  # after run xsb
+
     results = []
     for r,_ in _queries:
         rname = PurePath(r).name
         answers = read_answer(rname)
-        tuples = {tuple(eval_logicVar(v) for v in a.split(',')) if len(a.split(',')) > 1 
-                                                                   else eval_logicVar(a)
-                 for a in answers.split("\n")[:-1]}
+        tuples = {tuple(eval_logicVar(v) for v in a.split(','))
+                  if len(a.split(',')) > 1 
+                  else eval_logicVar(a)
+                  for a in answers.split("\n")[:-1]}
         results.append(tuples)
-    utime4, stime4, cutime4, cstime4, elapsed_time4 = os.times()     # timing: i/o: load output
     
-    # xsb query and i/o time
+    t_res = os.times()  # after reading results
+
+    # times for reading data and querying in xsb
     lines = output.stdout.split('\n')
     lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
-    print('\tnum_fact\tfile_size')
-    print('datasize\t%s\t%s' % (len(xsb_facts.split('\n')), 
-                                os.path.getsize(PurePath.joinpath(rule_path,rule_filename+'.facts'))))
     print('timing\telapse\tcpu')
-    print('write_input\t%s\t%s'%(elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
-    print('subprocess_xsb\t%s\t%s'%(elapsed_time3-elapsed_time2, utime3-utime2 + stime3-stime2 + cutime3-cutime2 + cstime3-cstime2))
-    print('read_output\t%s\t%s'%(elapsed_time4-elapsed_time3, utime4-utime3 + stime4-stime3 + cutime4-cutime3 + cstime4-cstime3))
     print('xsb_load\t%s\t%s'%(lines[-4],lines[-3]))
     print('xsb_query\t%s\t%s'%(lines[-2],lines[-1]))
 
+    t_end = os.times()  # after reading std outuput
+
+    # times for intefacing with xsb
+    time_dur(t_start,t_facts,'write_data')
+    time_dur(t_start,t_pre,'preproc_xsb')
+    time_dur(t_pre,t_post,'subprocess_xsb')
+    time_dur(t_post,t_res,'read_results')
+    time_dur(t_post,t_end,'postproc_xsb')
+
     if len(results) == 0:
         return results
-    if len(results) == 1:
+    if len(results) == 1:  # there is only one query
         return results[0]
     return tuple(results)
-
-
-
-
