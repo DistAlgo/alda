@@ -1,0 +1,96 @@
+import argparse, importlib, pickle, time, os, gc
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--bench', type= str, default= 'RBACnonloc')
+parser.add_argument('--workmode', type= str, default= 'random')
+parser.add_argument('--workload', type= str, default= None) 
+args=parser.parse_args()
+    
+if args.workload:
+    workload = pickle.load(open(
+        f'input/workload_{args.workmode}_{args.workload}', 'rb'))
+#else:
+#    workload = ['print(self.AuthorizedUsers)',
+#                'print(self.AddUser)',
+#		'print(self.AuthorizedUsers(91))',
+#		'print(self.AuthorizedUsers(92))',
+#		'self.AddUser(4)',
+#		'self.AddUser(5)',
+#		'self.AddRole(94)',
+#		'self.AddRole(95)',
+#		'self.AssignUser(4,94)',
+#		'self.AssignUser(5,95)',
+#		'self.AddInheritance(94,95)',
+#		'self.AddUser(6)',
+#		'self.AddRole(96)',
+#		'self.AssignUser(6,96)',
+#		'self.AddInheritance(95,96)',
+#		'self.AddRole(97)',
+#		'print(self.AuthorizedUsers(95))',
+#		'print(self.AuthorizedUsers(96))',
+#		'self.DeleteInheritance(91,92)',
+#		'print(self.AuthorizedUsers(91))',
+#		'print(self.AuthorizedUsers(92))',
+#		'self.DeleteRole(96)',
+#		'print(self.AuthorizedUsers(95))']
+#
+
+from allRBAC import *
+
+class RBACrun(process, GeneralHierRBAC):
+    def run():
+        gc.disable()
+        utime1, stime1, cu1, cs1, elapsed1 = os.times()
+
+        for op in workload: eval(op)
+
+        utime2, stime2, cu2, cs2, elapsed2 = os.times()
+        print('run_os_total\t%s\t%s' % (elapsed2-elapsed1, 
+               utime2-utime1 + stime2-stime1 + cu2-cu1 + cs2-cs1))
+
+#import RBACnonloc
+#class RBACnonloc(process, RBACnonloc.RBACnonloc, RBACrun): pass  # works too
+from RBACnonloc import RBACnonloc
+class RBACnonloc(process, RBACnonloc, RBACrun): pass
+
+from RBACallloc import RBACallloc
+class RBACallloc(process, RBACallloc, RBACrun): pass
+
+from RBACunion import RBACunion
+class RBACunion(process, RBACunion, RBACrun): pass
+
+from RBACda import RBACda
+class RBACda(process, RBACda, RBACrun): pass
+
+from RBACpy import RBACpy
+class RBACpy(process, RBACpy, RBACrun):  pass
+
+
+def main():
+
+    RBAC = eval(args.bench)
+
+    objs = set()
+    ops = set()
+    users = set(range(5000)) if args.workload else {1,2,3}
+    roles = set(range(500)) if args.workload else {91,92}
+    pr = set()
+    ur =  pickle.load(open('input/UR_500','rb')) if args.workload else \
+        {(1,91),(2,92),(3,92)}
+    sessions = set()
+    su = set()
+    sr = set()
+    rh = pickle.load(open('input/RH_500','rb')) if args.workload else \
+        {(91,92)}
+  
+    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh])
+    start(rbac)
+
+#    # works too
+#    ssdnames = set()
+#    ssdnr = set()
+#    ssdnc = set()
+#    RBAC = GeneralHierRBACwithSSD
+#    rbac = new(RBAC, [objs,ops,users,roles,pr,ur,sessions,su,sr,rh,
+#                      ssdnames,ssdnr,ssdnc])
+#    start(rbac)
