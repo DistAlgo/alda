@@ -6,7 +6,7 @@
 daPgms="TCraw DBLPraw Wineraw TC TCrev DBLP Wine_break"
 xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb DBLPWxsb Winexsb WineWxsb"
 tcMin=10000
-tcMax=20000
+tcMax=100000
 # allowed values of cyc: true, false, both.  determines which TC datasets are used.
 cyc="both"
 startIter=0
