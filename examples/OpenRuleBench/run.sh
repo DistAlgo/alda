@@ -3,8 +3,8 @@
 # run this script in examples/OpenRuleBench
 
 # run everything
-daPgms="DBLP"
-xsbPgms="DBLPxsb"
+daPgms="TCraw DBLPraw Wineraw TC TCrev DBLP Wine_break"
+xsbPgms="TCxsb TCrevxsb DBLPxsb Winexsb"
 tcMin=10000
 tcMax=100000
 # allowed values of cyc: true, false, both.  determines which TC datasets are used.
