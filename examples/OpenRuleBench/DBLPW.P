@@ -12,7 +12,7 @@ measureTime(Q, T, WT) :-
 test :- 
 %%     	open('result.txt', append, Output),
      	open('dblp_result.txt', append, Output),
-     	open('dblp_answers.txt', append, Output2),  %% added for w version
+     	open('dblp_answers.txt', write, Output2),  %% added for w version
 %%	measureTime(load_dyn('dblp_data.P'), LoadT, LoadWT),  %% original
 	measureTime(load_dync('data_raw/dblp'), LoadT, LoadWT),  %% updated
 	write(Output, 'loading cputime:  '), writeln(Output, LoadT),

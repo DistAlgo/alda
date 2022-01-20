@@ -1,248 +1,248 @@
-adjacentregion_aux(mendocinoregion, sonomaregion).
-hasbody_aux(pulignymontrachetwhiteburgundy, medium).
-hasbody_aux(formanchardonnay, full).
-hasbody_aux(foxencheninblanc, full).
-hasbody_aux(chianticlassico, medium).
-hasbody_aux(cortonmontrachetwhiteburgundy, full).
-hasbody_aux(corbansprivatebinsauvignonblanc, full).
-hasbody_aux(congressspringssemillon, medium).
-hasbody_aux(mariettapetitesyrah, medium).
-hasbody_aux(corbanssauvignonblanc, medium).
-hasbody_aux(petermccoychardonnay, medium).
-hasbody_aux(selaksicewine, medium).
-hasbody_aux(bancroftchardonnay, medium).
-hasbody_aux(elysezinfandel, full).
-hasbody_aux(mountadampinotnoir, medium).
-hasbody_aux(mariettacabernetsauvignon, medium).
-hasbody_aux(schlossrothermeltrochenbierenausleseriesling, full).
-hasbody_aux(garyfarrellmerlot, medium).
-hasbody_aux(cotturizinfandel, full).
-hasbody_aux(mariettaoldvinesred, medium).
-hasbody_aux(longridgemerlot, light).
-hasbody_aux(kalincellarssemillon, full).
-hasbody_aux(pagemillwinerycabernetsauvignon, medium).
-hasbody_aux(seanthackreysiriuspetitesyrah, full).
-hasbody_aux(saucelitocanyonzinfandel1998, medium).
-hasbody_aux(whitehalllaneprimavera, light).
-hasbody_aux(santacruzmountainvineyardcabernetsauvignon, full).
-hasbody_aux(lanetannerpinotnoir, light).
-hasbody_aux(corbansdrywhiteriesling, medium).
-hasbody_aux(mountadamchardonnay, full).
-hasbody_aux(mountadamriesling, medium).
-hasbody_aux(mariettazinfandel, medium).
-hasbody_aux(kathrynkennedylateral, medium).
-hasbody_aux(mountedenvineyardestatepinotnoir, full).
-hasbody_aux(whitehalllanecabernetfranc, medium).
-hasbody_aux(ventanacheninblanc, medium).
-hasbody_aux(saucelitocanyonzinfandel, medium).
-hasbody_aux(formancabernetsauvignon, medium).
-hasbody_aux(schlossvolradtrochenbierenausleseriesling, full).
-hasbody_aux(mountedenvineyardednavalleychardonnay, medium).
-hasbody_aux(stonleighsauvignonblanc, medium).
-hasbody_aux(selakssauvignonblanc, medium).
-hascolor_aux(selaksicewine, white).
-hasflavor_aux(pulignymontrachetwhiteburgundy, moderate).
-hasflavor_aux(formanchardonnay, moderate).
-hasflavor_aux(stgenevievetexaswhite, moderate).
-hasflavor_aux(foxencheninblanc, moderate).
-hasflavor_aux(cortonmontrachetwhiteburgundy, strong).
-hasflavor_aux(corbansprivatebinsauvignonblanc, strong).
-hasflavor_aux(congressspringssemillon, moderate).
-hasflavor_aux(mariettapetitesyrah, moderate).
-hasflavor_aux(corbanssauvignonblanc, strong).
-hasflavor_aux(petermccoychardonnay, moderate).
-hasflavor_aux(selaksicewine, moderate).
-hasflavor_aux(bancroftchardonnay, moderate).
-hasflavor_aux(elysezinfandel, moderate).
-hasflavor_aux(mountadampinotnoir, moderate).
-hasflavor_aux(chateaudychemsauterne, strong).
-hasflavor_aux(mariettacabernetsauvignon, moderate).
-hasflavor_aux(schlossrothermeltrochenbierenausleseriesling, strong).
-hasflavor_aux(garyfarrellmerlot, moderate).
-hasflavor_aux(cotturizinfandel, strong).
-hasflavor_aux(mariettaoldvinesred, moderate).
-hasflavor_aux(longridgemerlot, moderate).
-hasflavor_aux(kalincellarssemillon, strong).
-hasflavor_aux(pagemillwinerycabernetsauvignon, moderate).
-hasflavor_aux(seanthackreysiriuspetitesyrah, strong).
-hasflavor_aux(saucelitocanyonzinfandel1998, moderate).
-hasflavor_aux(chateaudemeursaultmeursault, moderate).
-hasflavor_aux(whitehalllaneprimavera, delicate).
-hasflavor_aux(santacruzmountainvineyardcabernetsauvignon, strong).
-hasflavor_aux(lanetannerpinotnoir, delicate).
-hasflavor_aux(corbansdrywhiteriesling, moderate).
-hasflavor_aux(mountadamchardonnay, strong).
-hasflavor_aux(mountadamriesling, delicate).
-hasflavor_aux(mariettazinfandel, moderate).
-hasflavor_aux(kathrynkennedylateral, delicate).
-hasflavor_aux(mountedenvineyardestatepinotnoir, strong).
-hasflavor_aux(whitehalllanecabernetfranc, moderate).
-hasflavor_aux(ventanacheninblanc, moderate).
-hasflavor_aux(saucelitocanyonzinfandel, moderate).
-hasflavor_aux(formancabernetsauvignon, strong).
-hasflavor_aux(schlossvolradtrochenbierenausleseriesling, moderate).
-hasflavor_aux(mountedenvineyardednavalleychardonnay, moderate).
-hasflavor_aux(stonleighsauvignonblanc, delicate).
-hasflavor_aux(selakssauvignonblanc, moderate).
-hasmaker_aux(pulignymontrachetwhiteburgundy, pulignymontrachet).
-hasmaker_aux(chateaulafiterothschildpauillac, chateaulafiterothschild).
-hasmaker_aux(formanchardonnay, forman).
-hasmaker_aux(stgenevievetexaswhite, stgenevieve).
-hasmaker_aux(foxencheninblanc, foxen).
-hasmaker_aux(chianticlassico, mcguinnesso).
-hasmaker_aux(cortonmontrachetwhiteburgundy, cortonmontrachet).
-hasmaker_aux(corbansprivatebinsauvignonblanc, corbans).
-hasmaker_aux(congressspringssemillon, congresssprings).
-hasmaker_aux(mariettapetitesyrah, marietta).
-hasmaker_aux(corbanssauvignonblanc, corbans).
-hasmaker_aux(petermccoychardonnay, petermccoy).
-hasmaker_aux(selaksicewine, selaks).
-hasmaker_aux(bancroftchardonnay, bancroft).
-hasmaker_aux(chateauchevalblancstemilion, chateauchevalblanc).
-hasmaker_aux(chateaumorgonbeaujolais, chateaumorgon).
-hasmaker_aux(elysezinfandel, elyse).
-hasmaker_aux(mountadampinotnoir, mountadam).
-hasmaker_aux(taylorport, taylor).
-hasmaker_aux(chateaudychemsauterne, chateaudychem).
-hasmaker_aux(mariettacabernetsauvignon, marietta).
-hasmaker_aux(schlossrothermeltrochenbierenausleseriesling, schlossrothermel).
-hasmaker_aux(garyfarrellmerlot, garyfarrell).
-hasmaker_aux(closdevougeotcotesdor, closdevougeot).
-hasmaker_aux(cotturizinfandel, cotturi).
-hasmaker_aux(closdelapoussiesancerre, closdelapoussie).
-hasmaker_aux(mariettaoldvinesred, marietta).
-hasmaker_aux(longridgemerlot, longridge).
-hasmaker_aux(kalincellarssemillon, kalincellars).
-hasmaker_aux(pagemillwinerycabernetsauvignon, pagemillwinery).
-hasmaker_aux(seanthackreysiriuspetitesyrah, seanthackrey).
-hasmaker_aux(saucelitocanyonzinfandel1998, saucelitocanyon).
-hasmaker_aux(chateaudemeursaultmeursault, chateaudemeursault).
-hasmaker_aux(santacruzmountainvineyardcabernetsauvignon, santacruzmountainvineyard).
-hasmaker_aux(lanetannerpinotnoir, lanetanner).
-hasmaker_aux(corbansdrywhiteriesling, corbans).
-hasmaker_aux(rosedanjou, danjou).
-hasmaker_aux(mountadamchardonnay, mountadam).
-hasmaker_aux(mountadamriesling, mountadam).
-hasmaker_aux(mariettazinfandel, marietta).
-hasmaker_aux(chateaumargaux, chateaumargauxwinery).
-hasmaker_aux(kathrynkennedylateral, kathrynkennedy).
-hasmaker_aux(mountedenvineyardestatepinotnoir, mountedenvineyard).
-hasmaker_aux(whitehalllanecabernetfranc, whitehalllane).
-hasmaker_aux(ventanacheninblanc, ventana).
-hasmaker_aux(saucelitocanyonzinfandel, saucelitocanyon).
-hasmaker_aux(formancabernetsauvignon, forman).
-hasmaker_aux(schlossvolradtrochenbierenausleseriesling, schlossvolrad).
-hasmaker_aux(mountedenvineyardednavalleychardonnay, mountedenvineyard).
-hasmaker_aux(stonleighsauvignonblanc, stonleigh).
-hasmaker_aux(selakssauvignonblanc, selaks).
-hasmaker_aux(sevreetmainemuscadet, sevreetmaine).
-hassugar_aux(pulignymontrachetwhiteburgundy, dry).
-hassugar_aux(formanchardonnay, dry).
-hassugar_aux(stgenevievetexaswhite, dry).
-hassugar_aux(foxencheninblanc, dry).
-hassugar_aux(cortonmontrachetwhiteburgundy, dry).
-hassugar_aux(corbansprivatebinsauvignonblanc, dry).
-hassugar_aux(congressspringssemillon, dry).
-hassugar_aux(mariettapetitesyrah, dry).
-hassugar_aux(corbanssauvignonblanc, dry).
-hassugar_aux(petermccoychardonnay, dry).
-hassugar_aux(bancroftchardonnay, dry).
-hassugar_aux(elysezinfandel, dry).
-hassugar_aux(mountadampinotnoir, dry).
-hassugar_aux(mariettacabernetsauvignon, dry).
-hassugar_aux(schlossrothermeltrochenbierenausleseriesling, sweet).
-hassugar_aux(garyfarrellmerlot, dry).
-hassugar_aux(cotturizinfandel, dry).
-hassugar_aux(mariettaoldvinesred, dry).
-hassugar_aux(longridgemerlot, dry).
-hassugar_aux(kalincellarssemillon, dry).
-hassugar_aux(pagemillwinerycabernetsauvignon, dry).
-hassugar_aux(seanthackreysiriuspetitesyrah, dry).
-hassugar_aux(saucelitocanyonzinfandel1998, dry).
-hassugar_aux(whitehalllaneprimavera, sweet).
-hassugar_aux(santacruzmountainvineyardcabernetsauvignon, dry).
-hassugar_aux(lanetannerpinotnoir, dry).
-hassugar_aux(corbansdrywhiteriesling, offdry).
-hassugar_aux(mountadamchardonnay, dry).
-hassugar_aux(mountadamriesling, dry).
-hassugar_aux(mariettazinfandel, dry).
-hassugar_aux(kathrynkennedylateral, dry).
-hassugar_aux(mountedenvineyardestatepinotnoir, dry).
-hassugar_aux(whitehalllanecabernetfranc, dry).
-hassugar_aux(ventanacheninblanc, offdry).
-hassugar_aux(saucelitocanyonzinfandel, dry).
-hassugar_aux(formancabernetsauvignon, dry).
-hassugar_aux(schlossvolradtrochenbierenausleseriesling, sweet).
-hassugar_aux(mountedenvineyardednavalleychardonnay, dry).
-hassugar_aux(stonleighsauvignonblanc, dry).
-hassugar_aux(selakssauvignonblanc, dry).
-locatedin_aux(californiaregion, usregion).
-locatedin_aux(sancerreregion, loireregion).
-locatedin_aux(formanchardonnay, naparegion).
-locatedin_aux(stgenevievetexaswhite, centraltexasregion).
-locatedin_aux(foxencheninblanc, santabarbararegion).
-locatedin_aux(loireregion, frenchregion).
-locatedin_aux(corbansprivatebinsauvignonblanc, newzealandregion).
-locatedin_aux(mariettapetitesyrah, sonomaregion).
-locatedin_aux(corbanssauvignonblanc, newzealandregion).
-locatedin_aux(petermccoychardonnay, sonomaregion).
-locatedin_aux(selaksicewine, newzealandregion).
-locatedin_aux(bancroftchardonnay, naparegion).
-locatedin_aux(elysezinfandel, naparegion).
-locatedin_aux(naparegion, californiaregion).
-locatedin_aux(mountadampinotnoir, southaustraliaregion).
-locatedin_aux(chiantiregion, italianregion).
-locatedin_aux(mariettacabernetsauvignon, sonomaregion).
-locatedin_aux(sauterneregion, bordeauxregion).
-locatedin_aux(pauillacregion, medocregion).
-locatedin_aux(centraltexasregion, texasregion).
-locatedin_aux(schlossrothermeltrochenbierenausleseriesling, germanyregion).
-locatedin_aux(garyfarrellmerlot, sonomaregion).
-locatedin_aux(bordeauxregion, frenchregion).
-locatedin_aux(cotturizinfandel, sonomaregion).
-locatedin_aux(anjouregion, loireregion).
-locatedin_aux(centralcoastregion, californiaregion).
-locatedin_aux(mariettaoldvinesred, sonomaregion).
-locatedin_aux(longridgemerlot, newzealandregion).
-locatedin_aux(sonomaregion, californiaregion).
-locatedin_aux(santabarbararegion, californiaregion).
-locatedin_aux(pagemillwinerycabernetsauvignon, naparegion).
-locatedin_aux(seanthackreysiriuspetitesyrah, naparegion).
-locatedin_aux(saucelitocanyonzinfandel1998, arroyogranderegion).
-locatedin_aux(medocregion, bordeauxregion).
-locatedin_aux(southaustraliaregion, australianregion).
-locatedin_aux(whitehalllaneprimavera, naparegion).
-locatedin_aux(santacruzmountainvineyardcabernetsauvignon, santacruzmountainsregion).
-locatedin_aux(lanetannerpinotnoir, santabarbararegion).
-locatedin_aux(mendocinoregion, californiaregion).
-locatedin_aux(santacruzmountainsregion, californiaregion).
-locatedin_aux(corbansdrywhiteriesling, newzealandregion).
-locatedin_aux(margauxregion, medocregion).
-locatedin_aux(texasregion, usregion).
-locatedin_aux(muscadetregion, loireregion).
-locatedin_aux(mountadamchardonnay, southaustraliaregion).
-locatedin_aux(alsaceregion, frenchregion).
-locatedin_aux(mountadamriesling, southaustraliaregion).
-locatedin_aux(stemilionregion, bordeauxregion).
-locatedin_aux(bourgogneregion, frenchregion).
-locatedin_aux(mariettazinfandel, sonomaregion).
-locatedin_aux(toursregion, loireregion).
-locatedin_aux(cotesdorregion, bourgogneregion).
-locatedin_aux(mountedenvineyardestatepinotnoir, ednavalleyregion).
-locatedin_aux(whitehalllanecabernetfranc, naparegion).
-locatedin_aux(ventanacheninblanc, centralcoastregion).
-locatedin_aux(saucelitocanyonzinfandel, arroyogranderegion).
-locatedin_aux(formancabernetsauvignon, naparegion).
-locatedin_aux(schlossvolradtrochenbierenausleseriesling, germanyregion).
-locatedin_aux(beaujolaisregion, frenchregion).
-locatedin_aux(mountedenvineyardednavalleychardonnay, ednavalleyregion).
-locatedin_aux(meursaultregion, bourgogneregion).
-locatedin_aux(ednavalleyregion, californiaregion).
-locatedin_aux(stonleighsauvignonblanc, newzealandregion).
-locatedin_aux(arroyogranderegion, californiaregion).
-locatedin_aux(selakssauvignonblanc, newzealandregion).
-madefromgrape_aux(chateaudychemsauterne, semillongrape).
-madefromgrape_aux(chateaudychemsauterne, sauvignonblancgrape).
+adjacentregion_aux(mendocinoregion,sonomaregion).
+hasbody_aux(pulignymontrachetwhiteburgundy,medium).
+hasbody_aux(formanchardonnay,full).
+hasbody_aux(foxencheninblanc,full).
+hasbody_aux(chianticlassico,medium).
+hasbody_aux(cortonmontrachetwhiteburgundy,full).
+hasbody_aux(corbansprivatebinsauvignonblanc,full).
+hasbody_aux(congressspringssemillon,medium).
+hasbody_aux(mariettapetitesyrah,medium).
+hasbody_aux(corbanssauvignonblanc,medium).
+hasbody_aux(petermccoychardonnay,medium).
+hasbody_aux(selaksicewine,medium).
+hasbody_aux(bancroftchardonnay,medium).
+hasbody_aux(elysezinfandel,full).
+hasbody_aux(mountadampinotnoir,medium).
+hasbody_aux(mariettacabernetsauvignon,medium).
+hasbody_aux(schlossrothermeltrochenbierenausleseriesling,full).
+hasbody_aux(garyfarrellmerlot,medium).
+hasbody_aux(cotturizinfandel,full).
+hasbody_aux(mariettaoldvinesred,medium).
+hasbody_aux(longridgemerlot,light).
+hasbody_aux(kalincellarssemillon,full).
+hasbody_aux(pagemillwinerycabernetsauvignon,medium).
+hasbody_aux(seanthackreysiriuspetitesyrah,full).
+hasbody_aux(saucelitocanyonzinfandel1998,medium).
+hasbody_aux(whitehalllaneprimavera,light).
+hasbody_aux(santacruzmountainvineyardcabernetsauvignon,full).
+hasbody_aux(lanetannerpinotnoir,light).
+hasbody_aux(corbansdrywhiteriesling,medium).
+hasbody_aux(mountadamchardonnay,full).
+hasbody_aux(mountadamriesling,medium).
+hasbody_aux(mariettazinfandel,medium).
+hasbody_aux(kathrynkennedylateral,medium).
+hasbody_aux(mountedenvineyardestatepinotnoir,full).
+hasbody_aux(whitehalllanecabernetfranc,medium).
+hasbody_aux(ventanacheninblanc,medium).
+hasbody_aux(saucelitocanyonzinfandel,medium).
+hasbody_aux(formancabernetsauvignon,medium).
+hasbody_aux(schlossvolradtrochenbierenausleseriesling,full).
+hasbody_aux(mountedenvineyardednavalleychardonnay,medium).
+hasbody_aux(stonleighsauvignonblanc,medium).
+hasbody_aux(selakssauvignonblanc,medium).
+hascolor_aux(selaksicewine,white).
+hasflavor_aux(pulignymontrachetwhiteburgundy,moderate).
+hasflavor_aux(formanchardonnay,moderate).
+hasflavor_aux(stgenevievetexaswhite,moderate).
+hasflavor_aux(foxencheninblanc,moderate).
+hasflavor_aux(cortonmontrachetwhiteburgundy,strong).
+hasflavor_aux(corbansprivatebinsauvignonblanc,strong).
+hasflavor_aux(congressspringssemillon,moderate).
+hasflavor_aux(mariettapetitesyrah,moderate).
+hasflavor_aux(corbanssauvignonblanc,strong).
+hasflavor_aux(petermccoychardonnay,moderate).
+hasflavor_aux(selaksicewine,moderate).
+hasflavor_aux(bancroftchardonnay,moderate).
+hasflavor_aux(elysezinfandel,moderate).
+hasflavor_aux(mountadampinotnoir,moderate).
+hasflavor_aux(chateaudychemsauterne,strong).
+hasflavor_aux(mariettacabernetsauvignon,moderate).
+hasflavor_aux(schlossrothermeltrochenbierenausleseriesling,strong).
+hasflavor_aux(garyfarrellmerlot,moderate).
+hasflavor_aux(cotturizinfandel,strong).
+hasflavor_aux(mariettaoldvinesred,moderate).
+hasflavor_aux(longridgemerlot,moderate).
+hasflavor_aux(kalincellarssemillon,strong).
+hasflavor_aux(pagemillwinerycabernetsauvignon,moderate).
+hasflavor_aux(seanthackreysiriuspetitesyrah,strong).
+hasflavor_aux(saucelitocanyonzinfandel1998,moderate).
+hasflavor_aux(chateaudemeursaultmeursault,moderate).
+hasflavor_aux(whitehalllaneprimavera,delicate).
+hasflavor_aux(santacruzmountainvineyardcabernetsauvignon,strong).
+hasflavor_aux(lanetannerpinotnoir,delicate).
+hasflavor_aux(corbansdrywhiteriesling,moderate).
+hasflavor_aux(mountadamchardonnay,strong).
+hasflavor_aux(mountadamriesling,delicate).
+hasflavor_aux(mariettazinfandel,moderate).
+hasflavor_aux(kathrynkennedylateral,delicate).
+hasflavor_aux(mountedenvineyardestatepinotnoir,strong).
+hasflavor_aux(whitehalllanecabernetfranc,moderate).
+hasflavor_aux(ventanacheninblanc,moderate).
+hasflavor_aux(saucelitocanyonzinfandel,moderate).
+hasflavor_aux(formancabernetsauvignon,strong).
+hasflavor_aux(schlossvolradtrochenbierenausleseriesling,moderate).
+hasflavor_aux(mountedenvineyardednavalleychardonnay,moderate).
+hasflavor_aux(stonleighsauvignonblanc,delicate).
+hasflavor_aux(selakssauvignonblanc,moderate).
+hasmaker_aux(pulignymontrachetwhiteburgundy,pulignymontrachet).
+hasmaker_aux(chateaulafiterothschildpauillac,chateaulafiterothschild).
+hasmaker_aux(formanchardonnay,forman).
+hasmaker_aux(stgenevievetexaswhite,stgenevieve).
+hasmaker_aux(foxencheninblanc,foxen).
+hasmaker_aux(chianticlassico,mcguinnesso).
+hasmaker_aux(cortonmontrachetwhiteburgundy,cortonmontrachet).
+hasmaker_aux(corbansprivatebinsauvignonblanc,corbans).
+hasmaker_aux(congressspringssemillon,congresssprings).
+hasmaker_aux(mariettapetitesyrah,marietta).
+hasmaker_aux(corbanssauvignonblanc,corbans).
+hasmaker_aux(petermccoychardonnay,petermccoy).
+hasmaker_aux(selaksicewine,selaks).
+hasmaker_aux(bancroftchardonnay,bancroft).
+hasmaker_aux(chateauchevalblancstemilion,chateauchevalblanc).
+hasmaker_aux(chateaumorgonbeaujolais,chateaumorgon).
+hasmaker_aux(elysezinfandel,elyse).
+hasmaker_aux(mountadampinotnoir,mountadam).
+hasmaker_aux(taylorport,taylor).
+hasmaker_aux(chateaudychemsauterne,chateaudychem).
+hasmaker_aux(mariettacabernetsauvignon,marietta).
+hasmaker_aux(schlossrothermeltrochenbierenausleseriesling,schlossrothermel).
+hasmaker_aux(garyfarrellmerlot,garyfarrell).
+hasmaker_aux(closdevougeotcotesdor,closdevougeot).
+hasmaker_aux(cotturizinfandel,cotturi).
+hasmaker_aux(closdelapoussiesancerre,closdelapoussie).
+hasmaker_aux(mariettaoldvinesred,marietta).
+hasmaker_aux(longridgemerlot,longridge).
+hasmaker_aux(kalincellarssemillon,kalincellars).
+hasmaker_aux(pagemillwinerycabernetsauvignon,pagemillwinery).
+hasmaker_aux(seanthackreysiriuspetitesyrah,seanthackrey).
+hasmaker_aux(saucelitocanyonzinfandel1998,saucelitocanyon).
+hasmaker_aux(chateaudemeursaultmeursault,chateaudemeursault).
+hasmaker_aux(santacruzmountainvineyardcabernetsauvignon,santacruzmountainvineyard).
+hasmaker_aux(lanetannerpinotnoir,lanetanner).
+hasmaker_aux(corbansdrywhiteriesling,corbans).
+hasmaker_aux(rosedanjou,danjou).
+hasmaker_aux(mountadamchardonnay,mountadam).
+hasmaker_aux(mountadamriesling,mountadam).
+hasmaker_aux(mariettazinfandel,marietta).
+hasmaker_aux(chateaumargaux,chateaumargauxwinery).
+hasmaker_aux(kathrynkennedylateral,kathrynkennedy).
+hasmaker_aux(mountedenvineyardestatepinotnoir,mountedenvineyard).
+hasmaker_aux(whitehalllanecabernetfranc,whitehalllane).
+hasmaker_aux(ventanacheninblanc,ventana).
+hasmaker_aux(saucelitocanyonzinfandel,saucelitocanyon).
+hasmaker_aux(formancabernetsauvignon,forman).
+hasmaker_aux(schlossvolradtrochenbierenausleseriesling,schlossvolrad).
+hasmaker_aux(mountedenvineyardednavalleychardonnay,mountedenvineyard).
+hasmaker_aux(stonleighsauvignonblanc,stonleigh).
+hasmaker_aux(selakssauvignonblanc,selaks).
+hasmaker_aux(sevreetmainemuscadet,sevreetmaine).
+hassugar_aux(pulignymontrachetwhiteburgundy,dry).
+hassugar_aux(formanchardonnay,dry).
+hassugar_aux(stgenevievetexaswhite,dry).
+hassugar_aux(foxencheninblanc,dry).
+hassugar_aux(cortonmontrachetwhiteburgundy,dry).
+hassugar_aux(corbansprivatebinsauvignonblanc,dry).
+hassugar_aux(congressspringssemillon,dry).
+hassugar_aux(mariettapetitesyrah,dry).
+hassugar_aux(corbanssauvignonblanc,dry).
+hassugar_aux(petermccoychardonnay,dry).
+hassugar_aux(bancroftchardonnay,dry).
+hassugar_aux(elysezinfandel,dry).
+hassugar_aux(mountadampinotnoir,dry).
+hassugar_aux(mariettacabernetsauvignon,dry).
+hassugar_aux(schlossrothermeltrochenbierenausleseriesling,sweet).
+hassugar_aux(garyfarrellmerlot,dry).
+hassugar_aux(cotturizinfandel,dry).
+hassugar_aux(mariettaoldvinesred,dry).
+hassugar_aux(longridgemerlot,dry).
+hassugar_aux(kalincellarssemillon,dry).
+hassugar_aux(pagemillwinerycabernetsauvignon,dry).
+hassugar_aux(seanthackreysiriuspetitesyrah,dry).
+hassugar_aux(saucelitocanyonzinfandel1998,dry).
+hassugar_aux(whitehalllaneprimavera,sweet).
+hassugar_aux(santacruzmountainvineyardcabernetsauvignon,dry).
+hassugar_aux(lanetannerpinotnoir,dry).
+hassugar_aux(corbansdrywhiteriesling,offdry).
+hassugar_aux(mountadamchardonnay,dry).
+hassugar_aux(mountadamriesling,dry).
+hassugar_aux(mariettazinfandel,dry).
+hassugar_aux(kathrynkennedylateral,dry).
+hassugar_aux(mountedenvineyardestatepinotnoir,dry).
+hassugar_aux(whitehalllanecabernetfranc,dry).
+hassugar_aux(ventanacheninblanc,offdry).
+hassugar_aux(saucelitocanyonzinfandel,dry).
+hassugar_aux(formancabernetsauvignon,dry).
+hassugar_aux(schlossvolradtrochenbierenausleseriesling,sweet).
+hassugar_aux(mountedenvineyardednavalleychardonnay,dry).
+hassugar_aux(stonleighsauvignonblanc,dry).
+hassugar_aux(selakssauvignonblanc,dry).
+locatedin_aux(californiaregion,usregion).
+locatedin_aux(sancerreregion,loireregion).
+locatedin_aux(formanchardonnay,naparegion).
+locatedin_aux(stgenevievetexaswhite,centraltexasregion).
+locatedin_aux(foxencheninblanc,santabarbararegion).
+locatedin_aux(loireregion,frenchregion).
+locatedin_aux(corbansprivatebinsauvignonblanc,newzealandregion).
+locatedin_aux(mariettapetitesyrah,sonomaregion).
+locatedin_aux(corbanssauvignonblanc,newzealandregion).
+locatedin_aux(petermccoychardonnay,sonomaregion).
+locatedin_aux(selaksicewine,newzealandregion).
+locatedin_aux(bancroftchardonnay,naparegion).
+locatedin_aux(elysezinfandel,naparegion).
+locatedin_aux(naparegion,californiaregion).
+locatedin_aux(mountadampinotnoir,southaustraliaregion).
+locatedin_aux(chiantiregion,italianregion).
+locatedin_aux(mariettacabernetsauvignon,sonomaregion).
+locatedin_aux(sauterneregion,bordeauxregion).
+locatedin_aux(pauillacregion,medocregion).
+locatedin_aux(centraltexasregion,texasregion).
+locatedin_aux(schlossrothermeltrochenbierenausleseriesling,germanyregion).
+locatedin_aux(garyfarrellmerlot,sonomaregion).
+locatedin_aux(bordeauxregion,frenchregion).
+locatedin_aux(cotturizinfandel,sonomaregion).
+locatedin_aux(anjouregion,loireregion).
+locatedin_aux(centralcoastregion,californiaregion).
+locatedin_aux(mariettaoldvinesred,sonomaregion).
+locatedin_aux(longridgemerlot,newzealandregion).
+locatedin_aux(sonomaregion,californiaregion).
+locatedin_aux(santabarbararegion,californiaregion).
+locatedin_aux(pagemillwinerycabernetsauvignon,naparegion).
+locatedin_aux(seanthackreysiriuspetitesyrah,naparegion).
+locatedin_aux(saucelitocanyonzinfandel1998,arroyogranderegion).
+locatedin_aux(medocregion,bordeauxregion).
+locatedin_aux(southaustraliaregion,australianregion).
+locatedin_aux(whitehalllaneprimavera,naparegion).
+locatedin_aux(santacruzmountainvineyardcabernetsauvignon,santacruzmountainsregion).
+locatedin_aux(lanetannerpinotnoir,santabarbararegion).
+locatedin_aux(mendocinoregion,californiaregion).
+locatedin_aux(santacruzmountainsregion,californiaregion).
+locatedin_aux(corbansdrywhiteriesling,newzealandregion).
+locatedin_aux(margauxregion,medocregion).
+locatedin_aux(texasregion,usregion).
+locatedin_aux(muscadetregion,loireregion).
+locatedin_aux(mountadamchardonnay,southaustraliaregion).
+locatedin_aux(alsaceregion,frenchregion).
+locatedin_aux(mountadamriesling,southaustraliaregion).
+locatedin_aux(stemilionregion,bordeauxregion).
+locatedin_aux(bourgogneregion,frenchregion).
+locatedin_aux(mariettazinfandel,sonomaregion).
+locatedin_aux(toursregion,loireregion).
+locatedin_aux(cotesdorregion,bourgogneregion).
+locatedin_aux(mountedenvineyardestatepinotnoir,ednavalleyregion).
+locatedin_aux(whitehalllanecabernetfranc,naparegion).
+locatedin_aux(ventanacheninblanc,centralcoastregion).
+locatedin_aux(saucelitocanyonzinfandel,arroyogranderegion).
+locatedin_aux(formancabernetsauvignon,naparegion).
+locatedin_aux(schlossvolradtrochenbierenausleseriesling,germanyregion).
+locatedin_aux(beaujolaisregion,frenchregion).
+locatedin_aux(mountedenvineyardednavalleychardonnay,ednavalleyregion).
+locatedin_aux(meursaultregion,bourgogneregion).
+locatedin_aux(ednavalleyregion,californiaregion).
+locatedin_aux(stonleighsauvignonblanc,newzealandregion).
+locatedin_aux(arroyogranderegion,californiaregion).
+locatedin_aux(selakssauvignonblanc,newzealandregion).
+madefromgrape_aux(chateaudychemsauterne,semillongrape).
+madefromgrape_aux(chateaudychemsauterne,sauvignonblancgrape).
 ot____nom1_aux(sweet).
 ot____nom10_aux(texasregion).
 ot____nom11_aux(sauvignonblancgrape).
@@ -651,4 +651,4 @@ kaon2namedobjects(italianregion).
 kaon2namedobjects(centralcoastregion).
 kaon2namedobjects(petitesyrahgrape).
 vintageyear_aux(year1998).
-hasvintageyear_aux(saucelitocanyonzinfandel1998, year1998).
+hasvintageyear_aux(saucelitocanyonzinfandel1998,year1998).
