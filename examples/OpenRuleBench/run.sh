@@ -4,9 +4,9 @@
 
 # run everything
 daPgms="TCraw DBLPraw Wineraw TC TCrev DBLP Wine_break"
-xsbPgms="TCxsb TCrevxsb DBLPxsb Winexsb"
+xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb DBLPWxsb Winexsb WineWxsb"
 tcMin=10000
-tcMax=100000
+tcMax=20000
 # allowed values of cyc: true, false, both.  determines which TC datasets are used.
 cyc="both"
 startIter=0
@@ -14,7 +14,6 @@ endIter=4
 
 if [ "$1" == "correctness" ]; then 
     endIter=0
-    xsbwritesuffix="W"
     if [ ! -d "answers" ]; then
         mkdir answers
     else
@@ -93,14 +92,13 @@ done
 
 for pgm in ${xsbPgms}; do
     # remove "xsb" suffix from pgm name to get name of .P file
-    # and add a suffix "W" if checking for correctness
-    pgmfile=${pgm::-3}${xsbwritesuffix}
+    pgmfile=${pgm::-3}
     # datasets is needed by extract_timings
     if [ "${pgm::2}" = "TC" ]; then
         datasets="$tcdatasets"
-    elif [ "$pgm" = "DBLPxsb" ]; then
+    elif [ "${pgm::4}" = "DBLP" ]; then
         datasets="dblp"
-    elif [ "$pgm" = "Winexsb" ]; then
+    elif [ "${pgm::4}" = "Wine" ]; then
         datasets="wine"
     else
         echo "unknown xsb program $pgm"
@@ -119,14 +117,14 @@ for pgm in ${xsbPgms}; do
                     echo "timeout!" >>tc_result.txt
                 fi
                 mv -f tc_result.txt $outfile
-            elif [ "$pgm" = "DBLPxsb" ]; then
+            elif [ "${pgm::4}" = "DBLP" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
                     echo "timeout!" >>dblp_result.txt
                 fi
                 mv -f dblp_result.txt $outfile
-            elif [ "$pgm" = "Winexsb" ]; then
+            elif [ "${pgm::4}" = "Wine" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
@@ -140,9 +138,9 @@ for pgm in ${xsbPgms}; do
             if ! grep -q "computing cputime" "$outfile"; then
                 echo "incomplete iteration; skipping remaining iterations"
                 break
-            elif [ "$1" == "correctness" ]; then 
+            elif [ "$1" == "correctness" -a ${pgm: -4} == "Wxsb" ]; then 
                 latestanswers=`ls -t *answers.txt | head -n 1`
-                mv $latestanswers answers/${pgm::-3}_${data}_xsb.answers
+                mv $latestanswers answers/${pgm::-4}_${data}_xsb.answers
             fi
         done
     done
