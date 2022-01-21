@@ -4,7 +4,7 @@
 
 # run everything
 daPgms="TCraw DBLPraw Wineraw TC TCrev DBLP Wine_break"
-xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb Winexsb"
+xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb DBLPWxsb Winexsb WineWxsb"
 tcMin=10000
 tcMax=100000
 # allowed values of cyc: true, false, both.  determines which TC datasets are used.
@@ -72,6 +72,9 @@ for pgm in ${daPgms}; do
                 if ! grep -q "total_os_total" "$outfile"; then
                     echo "incomplete iteration; skipping remaining iterations"
                     break
+                elif [ "${i}" = "${startIter}" ]; then
+                    latestanswers=`ls -t __pycache__/*.answers | head -n 1`
+                    mv $latestanswers out/${pgm/_break/""}_${data}_da_answers.txt
                 fi
             fi
         done
@@ -84,9 +87,9 @@ for pgm in ${xsbPgms}; do
     # datasets is needed by extract_timings
     if [ "${pgm::2}" = "TC" ]; then
         datasets="$tcdatasets"
-    elif [ "$pgm" = "DBLPxsb" ]; then
+    elif [ "${pgm::4}" = "DBLP" ]; then
         datasets="dblp"
-    elif [ "$pgm" = "Winexsb" ]; then
+    elif [ "${pgm::4}" = "Wine" ]; then
         datasets="wine"
     else
         echo "unknown xsb program $pgm"
@@ -105,14 +108,14 @@ for pgm in ${xsbPgms}; do
                     echo "timeout!" >>tc_result.txt
                 fi
                 mv -f tc_result.txt $outfile
-            elif [ "$pgm" = "DBLPxsb" ]; then
+            elif [ "${pgm::4}" = "DBLP" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
-                    echo "timeout!" >>result.txt
+                    echo "timeout!" >>dblp_result.txt
                 fi
-                mv -f result.txt $outfile
-            elif [ "$pgm" = "Winexsb" ]; then
+                mv -f dblp_result.txt $outfile
+            elif [ "${pgm::4}" = "Wine" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
@@ -126,14 +129,13 @@ for pgm in ${xsbPgms}; do
             if ! grep -q "computing cputime" "$outfile"; then
                 echo "incomplete iteration; skipping remaining iterations"
                 break
+            elif [ "${i}" = "${startIter}" -a ${pgm:-4} == "Wxsb" ]; then 
+                latestanswers=`ls -t *answers.txt | head -n 1`
+                mv $latestanswers out/${pgm::-4}_${data}_xsb_answers.txt
             fi
         done
     done
 done
 
-# I usually run extract_times.py separately later, using run_extract.sh, because it automates calling extract_times.py three times, once for each benchmark (TC, DBLP, Wine).  this is necessary because extract_times.py assumes that all programs were run on the same datasets.
-#iters=$(expr $endIter + 1)
-#python3 ../extract_times.py "ORB" "${daPgms} ${xsbPgms}" "${datasets}" ${iters}
-
 echo " =============== FINISHED ==================="
-tput bel 
+tput bel
