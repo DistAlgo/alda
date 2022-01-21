@@ -7,9 +7,7 @@ import statistics
 
 # transform pgm name to a more readable column heading
 def colname(pgm):
-    if pgm == 'TCwritexsb': return 'TCXSBw'
-    elif pgm == 'TCrevwritexsb': return 'TCrevXSBw'
-    else: return pgm.replace('xsb','XSB')
+    return pgm.replace('xsb','XSB')
 
 def main():
     bench = sys.argv[1] # PA, RBAC, or ORB
@@ -21,7 +19,7 @@ def main():
     dapgms = [pgm for pgm in pgms if 'xsb' not in pgm and 'raw' not in pgm]
     # extracted timings, results, etc.
     res = {}
-    # we need to run extract_times 3 times for ORB, so include some info about pgms in filename.
+    # we need to run extract_times 3 times for ORB, so include some info about pgms in output filename.
     if bench=='ORB' and any(pgm in pgms for pgm in {'DBLP', 'DBLPraw', 'DBLPxsb'}):
         pgmname = 'DBLP'
     elif bench=='ORB' and any(pgm in pgms for pgm in {'Wine_break', 'Wineraw', 'Winexsb'}):
