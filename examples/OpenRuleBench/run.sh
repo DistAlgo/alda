@@ -4,22 +4,13 @@
 
 # run everything
 daPgms="TCraw DBLPraw Wineraw TC TCrev DBLP Wine_break"
-xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb DBLPWxsb Winexsb WineWxsb"
+xsbPgms="TCxsb TCWxsb TCrevxsb TCrevWxsb DBLPxsb Winexsb"
 tcMin=10000
 tcMax=100000
 # allowed values of cyc: true, false, both.  determines which TC datasets are used.
 cyc="both"
 startIter=0
 endIter=4
-
-if [ "$1" == "correctness" ]; then 
-    endIter=0
-    if [ ! -d "answers" ]; then
-        mkdir answers
-    else
-        rm -rf answers/*
-    fi
-fi
 
 tcdatasets=""
 for i in $(seq $tcMin 10000 $tcMax); do
@@ -81,9 +72,6 @@ for pgm in ${daPgms}; do
                 if ! grep -q "total_os_total" "$outfile"; then
                     echo "incomplete iteration; skipping remaining iterations"
                     break
-                elif [ "$1" == "correctness" ]; then 
-                    latestanswers=`ls -t __pycache__/*.answers | head -n 1`
-                    mv $latestanswers answers/${pgm/_break/""}_${data}_da.answers
                 fi
             fi
         done
@@ -96,9 +84,9 @@ for pgm in ${xsbPgms}; do
     # datasets is needed by extract_timings
     if [ "${pgm::2}" = "TC" ]; then
         datasets="$tcdatasets"
-    elif [ "${pgm::4}" = "DBLP" ]; then
+    elif [ "$pgm" = "DBLPxsb" ]; then
         datasets="dblp"
-    elif [ "${pgm::4}" = "Wine" ]; then
+    elif [ "$pgm" = "Winexsb" ]; then
         datasets="wine"
     else
         echo "unknown xsb program $pgm"
@@ -117,14 +105,14 @@ for pgm in ${xsbPgms}; do
                     echo "timeout!" >>tc_result.txt
                 fi
                 mv -f tc_result.txt $outfile
-            elif [ "${pgm::4}" = "DBLP" ]; then
+            elif [ "$pgm" = "DBLPxsb" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
-                    echo "timeout!" >>dblp_result.txt
+                    echo "timeout!" >>result.txt
                 fi
-                mv -f dblp_result.txt $outfile
-            elif [ "${pgm::4}" = "Wine" ]; then
+                mv -f result.txt $outfile
+            elif [ "$pgm" = "Winexsb" ]; then
                 echo "running ${pgm} ${i}"
                 timeout 1800 time xsb -e "['$pgmfile'], test, halt."  1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
@@ -138,47 +126,14 @@ for pgm in ${xsbPgms}; do
             if ! grep -q "computing cputime" "$outfile"; then
                 echo "incomplete iteration; skipping remaining iterations"
                 break
-            elif [ "$1" == "correctness" -a ${pgm: -4} == "Wxsb" ]; then 
-                latestanswers=`ls -t *answers.txt | head -n 1`
-                mv $latestanswers answers/${pgm::-4}_${data}_xsb.answers
             fi
         done
     done
 done
-
-cd answers
-if [ "$1" == "correctness" ]; then
-    > correctness.txt
-    # for each da answer, if there is a corresponding xsb answer file, then compare
-    # if the corresponding xsb answer file is not there, note this as well
-    for df in *_da.answers; do
-        bench=${df::-11}
-        xf=${bench}_xsb.answers
-        if [ -f $xf ]; then
-            d=`diff <(sed "s/^.//;s/.$//;s/'//g" ${xf} | sort) <(sed "s/'//g" ${df} | sort) | wc -l | tr -d ' '`
-            if [ "$d" == "0" ]; then 
-                echo "${bench}: match" >> correctness.txt
-            else
-                echo "${bench}: mismatch" >> correctness.txt
-            fi
-        else
-            echo "${bench}: no xsb answer file" >> correctness.txt
-        fi
-    done
-    # at this point, check if there are xsb files without corresponding da files
-    for xf in *_xsb.answers; do
-        bench=${xf::-12}
-        df=${bench}_da.answers
-        if [ ! -f $df ]; then
-            echo "${bench}: no da answer file" >> correctness.txt
-        fi
-    done
-fi
-cd .. 
 
 # I usually run extract_times.py separately later, using run_extract.sh, because it automates calling extract_times.py three times, once for each benchmark (TC, DBLP, Wine).  this is necessary because extract_times.py assumes that all programs were run on the same datasets.
 #iters=$(expr $endIter + 1)
 #python3 ../extract_times.py "ORB" "${daPgms} ${xsbPgms}" "${datasets}" ${iters}
 
 echo " =============== FINISHED ==================="
-tput bel
+tput bel 
