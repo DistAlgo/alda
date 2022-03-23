@@ -25,6 +25,7 @@ def pickle_facts(data):
     facts = collections.defaultdict(set)
     for line in f:
       words = re.split('[(,]' if data!='dblp' else '\(\'|,(?=\')|\',', line.strip()[:-2])
+      words = [w.lstrip() for w in words]
       facts[words[0]].add(tuple(map(lambda x: x.strip("'"),words[1:])))
   t1 = time_now()
   pickle.dump(facts, open(os.path.join('data_pickle',data), "wb"))
