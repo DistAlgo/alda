@@ -144,12 +144,15 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     Returns the compiled Python code object, or None in case of errors.
 
     """
-    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+    elptime1 = time.perf_counter_ns() 
+    cputime1 = time.process_time_ns()
     pyast = dastr_to_pyast(src, filename, args)
-    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+    cputime2 = time.process_time_ns()
+    elptime2 = time.perf_counter_ns() 
     if not os.path.exists('timing'):
         os.mkdir('timing')
-    open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+    open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elptime2-elptime1, cputime2-cputime1))
+
     if pyast is not None:
         outname = os.path.join('__pycache__',os.path.basename(filename)+'.py')
         with open(outname,'w') as outfd:
