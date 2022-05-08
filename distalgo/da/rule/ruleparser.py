@@ -841,6 +841,8 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 			scope = self.current_scope
 			while not whereinfer and scope:
 				whereinfer = scope.find_name(KW_INFER).last_assignment_before(node)
+				if whereinfer or not scope.parent_scope:
+					break
 				scope = scope.parent_scope
 			if not (isinstance(whereinfer, dast.ImportFromStmt) and whereinfer.module == 'da.rule.infer'):
 				return self.generic_visit(node)
