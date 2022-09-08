@@ -856,9 +856,17 @@ class ParserSecondPass(NodeTransformer, CompilerMessagePrinter):
 						# When the rules are defined with the def rules syntax
 						# 	the rule name refereed by infer function should be re-discovered
 						# 	and change to the updated NamedVar
-						new_val = scope.find_name(val.name)
-						val.value = new_val
-						rule_var = val
+						if(isinstance(val, dast.NameExpr)):
+							new_val = scope.find_name(val.name)
+							val.value = new_val
+							rule_var = val
+						elif(isinstance(val, dast.ConstantExpr)):
+							new_val = scope.find_name(val.value)
+							rule_var = self.create_expr(dast.NameExpr, value=new_val)
+						elif(isinstance(val, dast.AttributeExpr)):
+							rule_var = val
+						else:
+							raise Exception("Unsupported node type" + type(val))
 					elif key == 'bindings':
 						user_binding = val
 					elif key == 'queries':

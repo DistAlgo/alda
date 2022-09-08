@@ -140,6 +140,7 @@ def dump_facts(datafolder, varname, data):
         text_out.write(pformat(data))
 
 specialTag = {'is_Sub', 'Member','Context','ListLen'}
+ignoreField = {'type_comment'}
 ignoreAttr = {'lineno', 'col_offset', 'end_lineno', 'end_col_offset'}
 def dump_vars(datafolder):
     factdict = dict()
@@ -152,7 +153,7 @@ def dump_vars(datafolder):
         else:
             _,id_,fields,attributes = f
             factdict[f[0]].add((id_,)+
-                                tuple([a if a else None for (_,a) in fields])+
+                                tuple([a if a else None for (b,a) in fields if b not in ignoreField])+
                                 tuple([d if d else None for (c,d) in attributes if c not in ignoreAttr]))
 
     for key, value in factdict.items():

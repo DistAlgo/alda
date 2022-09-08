@@ -1011,9 +1011,12 @@ def _install():
 
     def _advised_get_command_line(**kwds):
         cmd = spawn_get_command_line(**kwds)
-        if len(cmd) < 3 or cmd[1] != '-c':
+        for i in range(len(cmd)):
+            if cmd[i] == '-c':
+                break
+        if i == len(cmd):
             raise RuntimeError('Unsupported Python version!!!')
-        cmd[2] = 'import da; ' + cmd[2]
+        cmd[i+1] = 'import da; ' + cmd[i+1]
         return cmd
 
     multiprocessing.spawn.prepare = _advised_prepare
