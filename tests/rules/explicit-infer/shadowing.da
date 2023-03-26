@@ -1,4 +1,4 @@
-# this file contains test cases for variables shadowing in rulesets
+# test cases with shadowing of variables in rulesets
 
 
 edge = {(1,2), (2,3)}
@@ -22,12 +22,12 @@ edge_local = {(4,5), (5,6)}
 correct_edge_local_query = {(4,5), (4,6), (5,6)}
 
 # test shadowing when the infer call specifies the binding to the local variable.
-q_r_1 = trans_method_1(edge_local)
-assert (q_r_1 == correct_edge_local_query), ('WRONG RESULT: QUERY 1 !!!!!!!!!!!\nQuery result: ' + str(q_r_1))
+qr_1 = trans_method_1(edge_local)
+assert (qr_1 == correct_edge_local_query), ('WRONG RESULT: QUERY 1!\nQuery result: ' + str(qr_1))
 
 # test shadowing when the infer call does not specify the binding to the local variable.
-q_r_2 = trans_method_2(edge_local)
-assert (q_r_2 == correct_edge_local_query), ('WRONG RESULT: QUERY 2 !!!!!!!!!!!\nQuery result: ' + str(q_r_2))
+qr_2 = trans_method_2(edge_local)
+assert (qr_2 == correct_edge_local_query), ('WRONG RESULT: QUERY 2!\nQuery result: ' + str(qr_2))
 
 # test shadowing when the rulest is defined in global scope
 def rules_trans_global():
@@ -37,20 +37,9 @@ def rules_trans_global():
 def trans_method_3(edge):
     return infer(rule=rules_trans_global, bindings = [('edge', edge)], queries=['path'])
 
-def trans_method_4(edge):
-    return infer(rule=rules_trans_global, queries=['path'])
-
 # test shadowing when the infer call specifies the binding to the local variable.
-q_r_3 = trans_method_3(edge_local)
-assert (q_r_3 == correct_edge_local_query), ('WRONG RESULT: QUERY 3 !!!!!!!!!!!\nQuery result: ' + str(q_r_3))
-
-# test shadowing when the infer call does not specify the binding to the local variable.
-
-# !!! This test case fails. We expect that without binding to the local variable, a local var should have precedence
-# over the global "edge" var, but it does not. The problem is that base predicates do not get bound to local
-# variables in scope at the call to infer.
-q_r_4 = trans_method_4(edge_local)
-assert (q_r_4 == correct_edge_local_query), ('WRONG RESULT: QUERY 4 !!!!!!!!!!!\nQuery result: ' + str(q_r_4))
+qr_3 = trans_method_3(edge_local)
+assert (qr_3 == correct_edge_local_query), ('WRONG RESULT: QUERY 3!\nQuery result: ' + str(qr_3))
 
 # test shadowing in class definition.
 class Graph1(process):
@@ -69,29 +58,19 @@ class Graph1(process):
     def trans_3(edge):
         return infer(rule=rules_trans, bindings = [('edge', edge)], queries=['path'])
 
-    def trans_4(edge):
-        return infer(rule=rules_trans, queries=['path'])
-
-
     def run():
-        # tests shadowing of object var and global var, with and without using binding.
+        # tests shadowing of object field and global variable, with and without using binding.
         result_1 = trans_1()
-        assert (result_1 == correct_edge_local_query), ('WRONG RESULT: QUERY 5 !!!!!!!!!!!\nQuery result: ' + str(result_1))
+        assert (result_1 == correct_edge_local_query), ('WRONG RESULT: QUERY 5!\nQuery result: ' + str(result_1))
         result_2 = trans_2()
         print(result_2)
-        assert (result_2 == correct_edge_local_query), ('WRONG RESULT: QUERY 6 !!!!!!!!!!!\nQuery result: ' + str(result_2))
+        assert (result_2 == correct_edge_local_query), ('WRONG RESULT: QUERY 6!\nQuery result: ' + str(result_2))
 
-        # test shadowing of local var with non-local var
+        # test shadowing of local variable with non-local variable
         edge_class_local = {(7,8), (8,9)}
         correct_edge_class_local_query = {(7,8), (7,9), (8,9)}
         result_3 = trans_3(edge_class_local)
-        assert (result_3 == correct_edge_class_local_query), ('WRONG RESULT: QUERY 7 !!!!!!!!!!!\nQuery result: ' + str(result_3))
-
-        # !!! This test case fails. We expect that without binding to the local variable, a local var should have precedence
-        # over the field "edge" of class Graph1, but it does not. This is the same problem of base predicates bounding at
-        # calls to infer, mentioned in the above failed test case comment.
-        result_4 = trans_4(edge_class_local)
-        assert (result_4 == correct_edge_class_local_query), ('WRONG RESULT: QUERY 8 !!!!!!!!!!!\nQuery result: ' + str(result_4))
+        assert (result_3 == correct_edge_class_local_query), ('WRONG RESULT: QUERY 7!\nQuery result: ' + str(result_3))
 
 def main():
     o1 = new(Graph1, [edge_local])

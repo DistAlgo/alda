@@ -1,39 +1,43 @@
-# this file contains test cases for ruleset defined in global scope
+# test cases for implicit infer for rule set defined in global scope
 
+path = None
 edge = {(1,2), (2,3)}
 correct_result = {(1,2), (1,3), (2,3)}
-path = {}
 
 def rules_trans():
     path(x,y), if_(edge(x,y))
     path(x,y), if_(edge(x,z), path(z,y))
 
 
-# !!! The next 4 test cases fail. The global var "path" is not updated correctly.
+# !!! tests 1, 2, 3, and 4 fail. path is not updated; its value remains None.
 
-# test if there is an implicit call to infer rules_trans and the global "path" is updated
+# test if there was an implicit call to infer with the iniital value of edge.
 if path != correct_result:
-    print('WRONG RESULT: QUERY 1 !!!!!!!!!!!\npath: ' + str(path))
+    print('TEST 1: WRONG RESULT: QUERY 1!\npath: ' + str(path))
 
-# test if update a base predicate will automatically call to infer as expected
+# test if there is an implicit call to infer when edge is updated by an assignment.
 edge = {(4,5), (5,6)}
 correct_result = {(4,5), (4,6), (5,6)}
 if path != correct_result:
-    print('WRONG RESULT: QUERY 2 !!!!!!!!!!!\npath: ' + str(path))
+    print('TEST 2: WRONG RESULT: QUERY 2!\npath: ' + str(path))
 
+# test if there is an implicit call to infer when edge is updated by a method call.
 edge.add((6,7))
 correct_result = {(4,5), (4,6), (4,7), (5,6), (5,7), (6,7)}
 if path != correct_result:
-    print('WRONG RESULT: QUERY 3 !!!!!!!!!!!\npath: ' + str(path))
+    print('TEST 3: WRONG RESULT: QUERY 3!\npath: ' + str(path))
 
+# test if there is an implicit call to infer when edge is updated by a compound assignment.
 edge -= {(6,7)}
 correct_result = {(4,5), (4,6), (5,6)}
 if path != correct_result:
-    print('WRONG RESULT: QUERY 4 !!!!!!!!!!!\npath: ' + str(path))
+    print('TEST 4: WRONG RESULT: QUERY 4!\npath: ' + str(path))
 
-# test that updates to derived predicates of a ruleset outside the ruleset definition are not allowed.
-# !!! this test case fails. There is no error when updating a derived predicate outside the ruleset def.
+# test that derived predicates cannot be updated outside the rule set definition.
+# !!! this test fails. the update to path is permitted but should produce an exception or error message.
+old_path = path
 path = {(1,2)}
-q_r_1 = infer(rule = rules_trans)
-print(q_r_1)
-print('End of tests')
+if path == {(1,2)}:
+    print('TEST 5: DERIVED PREDICATE CAN BE UPDATED OUTSIDE THE RULE SET!')
+elif path == old_path:
+    print('TEST 5: UPDATE TO DERIVED PREDICATE IS SILENTLY IGNORED!\npath: ' + str(path))

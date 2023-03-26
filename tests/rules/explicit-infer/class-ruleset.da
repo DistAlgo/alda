@@ -1,11 +1,10 @@
-# this file contains test cases for ruleset defined in class scope
-# with different local and non-local predicates
+# test cases for rulesets defined in a class scope, with the predicates in various scopes.
 
 correct_result_1 = {(1,2), (1,3), (2,3)}
 correct_result_2 = {(4,5), (4,6), (5,6)}
 edge_global = {(4,5), (5,6)}
 
-# test with local "edge" predicates
+# test with edge predicate bound by call to infer and rule-local path predicate
 class Graph1(process):
     def setup(E): pass
 
@@ -18,9 +17,9 @@ class Graph1(process):
 
     def run():
         result = trans(E)
-        assert (result == correct_result_1), ('WRONG RESULT: QUERY 1 !!!!!!!!!!!\nQuery result: ' + str(result))
+        assert (result == correct_result_1), ('WRONG RESULT: QUERY 1!\nQuery result: ' + str(result))
 
-# test with global "edge_global" predicates
+# test with global edge predicate and rule-local path predicate
 class Graph2(process):
     def setup(): pass
 
@@ -33,9 +32,9 @@ class Graph2(process):
 
     def run():
         result = trans()
-        assert (result == correct_result_2), ('WRONG RESULT: QUERY 2 !!!!!!!!!!!\nQuery result: ' + str(result))
+        assert (result == correct_result_2), ('WRONG RESULT: QUERY 2!\nQuery result: ' + str(result))
 
-# test with global "edge_global" predicate and non-local derived predicate "path"
+# test with global edge predicate and object-field derived predicate "path"
 
 class Graph3(process):
     def setup():
@@ -49,10 +48,10 @@ class Graph3(process):
 
     def run():
         trans()
-        assert (path == correct_result_2), ('WRONG RESULT: QUERY 3 !!!!!!!!!!!\nQuery result: ' + str(path))
+        assert (path == correct_result_2), ('WRONG RESULT: QUERY 3!\nQuery result: ' + str(path))
 
 
-# test with "edge" field predicate and non-local derived predicate "path"
+# test with edge predicate bound by call to infer and object-field derived predicate "path"
 
 class Graph4(process):
     def setup(E):
@@ -66,7 +65,7 @@ class Graph4(process):
 
     def run():
         trans()
-        assert (path == correct_result_1), ('WRONG RESULT: QUERY 4 !!!!!!!!!!!\nQuery result: ' + str(path))
+        assert (path == correct_result_1), ('WRONG RESULT: QUERY 4!\nQuery result: ' + str(path))
 
 def main():
     edge_local = {(1,2), (2,3)}
@@ -78,7 +77,3 @@ def main():
     start(o2)
     start(o3)
     start(o4)
-
-
-
-
