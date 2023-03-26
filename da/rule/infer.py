@@ -83,10 +83,10 @@ class InferXSB():
                 return ','.join(self.LogicVarToXSB(y) for x in v for y in self.flatten(x))
             # error if number is too large, yielding missed facts:
             # return str(v) if v == '_' or isinstance(v, int) or (isinstance(v,str) and v.isdigit()) else \
-            return str(v) if v == '_' or isinstance(v, int) else \
-                "'None'" if v is None or v == 'None' else \
-                "'False'" if v is False or v == 'False' else \
-                "'True'" if v is True or v == 'True' else "'%s'" % v
+            return str(v) if v == '_' or (isinstance(v, str) and v.isdigit()) or (not isinstance(v, bool) and isinstance(v, int)) else \
+                "'None'" if (v is None or v == 'None') else \
+                "0" if (v is False or v == 'False') else \
+                "1" if (v is True or v == 'True') else "'%s'" % v
         else:
             if isinstance(v, tuple):
                 return str(self.getid(v))
