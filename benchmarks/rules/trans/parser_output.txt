@@ -1,0 +1,966 @@
+---------- <class 'ast.Module'> ----------
+	{'body': [<ast.Import object at 0x1024edfa0>,
+          <ast.ClassDef object at 0x1024edee0>,
+          <ast.ClassDef object at 0x102315880>],
+ 'type_ignores': []}
+>>>>>>>>> push_state
+---------- <class 'ast.Import'> ----------
+	{'col_offset': 0,
+ 'end_col_offset': 9,
+ 'end_lineno': 1,
+ 'lineno': 1,
+ 'names': [<ast.alias object at 0x1024edf70>]}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.ClassDef'> ----------
+	{'bases': [<ast.Name object at 0x1023159d0>],
+ 'body': [<ast.FunctionDef object at 0x102315910>,
+          <ast.FunctionDef object at 0x102315940>,
+          <ast.FunctionDef object at 0x10238c820>],
+ 'col_offset': 0,
+ 'decorator_list': [],
+ 'end_col_offset': 132,
+ 'end_lineno': 9,
+ 'keywords': [],
+ 'lineno': 2,
+ 'name': 'Trans'}
+>>>>>>>>> push_state
+---------- <class 'ast.FunctionDef'> ----------
+	{'args': <ast.arguments object at 0x102369c10>,
+ 'body': [<ast.Pass object at 0x102369790>],
+ 'col_offset': 2,
+ 'decorator_list': [],
+ 'end_col_offset': 20,
+ 'end_lineno': 3,
+ 'lineno': 3,
+ 'name': 'setup',
+ 'returns': None,
+ 'type_comment': None}
+>>>>>>>>> push_state
+---------- <class 'ast.Pass'> ----------
+	{'col_offset': 16, 'end_col_offset': 20, 'end_lineno': 3, 'lineno': 3}
+pop_state <<<<<<<<<
+---------- <class 'ast.FunctionDef'> ----------
+	{'args': <ast.arguments object at 0x10238c040>,
+ 'body': [<ast.Pass object at 0x10238c7f0>],
+ 'col_offset': 2,
+ 'decorator_list': [],
+ 'end_col_offset': 20,
+ 'end_lineno': 4,
+ 'lineno': 4,
+ 'name': 'trans',
+ 'returns': None,
+ 'type_comment': None}
+>>>>>>>>> push_state
+---------- <class 'ast.Pass'> ----------
+	{'col_offset': 16, 'end_col_offset': 20, 'end_lineno': 4, 'lineno': 4}
+pop_state <<<<<<<<<
+---------- <class 'ast.FunctionDef'> ----------
+	{'args': <ast.arguments object at 0x10238c850>,
+ 'body': [<ast.Assign object at 0x10238cca0>,
+          <ast.Expr object at 0x1023b9cd0>,
+          <ast.Assign object at 0x1023b9f70>,
+          <ast.Expr object at 0x1024ede20>],
+ 'col_offset': 2,
+ 'decorator_list': [],
+ 'end_col_offset': 132,
+ 'end_lineno': 9,
+ 'lineno': 5,
+ 'name': 'run',
+ 'returns': None,
+ 'type_comment': None}
+>>>>>>>>> push_state
+---------- <class 'ast.Assign'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 64,
+ 'end_lineno': 6,
+ 'lineno': 6,
+ 'targets': [<ast.Tuple object at 0x10238c8b0>],
+ 'type_comment': None,
+ 'value': <ast.Call object at 0x1023b9dc0>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [],
+ 'col_offset': 54,
+ 'end_col_offset': 64,
+ 'end_lineno': 6,
+ 'func': <ast.Attribute object at 0x1023b9df0>,
+ 'keywords': [],
+ 'lineno': 6}
+>>>>>>>>> push_state
+---------- <class 'ast.Attribute'> ----------
+	{'attr': 'times',
+ 'col_offset': 54,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 62,
+ 'end_lineno': 6,
+ 'lineno': 6,
+ 'value': <ast.Name object at 0x1023b9d90>}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 54,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 56,
+ 'end_lineno': 6,
+ 'id': 'os',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'elts': [<ast.Name object at 0x10238c880>,
+          <ast.Name object at 0x10238ccd0>,
+          <ast.Name object at 0x10238cc40>,
+          <ast.Name object at 0x1023b9d00>,
+          <ast.Name object at 0x1023b9d30>],
+ 'end_col_offset': 51,
+ 'end_lineno': 6,
+ 'lineno': 6}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 10,
+ 'end_lineno': 6,
+ 'id': 'utime1',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 12,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 18,
+ 'end_lineno': 6,
+ 'id': 'stime1',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 20,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 27,
+ 'end_lineno': 6,
+ 'id': 'cutime1',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 29,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 36,
+ 'end_lineno': 6,
+ 'id': 'cstime1',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 38,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 51,
+ 'end_lineno': 6,
+ 'id': 'elapsed_time1',
+ 'lineno': 6}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Expr'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 12,
+ 'end_lineno': 7,
+ 'lineno': 7,
+ 'value': <ast.Call object at 0x1023b9e80>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1023b9e50>],
+ 'col_offset': 4,
+ 'end_col_offset': 12,
+ 'end_lineno': 7,
+ 'func': <ast.Name object at 0x1023b9eb0>,
+ 'keywords': [],
+ 'lineno': 7}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 9,
+ 'end_lineno': 7,
+ 'id': 'trans',
+ 'lineno': 7}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 10,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 11,
+ 'end_lineno': 7,
+ 'id': 'E',
+ 'lineno': 7}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Assign'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 64,
+ 'end_lineno': 8,
+ 'lineno': 8,
+ 'targets': [<ast.Tuple object at 0x1023b9f10>],
+ 'type_comment': None,
+ 'value': <ast.Call object at 0x1024edeb0>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [],
+ 'col_offset': 54,
+ 'end_col_offset': 64,
+ 'end_lineno': 8,
+ 'func': <ast.Attribute object at 0x1024ede80>,
+ 'keywords': [],
+ 'lineno': 8}
+>>>>>>>>> push_state
+---------- <class 'ast.Attribute'> ----------
+	{'attr': 'times',
+ 'col_offset': 54,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 62,
+ 'end_lineno': 8,
+ 'lineno': 8,
+ 'value': <ast.Name object at 0x1024ede50>}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 54,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 56,
+ 'end_lineno': 8,
+ 'id': 'os',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'elts': [<ast.Name object at 0x1023b9fa0>,
+          <ast.Name object at 0x1023b9ee0>,
+          <ast.Name object at 0x1023b9e20>,
+          <ast.Name object at 0x1023b9d60>,
+          <ast.Name object at 0x1023b9ca0>],
+ 'end_col_offset': 51,
+ 'end_lineno': 8,
+ 'lineno': 8}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 10,
+ 'end_lineno': 8,
+ 'id': 'utime2',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 12,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 18,
+ 'end_lineno': 8,
+ 'id': 'stime2',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 20,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 27,
+ 'end_lineno': 8,
+ 'id': 'cutime2',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 29,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 36,
+ 'end_lineno': 8,
+ 'id': 'cstime2',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 38,
+ 'ctx': <ast.Store object at 0x100c89ac0>,
+ 'end_col_offset': 51,
+ 'end_lineno': 8,
+ 'id': 'elapsed_time2',
+ 'lineno': 8}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Expr'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 132,
+ 'end_lineno': 9,
+ 'lineno': 9,
+ 'value': <ast.Call object at 0x1024eddf0>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.BinOp object at 0x1024edd90>],
+ 'col_offset': 4,
+ 'end_col_offset': 132,
+ 'end_lineno': 9,
+ 'func': <ast.Name object at 0x1024eddc0>,
+ 'keywords': [],
+ 'lineno': 9}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 9,
+ 'end_lineno': 9,
+ 'id': 'print',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 10,
+ 'end_col_offset': 131,
+ 'end_lineno': 9,
+ 'left': <ast.Constant object at 0x1024edd60>,
+ 'lineno': 9,
+ 'op': <ast.Mod object at 0x100c89520>,
+ 'right': <ast.Tuple object at 0x1024edd00>}
+>>>>>>>>> push_state
+---------- <class 'ast.Constant'> ----------
+	{'col_offset': 10,
+ 'end_col_offset': 32,
+ 'end_lineno': 9,
+ 'kind': None,
+ 'lineno': 9,
+ 'value': 'python_total\t%s\t%s'}
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 35,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.BinOp object at 0x1024edcd0>, <ast.BinOp object at 0x1024edc70>],
+ 'end_col_offset': 131,
+ 'end_lineno': 9,
+ 'lineno': 9}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 36,
+ 'end_col_offset': 63,
+ 'end_lineno': 9,
+ 'left': <ast.Name object at 0x1024edca0>,
+ 'lineno': 9,
+ 'op': <ast.Sub object at 0x100c89730>,
+ 'right': <ast.Name object at 0x1024edc40>}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 36,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 49,
+ 'end_lineno': 9,
+ 'id': 'elapsed_time2',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 50,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 63,
+ 'end_lineno': 9,
+ 'id': 'elapsed_time1',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 130,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edc10>,
+ 'lineno': 9,
+ 'op': <ast.Sub object at 0x100c89730>,
+ 'right': <ast.Name object at 0x1024ed190>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 122,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edbe0>,
+ 'lineno': 9,
+ 'op': <ast.Add object at 0x100c897f0>,
+ 'right': <ast.Name object at 0x1024ed160>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 112,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edbb0>,
+ 'lineno': 9,
+ 'op': <ast.Sub object at 0x100c89730>,
+ 'right': <ast.Name object at 0x1024ed130>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 104,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edb80>,
+ 'lineno': 9,
+ 'op': <ast.Add object at 0x100c897f0>,
+ 'right': <ast.Name object at 0x1024ed100>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 94,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edb50>,
+ 'lineno': 9,
+ 'op': <ast.Sub object at 0x100c89730>,
+ 'right': <ast.Name object at 0x1024ed0d0>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 87,
+ 'end_lineno': 9,
+ 'left': <ast.BinOp object at 0x1024edac0>,
+ 'lineno': 9,
+ 'op': <ast.Add object at 0x100c897f0>,
+ 'right': <ast.Name object at 0x1024ed0a0>}
+>>>>>>>>> push_state
+---------- <class 'ast.BinOp'> ----------
+	{'col_offset': 65,
+ 'end_col_offset': 78,
+ 'end_lineno': 9,
+ 'left': <ast.Name object at 0x1024ed040>,
+ 'lineno': 9,
+ 'op': <ast.Sub object at 0x100c89730>,
+ 'right': <ast.Name object at 0x1024ed070>}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 65,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 71,
+ 'end_lineno': 9,
+ 'id': 'utime2',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 72,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 78,
+ 'end_lineno': 9,
+ 'id': 'utime1',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 81,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 87,
+ 'end_lineno': 9,
+ 'id': 'stime2',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 88,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 94,
+ 'end_lineno': 9,
+ 'id': 'stime1',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 97,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 104,
+ 'end_lineno': 9,
+ 'id': 'cutime2',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 105,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 112,
+ 'end_lineno': 9,
+ 'id': 'cutime1',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 115,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 122,
+ 'end_lineno': 9,
+ 'id': 'cstime2',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 123,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 130,
+ 'end_lineno': 9,
+ 'id': 'cstime1',
+ 'lineno': 9}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.ClassDef'> ----------
+	{'bases': [<ast.Name object at 0x1024ed1c0>, <ast.Name object at 0x1024ed1f0>],
+ 'body': [<ast.FunctionDef object at 0x1024ed220>,
+          <ast.FunctionDef object at 0x1024ed820>],
+ 'col_offset': 0,
+ 'decorator_list': [],
+ 'end_col_offset': 86,
+ 'end_lineno': 17,
+ 'keywords': [],
+ 'lineno': 11,
+ 'name': 'Trans_rules'}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 18,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 23,
+ 'end_lineno': 11,
+ 'id': 'Trans',
+ 'lineno': 11}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.FunctionDef'> ----------
+	{'args': <ast.arguments object at 0x1024ed250>,
+ 'body': [<ast.Expr object at 0x1024ed280>, <ast.Expr object at 0x1024ed4f0>],
+ 'col_offset': 2,
+ 'decorator_list': [],
+ 'end_col_offset': 40,
+ 'end_lineno': 14,
+ 'lineno': 12,
+ 'name': 'rules_Trans_rules',
+ 'returns': None,
+ 'type_comment': None}
+>>>>>>>>> push_state
+---------- <class 'ast.Expr'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 29,
+ 'end_lineno': 13,
+ 'lineno': 13,
+ 'value': <ast.Tuple object at 0x1024ed2b0>}
+>>>>>>>>> push_state
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.Call object at 0x1024ed2e0>, <ast.Call object at 0x1024ed3a0>],
+ 'end_col_offset': 29,
+ 'end_lineno': 13,
+ 'lineno': 13}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1024ed340>, <ast.Name object at 0x1024ed370>],
+ 'col_offset': 4,
+ 'end_col_offset': 13,
+ 'end_lineno': 13,
+ 'func': <ast.Name object at 0x1024ed310>,
+ 'keywords': [],
+ 'lineno': 13}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 8,
+ 'end_lineno': 13,
+ 'id': 'path',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 9,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 10,
+ 'end_lineno': 13,
+ 'id': 'x',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 11,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 12,
+ 'end_lineno': 13,
+ 'id': 'y',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Call object at 0x1024ed400>],
+ 'col_offset': 15,
+ 'end_col_offset': 29,
+ 'end_lineno': 13,
+ 'func': <ast.Name object at 0x1024ed3d0>,
+ 'keywords': [],
+ 'lineno': 13}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 15,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 18,
+ 'end_lineno': 13,
+ 'id': 'if_',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1024ed460>, <ast.Name object at 0x1024ed490>],
+ 'col_offset': 19,
+ 'end_col_offset': 28,
+ 'end_lineno': 13,
+ 'func': <ast.Name object at 0x1024ed430>,
+ 'keywords': [],
+ 'lineno': 13}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 19,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 23,
+ 'end_lineno': 13,
+ 'id': 'edge',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 24,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 25,
+ 'end_lineno': 13,
+ 'id': 'x',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 26,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 27,
+ 'end_lineno': 13,
+ 'id': 'y',
+ 'lineno': 13}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Expr'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 40,
+ 'end_lineno': 14,
+ 'lineno': 14,
+ 'value': <ast.Tuple object at 0x1024ed520>}
+>>>>>>>>> push_state
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.Call object at 0x1024ed550>, <ast.Call object at 0x1024ed610>],
+ 'end_col_offset': 40,
+ 'end_lineno': 14,
+ 'lineno': 14}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1024ed5b0>, <ast.Name object at 0x1024ed5e0>],
+ 'col_offset': 4,
+ 'end_col_offset': 13,
+ 'end_lineno': 14,
+ 'func': <ast.Name object at 0x1024ed580>,
+ 'keywords': [],
+ 'lineno': 14}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 8,
+ 'end_lineno': 14,
+ 'id': 'path',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 9,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 10,
+ 'end_lineno': 14,
+ 'id': 'x',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 11,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 12,
+ 'end_lineno': 14,
+ 'id': 'y',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Call object at 0x1024ed670>, <ast.Call object at 0x1024ed730>],
+ 'col_offset': 15,
+ 'end_col_offset': 40,
+ 'end_lineno': 14,
+ 'func': <ast.Name object at 0x1024ed640>,
+ 'keywords': [],
+ 'lineno': 14}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 15,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 18,
+ 'end_lineno': 14,
+ 'id': 'if_',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1024ed6d0>, <ast.Name object at 0x1024ed700>],
+ 'col_offset': 19,
+ 'end_col_offset': 28,
+ 'end_lineno': 14,
+ 'func': <ast.Name object at 0x1024ed6a0>,
+ 'keywords': [],
+ 'lineno': 14}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 19,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 23,
+ 'end_lineno': 14,
+ 'id': 'edge',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 24,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 25,
+ 'end_lineno': 14,
+ 'id': 'x',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 26,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 27,
+ 'end_lineno': 14,
+ 'id': 'z',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Name object at 0x1024ed790>, <ast.Name object at 0x1024ed7c0>],
+ 'col_offset': 30,
+ 'end_col_offset': 39,
+ 'end_lineno': 14,
+ 'func': <ast.Name object at 0x1024ed760>,
+ 'keywords': [],
+ 'lineno': 14}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 30,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 34,
+ 'end_lineno': 14,
+ 'id': 'path',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 35,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 36,
+ 'end_lineno': 14,
+ 'id': 'z',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 37,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 38,
+ 'end_lineno': 14,
+ 'id': 'y',
+ 'lineno': 14}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.FunctionDef'> ----------
+	{'args': <ast.arguments object at 0x1024ed850>,
+ 'body': [<ast.Expr object at 0x1024ed8b0>, <ast.Return object at 0x1024ed9a0>],
+ 'col_offset': 2,
+ 'decorator_list': [],
+ 'end_col_offset': 86,
+ 'end_lineno': 17,
+ 'lineno': 15,
+ 'name': 'trans',
+ 'returns': None,
+ 'type_comment': None}
+>>>>>>>>> push_state
+---------- <class 'ast.Expr'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 17,
+ 'end_lineno': 16,
+ 'lineno': 16,
+ 'value': <ast.Call object at 0x1024ed8e0>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [<ast.Constant object at 0x1024ed940>],
+ 'col_offset': 4,
+ 'end_col_offset': 17,
+ 'end_lineno': 16,
+ 'func': <ast.Name object at 0x1024ed910>,
+ 'keywords': [],
+ 'lineno': 16}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 4,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 9,
+ 'end_lineno': 16,
+ 'id': 'print',
+ 'lineno': 16}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Constant'> ----------
+	{'col_offset': 10,
+ 'end_col_offset': 16,
+ 'end_lineno': 16,
+ 'kind': None,
+ 'lineno': 16,
+ 'value': 'test'}
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.Return'> ----------
+	{'col_offset': 4,
+ 'end_col_offset': 86,
+ 'end_lineno': 17,
+ 'lineno': 17,
+ 'value': <ast.Call object at 0x102465370>}
+>>>>>>>>> push_state
+---------- <class 'ast.Call'> ----------
+	{'args': [],
+ 'col_offset': 11,
+ 'end_col_offset': 86,
+ 'end_lineno': 17,
+ 'func': <ast.Name object at 0x1024653a0>,
+ 'keywords': [<ast.keyword object at 0x1024653d0>,
+              <ast.keyword object at 0x102465400>,
+              <ast.keyword object at 0x1024dad00>],
+ 'lineno': 17}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 11,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 16,
+ 'end_lineno': 17,
+ 'id': 'infer',
+ 'lineno': 17}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.Attribute'> ----------
+	{'attr': 'rules_Trans_rules',
+ 'col_offset': 22,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 44,
+ 'end_lineno': 17,
+ 'lineno': 17,
+ 'value': <ast.Name object at 0x102465460>}
+>>>>>>>>> push_state
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 22,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 26,
+ 'end_lineno': 17,
+ 'id': 'self',
+ 'lineno': 17}
+pop_state <<<<<<<<<
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+---------- <class 'ast.List'> ----------
+	{'col_offset': 55,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.Tuple object at 0x102465af0>],
+ 'end_col_offset': 67,
+ 'end_lineno': 17,
+ 'lineno': 17}
+>>>>>>>>> push_state
+---------- <class 'ast.Tuple'> ----------
+	{'col_offset': 56,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.Constant object at 0x102465a90>,
+          <ast.Name object at 0x1024dacd0>],
+ 'end_col_offset': 66,
+ 'end_lineno': 17,
+ 'lineno': 17}
+>>>>>>>>> push_state
+---------- <class 'ast.Constant'> ----------
+	{'col_offset': 57,
+ 'end_col_offset': 63,
+ 'end_lineno': 17,
+ 'kind': None,
+ 'lineno': 17,
+ 'value': 'edge'}
+---------- <class 'ast.Name'> ----------
+	{'col_offset': 64,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'end_col_offset': 65,
+ 'end_lineno': 17,
+ 'id': 'E',
+ 'lineno': 17}
+>>>>>>>>> push_state
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+---------- <class 'ast.List'> ----------
+	{'col_offset': 77,
+ 'ctx': <ast.Load object at 0x100c89b20>,
+ 'elts': [<ast.Constant object at 0x1024dad60>],
+ 'end_col_offset': 85,
+ 'end_lineno': 17,
+ 'lineno': 17}
+>>>>>>>>> push_state
+---------- <class 'ast.Constant'> ----------
+	{'col_offset': 78,
+ 'end_col_offset': 84,
+ 'end_lineno': 17,
+ 'kind': None,
+ 'lineno': 17,
+ 'value': 'path'}
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<
+pop_state <<<<<<<<<

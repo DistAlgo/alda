@@ -1,0 +1,179 @@
+import os, sys, ast, shutil
+from da.compiler.utils import to_source
+from analyzer import Analyzer
+
+class LoopTansformer(ast.NodeTransformer):
+	
+	def __init__(self,transDict):
+		super().__init__()
+		self.transDict = transDict
+
+	def visit_For(self,node):
+		if node in self.transDict:
+			return self.transDict[node]
+		else:
+			return self.generic_visit(node)
+
+class NumpyAnalyzer(Analyzer):
+		
+	def gen_npCall(self,func,op1,op2):
+		return ast.Call(ast.Attribute(ast.Name('np', ast.Load()), func),
+					  	 [self.ValueDict[op1], self.ValueDict[op2]],keywords=[])
+
+	def gen_BinMult(self,ops):
+		return ast.BinOp(self.ValueDict[ops[0]], ast.Mult(), self.ValueDict[ops[1]])	
+
+	def query_numpy_rule(self):
+		candidate = infer(rule=self.rules_vProdToNp, queries=['numpyCandidate'])
+		
+		# collect all the scalar multiplications
+		scalarExpr = setof((id,'scalar',target,tupleof((op1,op2), (_id,_,_,op1,op2) in  candidate)), 
+						   (id,'scalar',target,_,_) in candidate)
+		
+		# convert to numpy
+		transDict = dict()
+		for id, op, target, op1, op2 in candidate:
+			f = self.FileDict[id]
+			if f not in transDict:
+				transDict[f] = dict()
+			if op == 'inner':
+				npAst = ast.AugAssign(self.ValueDict[target],
+									  ast.Add(),
+									  self.gen_npCall('inner',op1,op2))
+			elif op == 'multiply':
+				npAst = ast.Assign([self.ValueDict[target]], self.gen_npCall('multiply',op1,op2))
+			else:
+				continue
+			transDict[f][self.ValueDict[id]] = npAst
+
+		for id, op, target, scalars in scalarExpr:
+			f = self.FileDict[id]
+			if f not in transDict:
+				transDict[f] = dict()
+			rhs = self.gen_BinMult(scalars[0])
+			for s in scalars[1:]:
+				rhs = ast.BinOp(rhs, ast.Add(), self.gen_BinMult(s))
+			npAst = ast.Assign([self.ValueDict[target]], rhs)
+			transDict[f][self.ValueDict[id]] = npAst
+
+		for file, innerDict in transDict.items():
+			for key, val in sorted(innerDict.items(), key=lambda t: t[0].lineno):
+				print('========== %s: lineno: %s ==========%s----------- transformed to ------------%s' 
+						% (self.ValueDict[file], key.lineno, to_source(key), to_source(val)))
+
+		self.write_transformed(transDict)
+
+	def write_transformed(self, transDict):
+		outFolder = os.path.join('output','NumpyAnalyzer')
+		basename = os.path.basename(self.filename)
+		outroot = os.path.join(outFolder,basename)
+		if os.path.exists(outroot):
+			shutil.rmtree(outroot)
+		for m in self.Module:
+			fileid = self.FileDict[m[0]]
+			file = self.ValueDict[fileid]
+			outdir = os.path.join(outFolder, os.path.dirname(file))
+			os.makedirs(outdir, exist_ok=True)
+			outfile = os.path.join(outdir, os.path.basename(file)+'.py')
+			
+			if fileid in transDict:
+				cr = LoopTansformer(transDict[fileid]).visit(self.ValueDict[m[0]])
+				txt = 'import numpy as np\n'
+				txt += to_source(cr)
+			else:
+				continue
+				txt = to_source(self.ValueDict[m[0]])
+			open(outfile,'w').write(txt)
+
+	# vertex product to numpy
+	def rules_vProdToNp():
+		# one thing special about subscript, a[i,j] is equivalent to a[i][j]? 
+		# problem occurs for matrix multiplication in some order, not consider this yet
+
+		# get the pattern of: target[idx]
+		IdxExpr(id,target,idx), if_(Subscript(id, target, slicing,_),
+			Index(slicing,idxid), Name(idxid,idx,_))
+
+		##case 1.1: inner product
+		# 	sum = 0.0							# s initialized to number (not considered yet)
+		# 	for i in range(len(self.a)):		# lhs: a variable. op: AugAssign
+		# 	   sum += self.a[i] * other.a[i]	# rhs: arithExpr of * with both operator a subscript expr of i;
+		#---------------  to  ---------------
+		# 	sum = np.inner(self.a, other.a)
+		NumpyPattern(id, idx, 'inner', target, operand1, operand2), if_(
+			AugAssign(id, target, augop, rhs), Add(augop), 	# += expression
+			Name(target,_,_),									# lhs is a variable
+			BinOp(rhs, left, binop, right), Mult(binop), 	# rhs is a multiplication
+			IdxExpr(left,operand1,idx), 						# both operand are Subscript expression
+			IdxExpr(right,operand2,idx))						# with the same index
+
+		##case 1.2: inner product 2
+		# 	for i in range(len(self.a)):			# lhs: a variable. op: AugAssign
+		# 	   sum = sum + self.a[i] * other.a[i]	# rhs: target + arithExpr of *
+		#---------------  to  ---------------
+		# 	sum = np.inner(self.a, other.a)
+
+		##case 2.1: scalar multiply				# lhs: subscript expr of i; op: Assign
+		# 	for i in range(len(self.a)):		# rhs: basic expr: constant or variable times subscript expr of i
+		# 		self.a[i] = alpha*self.a[i] + beta*other.a[i]	# rhs can also be sum of multiple times basic exprs
+		#---------------  to  ---------------
+		#  	self.a = alpha*self.a + beta*other.a
+		
+		# get the scalars: variable or number, for simplicity
+		Scalar(id), if_(Name(id,_,_))	# TODO: need to check if the variable is i
+		Scalar(id), if_(Num(id,_))
+		# ScalarMult(id,idx,scalar,array)
+		ScalarMult(id,idx,left,operand), if_(BinOp(id, left, binop, right), Mult(binop),
+			Scalar(left), IdxExpr(right,operand,idx))	# scalar on the left
+		ScalarMult(id,idx,right,operand), if_(BinOp(id, left, binop, right), Mult(binop),
+			Scalar(right), IdxExpr(left,operand,idx))	# scalar on the right
+		# flatten the ScalarMult if they add up
+		ScalarMult(id,idx,scalar,array), if_(BinOp(id, left, binop, right), Add(binop),
+			ScalarMult(left,idx,scalar,array), ScalarMult(right,_,_,_))	# sum of scalarmult, left value
+		ScalarMult(id,idx,scalar,array), if_(BinOp(id, left, binop, right), Add(binop),
+			ScalarMult(left,_,_,_), ScalarMult(right,idx,scalar,array))	# sum of scalarmult, right value
+		
+		# might return multiple facts for one assignment, according to the number of added up ScalarMult's
+		NumpyPattern(id, idx, 'scalar', target, operand1, operand2), if_(
+			Assign(id, targetid, valueid), Member(targetid,sid,_), ListLen(targetid,1),
+			IdxExpr(sid,target,idx),					# lhs is subscript expr with idx
+			ScalarMult(valueid,idx,operand1,operand2))	# rhs is a ScalarMult with idx
+
+		##case 2.2: scalar multiply augAssign ver
+		# 	for i in range(len(self.a)):		# lhs: subscript expr of i; op: AugAssign
+		# 		self.a[i] *= s 					# rhs: constant or variable
+		#---------------  to  ---------------
+		# 	self.a = s * self.a
+		NumpyPattern(id, idx, 'scalar', target, operand1, target), if_(
+			AugAssign(id, targetid, augop, operand1), Mult(augop),
+			IdxExpr(targetid,target,idx),	# lhs is subscript expr with idx
+			Scalar(operand1))				# rhs is a Scalar
+
+		##case 3.1: element-wise multiply		# the result is a list, if sum up, equals inner product	
+		# 	for i in range(len(self.a)):		# note: no such example in tensor.py
+		# 		self.a[i] = a[i]*b[i]			# lhs: subscript expr of i; AugAssign, rhs: mult of subscript expr
+		#---------------  to  ---------------
+		# 	self.a = np.multiply(a,b)
+		NumpyPattern(id, idx, 'multiply', target, operand1, operand2), if_(
+			Assign(id, targetid, valueid), Member(targetid,sid,_), ListLen(targetid,1),
+			IdxExpr(sid,target,idx),								# lhs is subscript expr with idx
+			BinOp(valueid, left, binop, right), Mult(binop),	# rhs is a multiply of subscript expr
+			IdxExpr(left,operand1,idx),IdxExpr(right,operand2,idx))	
+
+		##case 3.2: element-wise multiply augAssign ver	
+		# 	for i in range(len(self.a)):
+		# 		self.a[i] *= other.a[i]			# lhs: subscript expr of i; AugAssign, rhs: subscript expr of i
+		#---------------  to  ---------------
+		# 	self.a = np.multiply(self.a,other.a)
+		NumpyPattern(id, idx, 'multiply', target, target, operand2), if_(
+			AugAssign(id, targetid, augop, rhs), Mult(augop),
+			IdxExpr(targetid,target,idx),	# lhs is subscript expr with idx
+			IdxExpr(rhs,operand2,idx))
+
+		# find the loop whose iterator are the same as those inside the loop
+		numpyCandidate(id,op,target,operand1,operand2), if_(
+			For(id,itr,_,bodyid,_), Name(itr,idx,_),
+			Member(bodyid,body,_), ListLen(bodyid,1), 		# contains only one statement inside body
+			NumpyPattern(body,idx,op,target,operand1,operand2))# join loop with body and idx
+
+
