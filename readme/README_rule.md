@@ -4,8 +4,11 @@ DA-rules is an extension of DistAlgo with rules.  This implementation supports P
 
 ## Installation
 
-1. Install DA-rules by (1) copying or extracting the DA-rules files to a path, designated as `<DArulesROOT>`, in the local file system, and (2) adding `<DArulesROOT>/distalgo` to the front of the `PYTHONPATH` environment variable so that Python can load the `da` module.
-2. To use the extension with rules, install [XSB](http://xsb.sourceforge.net/) by: (1) download XSB from <https://sourceforge.net/projects/xsb> --- click "Download" for Windows, or download from "Source(GIT)" for Unix, (2) run the downloaded .exe file for Windows, or follow the instructions in Section 2.1 in the manual (just paragraph 1, items 1 and 4) for Unix, and (3) add the path for the XSB executable to the `PATH` environment variable.
+To use the extension with rules, install [XSB](http://xsb.sourceforge.net/) by:
+
+1. download XSB from <https://sourceforge.net/projects/xsb> --- click "Download" for Windows, or download from "Source(GIT)" for Unix,
+2. run the downloaded .exe file for Windows, or follow the instructions in Section 2.1 in the manual (just paragraph 1, items 1 and 4) for Unix, and
+3. add the path for the XSB executable to the `PATH` environment variable.
 
 ## Using the extension with rules
 
@@ -173,7 +176,7 @@ This example is on the full core and hierarchical RBAC, the description of which
 This folder contains the examples for analyzing Python programs as discussed in section 7.5 and 7.6.
 
 - to generate input data, run in the `data_prepare` folder
- `python pyast_views.da INPUT`, where input can be a Python module or a Python package
+ `python pyast_views.py INPUT`, where input can be a Python module or a Python package
  the generated data will be in `data` folder.
 
 <!-- ##### Program analysis -->
