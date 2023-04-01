@@ -1,24 +1,31 @@
-import os, sys, argparse, gc, pickle, importlib
+import os
+import sys
+import argparse
+import gc
+import pickle
+import importlib
 gc.disable()
 
 HandlerRoute = {
-  'python': ('trans_py', 'Trans_py'),
-  'distalgo': ('trans_set', 'Trans_set'),
-  'rule': ('trans_rules', 'Trans_rules'),
-  'rev_rule': ('trans_rev_rule', 'Trans_left_rec_rules')
+    'python': ('trans_py', 'Trans_py'),
+    'distalgo': ('trans_set', 'Trans_set'),
+    'rule': ('trans_rules', 'Trans_rules'),
+    'rev_rule': ('trans_rev_rules', 'Trans_left_rec_rules')
 }
+
+
 def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--nume', type= int, default= 100)  # number of roles (graph size)
-  parser.add_argument('--mode', type= str, default= 'python')
-  args=parser.parse_args()
-  inputfile = 'v%se%s' % (int(args.nume/2),args.nume)
-  data = pickle.load(open(os.path.join('input', inputfile), 'rb'))
-  
-  if not os.path.exists('timing'):
-      os.mkdir('timing')
-  sys.stdout = open('./timing/timing_trans_%s_%s.txt' % (args.mode, inputfile), 'a')
-  
-  transClass = importlib.import_module(HandlerRoute[args.mode][0])
-  o = new(eval('transClass.'+HandlerRoute[args.mode][1]), [data])
-  start(o)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--nume', type=int, default=100)  # number of roles (graph size)
+    parser.add_argument('--mode', type=str, default='python')
+    args = parser.parse_args()
+    inputfile = 'v%se%s' % (int(args.nume/2), args.nume)
+    data = pickle.load(open(os.path.join('input', inputfile), 'rb'))
+
+    if not os.path.exists('timing'):
+        os.mkdir('timing')
+    sys.stdout = open('./timing/timing_trans_%s_%s.txt' % (args.mode, inputfile), 'a')
+
+    transClass = importlib.import_module(HandlerRoute[args.mode][0])
+    o = new(eval('transClass.'+HandlerRoute[args.mode][1]), [data])
+    start(o)
