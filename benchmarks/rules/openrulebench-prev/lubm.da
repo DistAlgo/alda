@@ -115,19 +115,19 @@ def query_1(facts):
   for el in empty_list:
     facts[el] = facts[el] or []
   
-  return infer(rule=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query1_1'])
+  return infer(rules=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query1_1'])
 
 def query_2(facts):
   empty_list = ["clericalStaff", "systemsStaff", "postDoc", "visitingProfessor", "college", "program", "institute", "conferencePaper", "journalArticle", "technicalReport", "book", "manual", "specification", "unofficialPublication", "researchProject", "publicationResearch", "affiliateOf", "affiliatedOrganizationOf", "age", "listedCourse", "orgPublication", "publicationDate", "softwareDocumentation", "tenured", "softwareVersion", "title"]
   for el in empty_list:
     facts[el] = facts[el] or []
   
-  return infer(rule=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query2_1'])
+  return infer(rules=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query2_1'])
 
 def query_9(facts):
   empty_list = ["clericalStaff", "systemsStaff", "postDoc", "visitingProfessor", "college", "program", "institute", "conferencePaper", "journalArticle", "technicalReport", "book", "manual", "specification", "unofficialPublication", "researchProject", "publicationResearch", "affiliateOf", "affiliatedOrganizationOf", "age", "listedCourse", "orgPublication", "publicationDate", "softwareDocumentation", "tenured", "softwareVersion", "title"]
   for el in empty_list:
     facts[el] = facts[el] or []
   
-  return infer(rule=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query9_1'])
+  return infer(rules=rules_lubm, bindings=[(pred, facts[pred]) for pred in facts], queries=['query9_1'])
 

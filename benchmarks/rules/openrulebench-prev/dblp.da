@@ -2,5 +2,5 @@ def rules_dblp():
   queryrule(X, T, Y, A, M), if_(att(X, 'title', T),att(X, 'year', Y),att(X, 'author', A),att(X, 'month', M))
 
 def query(facts):
-  return infer(rule=rules_dblp, bindings=[(pred, facts[pred]) for pred in facts], queries=['queryrule'])
+  return infer(rules=rules_dblp, bindings=[(pred, facts[pred]) for pred in facts], queries=['queryrule'])
 

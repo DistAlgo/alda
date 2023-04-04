@@ -81,7 +81,7 @@ YT: Yes. And I think if you want to use rules to check the function name you nee
 
 SS: since the id's of interest cannot be put directly in the rules, they need to be stored in a base relation passed to the ruleset.  for example:
 
-infer(rule=..., bindings = ['addId', {(ValueDict['add'])}], ...)
+infer(rules=..., bindings = ['addId', {(ValueDict['add'])}], ...)
 
 is this the cleanest way to do it?
 
@@ -90,4 +90,4 @@ YT: Yes, this way is fine, except it should be ValueIdDict['add'].
 There is another way that if the derived predicates contains the id of function name, then you can pass the id in with the query. 
 
 For example, if there is a derived predicate: FuncName(func_id, name_id), then you can infer with 
-    infer(rule=..., queries=['FuncName(_, %s)' %ValueIdDict['add'])
+    infer(rules=..., queries=['FuncName(_, %s)' %ValueIdDict['add'])

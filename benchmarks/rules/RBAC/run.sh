@@ -32,7 +32,7 @@ for pgm in $pgms; do
         echo "running $pgm $data $i"
         timedout="false"
         # if removing -I thread, add:  --message-buffer-size=409600000
-        timeout 1800 python3 -m da -r -I thread --rule RBACtimer.da --bench $pgm --workload $data --workmode random 1>>$outfile 2>>$errfile
+        timeout 1800 python -m da -r -I thread --rules RBACtimer.da --bench $pgm --workload $data --workmode random 1>>$outfile 2>>$errfile
         # in case of timeout, append timeout message to outfile, to confirm that execution didn't abort for other reasons.
         if [ "$?" == "124" ]; then
             echo "timeout!" >>$outfile
@@ -53,7 +53,7 @@ done
 
 # I usually run extract_times.py separately later, using run_extract.sh
 #iters=$(expr $endIter + 1)
-#python3 ../extract_times.py "RBAC" "${pgms}" "${datasets}" ${iters}
+#python ../extract_times.py "RBAC" "${pgms}" "${datasets}" ${iters}
 
 echo " =============== FINISHED ==================="
 tput bel

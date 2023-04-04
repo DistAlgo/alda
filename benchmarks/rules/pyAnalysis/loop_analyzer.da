@@ -17,7 +17,7 @@ class LoopAnalyzer(Analyzer):
 
     def query_loopdepth_rule(self):
         print(len(self.For))
-        self.Loop = infer(rule=self.rules_allbody, queries=['Loops'])
+        self.Loop = infer(rules=self.rules_allbody, queries=['Loops'])
         print(len(self.Loop))
         looplevel = [(forid, self.getDepth(forid)) for (forid, _, _, _, _) in self.For]
         countLevelAll = {level: listof(forid, (forid, _level) in looplevel) for _, level in looplevel}

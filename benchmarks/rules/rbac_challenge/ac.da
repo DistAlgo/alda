@@ -124,7 +124,7 @@ class HierarchicalRBAC_rules(CoreRBAC,process): # using rules for Trans
     path(x,y), if_(edge(x,z), path(z,y))
 
   def Trans(E):
-    return infer(rule=rules_Trans_rules, bindings=[('edge',E)], queries=['path']) | setof((r,r), r in ROLES)
+    return infer(rules=rules_Trans_rules, bindings=[('edge',E)], queries=['path']) | setof((r,r), r in ROLES)
 
 class HierarchicalRBAC(HierarchicalRBAC_set,process):
   """

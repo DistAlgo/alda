@@ -13,7 +13,7 @@ class Graph1(process):
         path(x,y), if_(edge(x,z), path(z,y))
 
     def trans(E):
-        return infer(rule=rules_trans, bindings = [('edge', E)], queries=['path'])
+        return infer(rules=rules_trans, bindings = [('edge', E)], queries=['path'])
 
     def run():
         result = trans(E)
@@ -28,7 +28,7 @@ class Graph2(process):
         path(x,y), if_(edge_global(x,z), path(z,y))
 
     def trans():
-        return infer(rule=rules_trans, queries=['path'])
+        return infer(rules=rules_trans, queries=['path'])
 
     def run():
         result = trans()
@@ -44,7 +44,7 @@ class Graph3(process):
         path(x,y), if_(edge_global(x,z), path(z,y))
 
     def trans():
-        infer(rule=rules_trans)
+        infer(rules=rules_trans)
 
     def run():
         trans()
@@ -61,7 +61,7 @@ class Graph4(process):
         path(x,y), if_(edge(x,z), path(z,y))
 
     def trans():
-        infer(rule=rules_trans, bindings = [('edge', E)])
+        infer(rules=rules_trans, bindings = [('edge', E)])
 
     def run():
         trans()

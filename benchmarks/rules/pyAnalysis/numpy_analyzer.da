@@ -24,7 +24,7 @@ class NumpyAnalyzer(Analyzer):
 		return ast.BinOp(self.ValueDict[ops[0]], ast.Mult(), self.ValueDict[ops[1]])	
 
 	def query_numpy_rule(self):
-		candidate = infer(rule=self.rules_vProdToNp, queries=['numpyCandidate'])
+		candidate = infer(rules=self.rules_vProdToNp, queries=['numpyCandidate'])
 		
 		# collect all the scalar multiplications
 		scalarExpr = setof((id,'scalar',target,tupleof((op1,op2), (_id,_,_,op1,op2) in  candidate)), 

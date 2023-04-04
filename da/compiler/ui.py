@@ -65,11 +65,11 @@ def dastr_to_pyast(src, filename='<str>', args=None):
 
     """
     daast = daast_from_str(src, filename, args)
-    if daast is not None and common.get_runtime_option('rule', default=False):
-        from da.rule.ruleparser import ruleast_from_daast
+    if daast is not None and common.get_runtime_option('rules', default=False):
+        from da.rules.ruleparser import ruleast_from_daast
         daast = ruleast_from_daast(daast, filename)
-    if daast is not None and common.get_runtime_option('constraint', default=False):
-        from da.constraint.cparser import cast_from_daast
+    if daast is not None and common.get_runtime_option('constraints', default=False):
+        from da.constraints.cparser import cast_from_daast
         daast = cast_from_daast(daast, filename)
     if daast is not None:
         pyast = PythonGenerator(filename, args).visit(daast)
@@ -158,7 +158,7 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
         with open(outname,'w') as outfd:
             global OutputSize
             OutputSize += to_file(pyast, outfd)
-            stderr.write("Written compiled file %s.\n"% outname)
+            # stderr.write("Written compiled file %s.\n"% outname)
         # open(os.path.join('__pycache__',os.path.basename(filename)+'.py'),'w').write(to_source(pyast))
         return _pyast_to_pycode(pyast, filename, _optimize)
     else:
@@ -269,7 +269,7 @@ def dafile_to_pyfile(filename, outname=None, args=None):
         with open(outname, "w", encoding='utf-8') as outfd:
             global OutputSize
             OutputSize += to_file(pyast, outfd)
-            stderr.write("Written compiled file %s.\n"% outname)
+            # stderr.write("Written compiled file %s.\n"% outname)
         return 0
     else:
         return 1
@@ -350,10 +350,10 @@ def dafile_to_incfiles(args):
         inc, ast = gen_inc_module(daast, args, filename=incname)
         with open(outname, "w", encoding='utf-8') as outfd:
             OutputSize += to_file(ast, outfd)
-            stderr.write("Written compiled file %s.\n"% outname)
+            # stderr.write("Written compiled file %s.\n"% outname)
         with open(incname, "w", encoding='utf-8') as outfd:
             OutputSize += to_file(inc, outfd)
-            stderr.write("Written interface file %s.\n" % incname)
+            # stderr.write("Written interface file %s.\n" % incname)
         return 0
     else:
         return 1

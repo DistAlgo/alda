@@ -24,7 +24,7 @@ def rules(name=trans_rules):
   path(x,y), if_(edge(x,z), path(z,y))
 
 e = {(7,2), (7,3), (2,3), (2,4), (7,5), (3,6)}
-print(infer(rule=trans_rules, bindings=[('edge',e)], queries=['path']))
+print(infer(rules=trans_rules, bindings=[('edge',e)], queries=['path']))
 ```
 
 The first rule says that there is a path from `x` to `y` if there is an edge from `x` to `y`. The second rule says that there is a path from `x` to `y` if there is an edge from `x` to `z` and there is a path from `z` to `y`.
@@ -65,7 +65,7 @@ In a rule set, predicates not in any conclusion are called *base predicates* of 
 One can do inference using rules by calling a built-in inference function `infer`, of the following form
 
 ```python
-infer(rule=rsname, 
+infer(rules=rsname, 
       bindings=[('pred_1',sexp_1),...,('pred_i',sexp_i)], 
       queries=['query_1',...,'query_j'])
 ```
@@ -81,11 +81,11 @@ When using rules with only non-local predicates, the derived predicates are auto
 
 ### Running the program
 
-Usage: `python -m da --rule <filename>`  
+Usage: `python -m da --rules <filename>`  
 where `<filename>` is the name of a Alda program that uses rules.
 
 Save the example program to a file, say named `trans.da`, then running the command
-`>>> python -m da --rule trans.da`
+`>>> python -m da --rules trans.da`
 produces the output
 
 ```python

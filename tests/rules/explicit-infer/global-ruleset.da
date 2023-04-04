@@ -9,7 +9,7 @@ class Graph1(process):
     def setup(E, correct_result): pass
 
     def trans(E):
-        return infer(rule=rules_trans, bindings = [('edge', E)], queries=['path'])
+        return infer(rules=rules_trans, bindings = [('edge', E)], queries=['path'])
 
     def run():
         result = trans(E)
@@ -27,7 +27,7 @@ class Graph2(process):
     def setup(correct_result): pass
 
     def trans():
-        return infer(rule=rules_trans_1, queries=['path'])
+        return infer(rules=rules_trans_1, queries=['path'])
 
     def run():
         result = trans()

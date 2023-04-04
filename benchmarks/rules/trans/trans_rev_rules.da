@@ -14,4 +14,4 @@ class Trans_left_rec_rules(Trans, process):
     path(x,y), if_(edge(x,y))
     path(x,y), if_(path(x,z), edge(z,y))
   def trans(E): 
-    return infer(rule=self.rules_Trans_left_rec_rules, bindings=[('edge',E)], queries=['path'])
+    return infer(rules=self.rules_Trans_left_rec_rules, bindings=[('edge',E)], queries=['path'])

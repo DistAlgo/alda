@@ -2,4 +2,4 @@ def rules_win():
   win(X), if_(move(X,Y), not(win(Y)))
 
 def query(facts):
-  return infer(rule=rules_win, bindings=[(pred, facts[pred]) for pred in facts], queries=['win'])
+  return infer(rules=rules_win, bindings=[(pred, facts[pred]) for pred in facts], queries=['win'])

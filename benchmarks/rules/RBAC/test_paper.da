@@ -8,7 +8,7 @@ RBACallloc, RBACnonloc as the first argument
 - put workload in run method of RBACrun.da
 
 Sample command:
-python3.9 -m da --message-buffer-size=40960000 --rule test_paper.da --workloadcount 100 --workloadmode random --mode RBACpy
+python3.9 -m da --message-buffer-size=40960000 --rules test_paper.da --workloadcount 100 --workloadmode random --mode RBACpy
 
 """
 import sys, pickle, importlib, argparse, os

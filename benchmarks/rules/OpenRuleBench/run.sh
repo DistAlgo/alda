@@ -54,7 +54,7 @@ for pgm in ${daPgms}; do
                     mkdir data_pickle
                 fi
                 # no processes, so don't bother giving -I thread
-                timeout 1800 time python3 -m da -r --rule ORBtimer.da --data $data --mode raw 1>>${outfile} 2>>${errfile}
+                timeout 1800 time python -m da -r --rules ORBtimer.da --data $data --mode raw 1>>${outfile} 2>>${errfile}
                 # in case of timeout, append timeout message to outfile, to confirm that execution didn't abort for other reasons.
                 if [ "$?" == "124" ]; then
                     echo "timeout!" >>$outfile
@@ -65,7 +65,7 @@ for pgm in ${daPgms}; do
                 fi
             else
                 # if removing -I thread, add:  --message-buffer-size=409600000
-                timeout 1800 time python3 -m da -r -I thread --rule ORBtimer.da --bench $pgm --data $data 1>>${outfile} 2>>${errfile}
+                timeout 1800 time python -m da -r -I thread --rules ORBtimer.da --bench $pgm --data $data 1>>${outfile} 2>>${errfile}
                 if [ "$?" == "124" ]; then
                     echo "timeout!" >>$outfile
                 fi

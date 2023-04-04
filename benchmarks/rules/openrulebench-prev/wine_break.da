@@ -970,5 +970,5 @@ def rules_wine_break():
 
 
 def query(facts):
-  return infer(rule=rules_wine_break, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])
+  return infer(rules=rules_wine_break, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])
 

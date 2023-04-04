@@ -9,13 +9,13 @@ def trans_method_1(edge):
     def rules_trans():
         path(x,y), if_(edge(x,y))
         path(x,y), if_(edge(x,z), path(z,y))
-    return infer(rule=rules_trans, bindings = [('edge', edge)], queries=['path'])
+    return infer(rules=rules_trans, bindings = [('edge', edge)], queries=['path'])
 
 def trans_method_2(edge):
     def rules_trans():
         path(x,y), if_(edge(x,y))
         path(x,y), if_(edge(x,z), path(z,y))
-    return infer(rule=rules_trans, queries=['path'])
+    return infer(rules=rules_trans, queries=['path'])
 
 
 edge_local = {(4,5), (5,6)}
@@ -35,7 +35,7 @@ def rules_trans_global():
     path(x,y), if_(edge(x,z), path(z,y))
 
 def trans_method_3(edge):
-    return infer(rule=rules_trans_global, bindings = [('edge', edge)], queries=['path'])
+    return infer(rules=rules_trans_global, bindings = [('edge', edge)], queries=['path'])
 
 # test shadowing when the infer call specifies the binding to the local variable.
 qr_3 = trans_method_3(edge_local)
@@ -50,13 +50,13 @@ class Graph1(process):
         path(x,y), if_(edge(x,z), path(z,y))
 
     def trans_1():
-        return infer(rule=rules_trans, bindings = [('edge', edge)], queries=['path'])
+        return infer(rules=rules_trans, bindings = [('edge', edge)], queries=['path'])
 
     def trans_2():
-        return infer(rule=rules_trans, queries=['path'])
+        return infer(rules=rules_trans, queries=['path'])
 
     def trans_3(edge):
-        return infer(rule=rules_trans, bindings = [('edge', edge)], queries=['path'])
+        return infer(rules=rules_trans, bindings = [('edge', edge)], queries=['path'])
 
     def run():
         # tests shadowing of object field and global variable, with and without using binding.

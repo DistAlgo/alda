@@ -3,4 +3,4 @@ def rules_tc():
   tc(x,y), if_(tc(x,z), par(z,y))
 
 def query(facts):
-  return infer(rule=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc'])
+  return infer(rules=rules_tc, bindings=[(pred, facts[pred]) for pred in facts], queries=['tc'])

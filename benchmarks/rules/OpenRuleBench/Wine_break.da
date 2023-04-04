@@ -968,4 +968,4 @@ def rules (name='wine_break'):
   split965(x,y,z),if_(kaon2equal(x,y),kaon2equal(y,z))
 
 def query(facts):
-  return infer(rule=wine_break, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])
+  return infer(rules=wine_break, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])

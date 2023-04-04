@@ -13,4 +13,4 @@ def rules_nonsg():
   nonsg(X, Y), if_(ans(Y, X))
 
 def query(facts):
-  return infer(rule=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg']) - infer(rule=rules_nonsg, bindings=[(pred, facts[pred]) for pred in facts], queries=['nonsg'])
+  return infer(rules=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg']) - infer(rules=rules_nonsg, bindings=[(pred, facts[pred]) for pred in facts], queries=['nonsg'])

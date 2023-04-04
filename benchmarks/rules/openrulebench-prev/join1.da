@@ -5,28 +5,28 @@ def rules_join1():
   c1(X, Y), if_(d1(X, Z),d2(Z, Y))
 
 def query_a(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a'])
 
 def query_b1(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1'])
 
 def query_b2(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2'])
 
 def query_bf_a(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a(1,_)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a(1,_)'])
 
 def query_bf_b1(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1(1,_)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1(1,_)'])
 
 def query_bf_b2(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2(1,_)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2(1,_)'])
 
 def query_fb_a(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a(_,1)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['a(_,1)'])
 
 def query_fb_b1(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1(_,1)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1(_,1)'])
 
 def query_fb_b2(facts):
-  return infer(rule=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2(_,1)'])
+  return infer(rules=rules_join1, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2(_,1)'])

@@ -3,7 +3,7 @@ from analyzer import Analyzer
 class ClassAnalyzer(Analyzer):
 	
 	def query_subclass_rule(self):
-		sub = infer(rule=self.rules_inheritinfo, queries=['InheritInfo'])
+		sub = infer(rules=self.rules_inheritinfo, queries=['InheritInfo'])
 		print(sub)
 
 	def rules_inheritinfo():

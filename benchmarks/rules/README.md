@@ -8,7 +8,7 @@ This benchmark is on computing the transitive closure of a graph. Example input 
 
 1. to obtain all the statistics for a set of runs, run `./test_trans.sh`
 2. to measure a single run, run
- `python -m da --rule --message-buffer-size=409600 launcher.da --nume=NUMEDGE --mode=MODE`, where
+ `python -m da --rules --message-buffer-size=409600 launcher.da --nume=NUMEDGE --mode=MODE`, where
 
 - `NUMEDGE` is the number of edges in the input; to use an example data file in `input`, use a number after `e` in a file name
 - `MODE` specifies the method used to compute the transitive closure, and can be one of:
@@ -26,7 +26,7 @@ This benchmark is on Hierachical Role-Based Access Control (HRBAC). Example inpu
 
 1. to obtain all the statistics for a set of runs, run `./test_hrbac.sh`
 2. to measure a single run, run
- `python -m da --rule --message-buffer-size=409600 launcher.da --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
+ `python -m da --rules --message-buffer-size=409600 launcher.da --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
 
 - `NUMROLE` is the number of roles,
 - `NUMOP` is the number of operations for
@@ -55,7 +55,7 @@ This benchmark is on Hierachical Role-Based Access Control (HRBAC). Example inpu
 This benchamrk is on the full core and hierarchical RBAC, the description of which can be found [here](https://www3.cs.stonybrook.edu/~stoller/papers/rbac-spec.pdf).
 
 1. to measure the allrbac program, run
- `python -m da --rule --message-buffer-size=409600 launcher.da --numr=NUMROLE --nump=NUMPERM --ac=NUMQUERY`, where
+ `python -m da --rules --message-buffer-size=409600 launcher.da --numr=NUMROLE --nump=NUMPERM --ac=NUMQUERY`, where
 
     - `NUMROLE` is the number of roles,
     - `NUMPERM` is the number of permissions, and
@@ -69,7 +69,7 @@ This benchamrk is on the full core and hierarchical RBAC, the description of whi
 3. to generate your own input data, run the scripts in directory `gen_input` as follows:
 
     - run `python gen_allrbacDB.py` to generate a dataset of UR, RH, and permission-role (PR) relation
-    - run `python -m da --rule --message-buffer-size=409600 gen_allrbacQueries.da`
+    - run `python -m da --rules --message-buffer-size=409600 gen_allrbacQueries.da`
 
 #### pyAnalysis
 

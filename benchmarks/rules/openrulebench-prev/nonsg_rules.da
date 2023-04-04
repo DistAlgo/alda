@@ -12,4 +12,4 @@ def rules_sg():
   sg2(X,Y), if_(sg(X,Y), not nonsg(X,Y))
 
 def query(facts):
-  return infer(rule=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg2'])
+  return infer(rules=rules_sg, bindings=[(pred, facts[pred]) for pred in facts], queries=['sg2'])

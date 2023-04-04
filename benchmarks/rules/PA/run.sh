@@ -33,7 +33,7 @@ for pgm in ${daPgms}; do
         echo "running ${pgm} ${data} ${i}"
         # -r option to force da to re-compile, for measurement of compilation time
         # if removing -I thread, add:  --message-buffer-size=409600000
-        timeout 1800 time python3 -m da -r -I thread --rule PAtimer.da --data data/$data --bench $pgm 1>>${outfile} 2>>${errfile}
+        timeout 1800 time python -m da -r -I thread --rules PAtimer.da --data data/$data --bench $pgm 1>>${outfile} 2>>${errfile}
         # in case of timeout, append timeout message to outfile, to confirm that execution didn't abort for other reasons.
         if [ "$?" == "124" ]; then
             echo "timeout!" >>$outfile
@@ -76,7 +76,7 @@ done
 
 # I usually run extract_times.py separately later, using run_extract.sh
 #iters=$(expr $endIter + 1)
-#python3 ../extract_times.py "PA" "${daPgms} ${xsbPgms}" "${datasets}" ${iters}
+#python ../extract_times.py "PA" "${daPgms} ${xsbPgms}" "${datasets}" ${iters}
 
 echo " =============== FINISHED ==================="
 tput bel

@@ -33,5 +33,5 @@ with open(repos_list_file, 'r') as input_repos, open(output_bat_file, 'w') as ou
 			output_bat.write(repo_name)
 		else:
 			output_bat.write(',' + repo_name)
-	output_bat.write(') DO (\npython -m da --rule -r launcher.da LoopToQuery %%A candidate rule\n)')
+	output_bat.write(') DO (\npython -m da --rules -r launcher.da LoopToQuery %%A candidate rule\n)')
 

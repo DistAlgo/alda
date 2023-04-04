@@ -125,16 +125,16 @@ class HierarchicalRBAC(CoreRBAC,process):
 class HRBAC_transRH_rules(HierarchicalRBAC,process):
 
   def setup(USERS,ROLES,UR,RH,workload):
-    self.transRH = infer(rule=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
+    self.transRH = infer(rules=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
 
   def AddInheritance(a,d):
     # pre: a in ROLES, d in ROLES, (a,d) not in RH, (d,a) not in RH, a!=d
     super().AddInheritance(a,d)
-    transRH = infer(rule=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
+    transRH = infer(rules=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
 
   def DeleteInheritance(a,d):  # pre: (a,d) in RH
     super().DeleteInheritance(a,d)
-    transRH = infer(rule=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
+    transRH = infer(rules=rules_HRBAC_transRH_rules, bindings=[('rh',RH),('roles',ROLES)], queries=['transRH'])
 
   def rules_HRBAC_transRH_rules():
     transRH(x,y), if_(rh(x,y))

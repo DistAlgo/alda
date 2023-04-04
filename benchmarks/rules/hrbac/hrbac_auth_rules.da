@@ -136,5 +136,5 @@ class HRBAC_auth_rules(HierarchicalRBAC,process):
     authorizedUR(u,role), if_(USERS(u), ROLES(asc), UR(u,asc), transRH(asc ,role))
 
   def AuthorizedUsers(role):
-    return infer(rule=rules_authorizedUR_rs, queries=['authorizedUR(u,%s)' % role]) # use infer , not pass in base predicates
+    return infer(rules=rules_authorizedUR_rs, queries=['authorizedUR(u,%s)' % role]) # use infer , not pass in base predicates
 

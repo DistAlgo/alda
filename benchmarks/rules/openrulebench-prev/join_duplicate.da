@@ -36,10 +36,10 @@ def rules_join_duplicate():
   b2(X, Y), if_(p5_b2(X, Y))
 
 def query_a(facts):
-  return infer(rule=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['a'])
+  return infer(rules=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['a'])
 
 def query_b1(facts):
-  return infer(rule=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1'])
+  return infer(rules=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['b1'])
 
 def query_b2(facts):
-  return infer(rule=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2'])
+  return infer(rules=rules_join_duplicate, bindings=[(pred, facts[pred]) for pred in facts], queries=['b2'])

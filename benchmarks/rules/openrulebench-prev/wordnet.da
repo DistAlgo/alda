@@ -28,46 +28,46 @@ def rules_wordnet():
   antonym(Word1, Word2), if_(s(Synset_id1, W_num1, Word1, _, _, _),ant(Synset_id1, W_num1, Synset_id2, W_num2),s(Synset_id2, W_num2, Word2, _, _, _))
 
 def query_sameSynsets(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['sameSynsets'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['sameSynsets'])
 
 def query_gloss(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['gloss'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['gloss'])
 
 def query_directHypernym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHypernym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHypernym'])
 
 def query_hypernym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hypernym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hypernym'])
 
 def query_directHyponym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHyponym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHyponym'])
 
 def query_hyponym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hyponym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['hyponym'])
 
 def query_directMeronym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directMeronym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directMeronym'])
 
 def query_meronym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['meronym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['meronym'])
 
 def query_directHolonym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHolonym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directHolonym'])
 
 def query_holonym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['holonym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['holonym'])
 
 def query_directTroponym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directTroponym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directTroponym'])
 
 def query_troponym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['troponym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['troponym'])
 
 def query_directAdjectiveClusters(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directAdjectiveClusters'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['directAdjectiveClusters'])
 
 def query_adjectiveClusters(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['adjectiveClusters'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['adjectiveClusters'])
 
 def query_antonym(facts):
-  return infer(rule=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['antonym'])
+  return infer(rules=rules_wordnet, bindings=[(pred, facts[pred]) for pred in facts], queries=['antonym'])

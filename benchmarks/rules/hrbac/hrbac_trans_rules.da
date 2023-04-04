@@ -129,7 +129,7 @@ class HRBAC_trans_rules(HierarchicalRBAC,process):
     path(x,y), if_(edge(x,z), path(z,y))
   
   def trans(E):  # use infer plus set query
-    i = infer(rule=self.rules_HRBAC_trans_rules, bindings=[('edge',E)], queries=['path'])
+    i = infer(rules=self.rules_HRBAC_trans_rules, bindings=[('edge',E)], queries=['path'])
     return set(i) | setof((r,r), r in ROLES)
 
   def AuthorizedUsers(role):  # assert role in self.ROLES

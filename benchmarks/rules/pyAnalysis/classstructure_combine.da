@@ -110,7 +110,7 @@ class DAGAnalyzer(Analyzer):
 				test_sc_f.write('\n')
 
 			# check if all attributes and values of an attribute base class expression are Name.
-			sub_attribute_facts = infer(rule=self.rules_subAttribute, queries=['sub_attribute'])
+			sub_attribute_facts = infer(rules=self.rules_subAttribute, queries=['sub_attribute'])
 			non_class_name_attribute_base_class_exp = set()
 
 			for item in attribute_base_class_exp:
@@ -168,7 +168,7 @@ class DAGAnalyzer(Analyzer):
 			f.write('Number of generated AST nodes = ' + str(sumof(len(getattr(self, node_name, set())), node_name in ASTNodes)) + '\n')
 
 			f.write('Number of files = ' + str(len(setof(self.FileDict[f], f in self.FileDict))) + '\n')
-			extends, class1, internal_class = infer(rule=self.rules_inheritinfo, queries=['extends', 'class1', 'internal_class'])
+			extends, class1, internal_class = infer(rules=self.rules_inheritinfo, queries=['extends', 'class1', 'internal_class'])
 			len_ori_extends = len(extends)
 			# filter extends facts that the child and parent class have the same name (e.g. class Tree(BaseTree.Tree)) 
 			extends = setof((c, p), (c, p) in extends, c != p)

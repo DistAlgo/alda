@@ -6,4 +6,4 @@ def rules_mondial():
   queryrule(X, A, D), if_(isa('prov', X, 'cn', 'provi'),att('prov', X, 'cn', 'number', A),att('prov', X, 'cn', 'number2', D))
 
 def query(facts):
-  return infer(rule=rules_mondial, bindings=[(pred, facts[pred]) for pred in facts], queries=['queryrule'])
+  return infer(rules=rules_mondial, bindings=[(pred, facts[pred]) for pred in facts], queries=['queryrule'])

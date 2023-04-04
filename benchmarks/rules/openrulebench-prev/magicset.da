@@ -7,4 +7,4 @@ def rules_magicset():
   magicab(X), if_(magicfb(X), d(X))
 
 def query(facts):
-  return infer(rule=rules_magicset, bindings=[(pred, facts[pred]) for pred in facts], queries=['fb'])
+  return infer(rules=rules_magicset, bindings=[(pred, facts[pred]) for pred in facts], queries=['fb'])

@@ -7,7 +7,7 @@ class Wine(process):
 
 	def run():
 		utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-		pprint(infer(rule='wine_break', queries=['californiawine']))
+		pprint(infer(rules='wine_break', queries=['californiawine']))
 		utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
 		print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
 

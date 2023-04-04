@@ -42,9 +42,9 @@ class LoopAnalyzer(Analyzer):
 	def query_candidate_rule(self):
 		output_file = './output/LoopToQuery-candidate/' + self.ValueDict[2] + '-loop-index.txt'
 		with open(output_file, 'w') as f:
-			#query_inc_results = infer(rule=self.rules_incCandidate, queries=['CandidateIncPattern','For'])
+			#query_inc_results = infer(rules=self.rules_incCandidate, queries=['CandidateIncPattern','For'])
 			#inc_candidate = query_inc_results[0]
-			loop_index_candidate = infer(rule=self.rules_loopIndexCandidate, queries=['CandidateLoopIndexPattern'])
+			loop_index_candidate = infer(rules=self.rules_loopIndexCandidate, queries=['CandidateLoopIndexPattern'])
 			#candidates = inc_candidate.union(loop_index_candidate)
 			candidates = loop_index_candidate
 			# f.write('-------- total number of candidate loops: ' + str(len(candidates)) + '\n')
@@ -251,7 +251,7 @@ class LoopAnalyzer(Analyzer):
 			ListSetAdd(body,result, elt, operator), AllowedOp(operator))
 
 	def query_forToCompSimple_rule(self):
-		candidate = infer(rule=self.rules_simplestComp, 
+		candidate = infer(rules=self.rules_simplestComp, 
 						  bindings=[('AllowedOp', {self.ValueIdDict['add'], self.ValueIdDict['append']})],
 						  queries=['compFor'])
 		iterNameDict = {c[0]:self.flattenTuple(self.ValueDict[c[1]]) for c in candidate}

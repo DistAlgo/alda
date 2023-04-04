@@ -10,7 +10,7 @@ def trans_method_2(edge):
     def rules_trans():
         path(x,y), if_(edge(x,y))
         path(x,y), if_(edge(x,z), path(z,y))
-    return infer(rule=rules_trans, bindings = [('edge', edge)], queries=['path'])
+    return infer(rules=rules_trans, bindings = [('edge', edge)], queries=['path'])
 
 # test with global edge predicate
 correct_result = {(1,2), (1,3), (2,3)}
@@ -35,7 +35,7 @@ def trans_method_3():
         path_global(x,y), if_(edge_global(x,y))
         path_global(x,y), if_(edge_global(x,z), path_global(z,y))
 
-    infer(rule=rules_trans)
+    infer(rules=rules_trans)
     return True
 
 trans_method_3()

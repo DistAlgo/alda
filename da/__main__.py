@@ -200,10 +200,10 @@ def parseArgs():
                         " DistAlgo processes."
                         " 'process' uses OS processes,"
                         " 'thread' uses OS threads.")
-    parser.add_argument('--rule', default=False,
+    parser.add_argument('--rules', default=False,
                         help="Enable Rules",
                         action='store_true')
-    parser.add_argument('--constraint', default=False,
+    parser.add_argument('--constraints', default=False,
                         help="Enable Constraint Solving",
                         action='store_true')
     parser.add_argument("-v", "--version", action="version",

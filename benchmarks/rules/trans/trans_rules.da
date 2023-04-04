@@ -1,17 +1,21 @@
 import os
 
+
 class Trans(process):
-  def setup(E): pass
-  def trans(E): pass
-  def run():
-    utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
-    trans(E)
-    utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
-    print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+    def setup(E): pass
+    def trans(E): pass
+
+    def run():
+        utime1, stime1, cutime1, cstime1, elapsed_time1 = os.times()
+        trans(E)
+        utime2, stime2, cutime2, cstime2, elapsed_time2 = os.times()
+        print('python_total\t%s\t%s' % (elapsed_time2-elapsed_time1, utime2-utime1 + stime2-stime1 + cutime2-cutime1 + cstime2-cstime1))
+
 
 class Trans_rules(Trans, process):
-  def rules_Trans_rules():
-    path(x,y), if_(edge(x,y))
-    path(x,y), if_(edge(x,z), path(z,y))
-  def trans(E): 
-    return infer(rule=self.rules_Trans_rules, bindings=[('edge',E)], queries=['path'])
+    def rules_Trans_rules():
+        path(x, y), if_(edge(x, y))
+        path(x, y), if_(edge(x, z), path(z, y))
+
+    def trans(E):
+        return infer(rules=self.rules_Trans_rules, bindings=[('edge', E)], queries=['path'])

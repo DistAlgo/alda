@@ -962,4 +962,4 @@ def rules_wine():
   kaon2equal(X, Z), if_(kaon2equal(X, Y),kaon2equal(Y, Z),kaon2hu(X),kaon2hu(Y),kaon2hu(Z))
 
 def query(facts):
-  return infer(rule=rules_wine, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])
+  return infer(rules=rules_wine, bindings=[(pred, facts[pred]) for pred in facts], queries=['californiawine'])

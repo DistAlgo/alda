@@ -6,7 +6,7 @@ class RBACunion(GeneralHierRBAC, process):
         path(x,y), if_(edge(x,z), path(z,y))
   
     def trans(E):  # use infer plus set query
-        return infer(rule=rules_trans_rs, bindings=[('edge',E)], 
+        return infer(rules=rules_trans_rs, bindings=[('edge',E)], 
                      queries=['path']) | setof((r,r), r in ROLES)
 
     # copied from hierRBAC.GeneralHierRBAC, 

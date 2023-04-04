@@ -9,4 +9,4 @@ def rules_join2():
   q(E), if_(r(_, _, _, _, E))
 
 def query(facts):
-  return infer(rule=rules_join2, bindings=[(pred, facts[pred]) for pred in facts], queries=['q'])
+  return infer(rules=rules_join2, bindings=[(pred, facts[pred]) for pred in facts], queries=['q'])

@@ -16,8 +16,8 @@ if os.name == 'nt':
 
 
 class InferXSB():
-    def __init__(self, rule, arity, bindings, queries):
-        self.rule = rule
+    def __init__(self, rules, arity, bindings, queries):
+        self.rules = rules
         self.arity = arity
         self.bindings = bindings
         self.queries = queries
@@ -120,7 +120,7 @@ class InferXSB():
 
         # generate facts
         xsb_facts = ""
-        rule_filename = self.rule+'_'+self.gen_unique_id()
+        rule_filename = self.rules+'_'+self.gen_unique_id()
         for key, val in self.bindings:  # pair of predicate name and tuple values
             if len(val) == 0:  # val is an empty predicate
                 # generate a place holder where all logic vars are -1
@@ -154,7 +154,7 @@ class InferXSB():
 
         print('', flush=True)  # clear the print(end='\r') after effect
 
-        rule_path_rule = PurePath.joinpath(rule_path, self.rule)
+        rule_path_rule = PurePath.joinpath(rule_path, self.rules)
         rule_path_fact = PurePath.joinpath(rule_path, rule_filename)
         if os.name == 'nt':
             rule_path_rule = str(rule_path_rule).replace('\\', '\\\\')
@@ -231,8 +231,8 @@ class InferXSB():
         #   so additional rule for rewriting the query to and from this form might be needed
 
 
-def _infer(rule, arity, bindings, queries):
-    infer_xsb = InferXSB(rule, arity, bindings, queries)
+def _infer(rules, arity, bindings, queries):
+    infer_xsb = InferXSB(rules, arity, bindings, queries)
     return infer_xsb.xsb_file_interface()
     # TODO uncomment after finish writing xsb_px_interface
     # if importlib.util.find_spec("px"):

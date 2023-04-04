@@ -9,7 +9,7 @@ In order to run these tests, the following steps are necessary:
  * unxz all of the files in data_raw (these are the data sets and have been xz'ed for ease of upload/download)
  
 Then each test can be run via the following generic command:
- python3.7 -m da --rule run_tests.da --testsuite testsuite_name --data datafile_name --query query_name
+ python3.7 -m da --rules run_tests.da --testsuite testsuite_name --data datafile_name --query query_name
 
 The query argument can be omitted if the query name is query.
 

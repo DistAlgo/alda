@@ -130,7 +130,7 @@ class HRBAC_trans_with_ROLES_rules(HierarchicalRBAC,process):
     path(x,x), if_(ROLES(x))
 
   def trans(E): # use infer only, pass in only E
-    return infer(rule=rules_trans_with_ROLES_rules, bindings=[('edge',E)], queries=['path'])
+    return infer(rules=rules_trans_with_ROLES_rules, bindings=[('edge',E)], queries=['path'])
 
   def AuthorizedUsers(role):  # assert role in self.ROLES
     transRH = trans(RH)

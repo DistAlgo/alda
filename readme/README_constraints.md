@@ -173,10 +173,10 @@ query(constraint, **kwargs)
 
 ### Running the program
 
-Usage: `python -m da --constraint <filename>`
+Usage: `python -m da --constraints <filename>`
 
 Save the example program to a file, say named `vertex_cover.da`, then running following command
-`>>> python -m da --constraint vertex_cover.da`
+`>>> python -m da --constraints vertex_cover.da`
 produces the output:
 
 ```python

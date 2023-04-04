@@ -9,8 +9,8 @@ if [ "$1" == "regen" ]; then
   if [ ! -d "../input" ]; then
     mkdir ../input
   fi
-  python3 gen_rbacDB.py
-  python3 -m da -r -I thread --rule gen_queries.da 
+  python gen_rbacDB.py
+  python -m da -r -I thread --rules gen_queries.da 
   cd -
 fi 
 
@@ -19,4 +19,4 @@ if [ ! -d "../input" ]; then
 fi
 cp ../../hrbac/input/UR_500 ../input
 cp ../../hrbac/input/RH_500 ../input
-python3 use_and_randomize_hrbac_input.py
+python use_and_randomize_hrbac_input.py
