@@ -1,5 +1,4 @@
-# extract times from output files in {bench}/{pgm}/out, and save them to a csv file.
-# to run this program, run run_extract.sh in examples/, or run this program directly in examples/{bench}.
+# extract running times from output files in ./out, and save the information in a csv file.
 
 import sys
 import os
@@ -10,16 +9,18 @@ def colname(pgm):
     return pgm.replace('xsb','XSB')
 
 def main():
-    bench = sys.argv[1] # PA, RBAC, or ORB
+    bench = sys.argv[1]
+    if bench == 'OpenRuleBench':
+        bench = 'ORB'
     pgms = [pgm for pgm in sys.argv[2].split(' ') if len(pgm)>0]
     datasets = sys.argv[3].split(' ')
     iters = int(sys.argv[4])
-    xsbpgms = [pgm for pgm in pgms if 'xsb' in pgm]
+    xsbpgms = [pgm for pgm in pgms if 'xsb' in pgm or 'XSB' in pgm]
     rawpgms = [pgm for pgm in pgms if 'raw' in pgm]
-    dapgms = [pgm for pgm in pgms if 'xsb' not in pgm and 'raw' not in pgm]
+    dapgms = [pgm for pgm in pgms if 'xsb' not in pgm and 'XSB' not in pgm and 'raw' not in pgm]
     # extracted timings, results, etc.
     res = {}
-    # we need to run extract_times 3 times for ORB, so include some info about pgms in output filename.
+    # we need to run extract_times 3 times for ORB, so include some info about pgms in filename.
     if bench=='ORB' and any(pgm in pgms for pgm in {'DBLP', 'DBLPraw', 'DBLPxsb'}):
         pgmname = 'DBLP'
     elif bench=='ORB' and any(pgm in pgms for pgm in {'Wine_break', 'Wineraw', 'Winexsb'}):
@@ -41,8 +42,10 @@ def main():
     prefixes_map['PA'] = [('init_os_total', 'R_data'), ('write_data', 'W_data'), ('xsb_load',  'xsb_R'), ('preproc_xsb', 'pre'), ('xsb_query', 'xsb_QW'), ('subprocess_xsb', 'xsb'), ('read_results', 'R_res'), ('postproc_xsb', 'post'), ('run_os_total', 'run')]
     prefixes_map['RBAC'] = prefixes_map['PA'][1:]
     # da programs that do not call XSB.  might be cleaner to remove these from dapgms.
-    daNoXSBpgms = {'RBACpy', 'RBACda'}
-    prefixes_map['daNoXSB'] = prefixes_map['RBAC'][-1:]
+    daNoXSB_RBAC = {'RBACpy', 'RBACda'}
+    daNoXSB_ORB = {'TCpy', 'TCda'}
+    prefixes_map['daNoXSB_RBAC'] = prefixes_map['RBAC'][-1:]
+    prefixes_map['daNoXSB_ORB'] = [('total_os_total', 'run')]
     # use 'run' instead of 'query' in column headings for consistency.  removed ('query_tm_pf+pr', 'run_tm').
     prefixes_map['ORB'] = [('init_os_total', 'R_data'), ('write_data', 'W_data'), ('xsb_load',  'xsb_R'), ('preproc_xsb', 'pre'), ('xsb_query', 'xsb_QW'), ('subprocess_xsb', 'xsb'), ('read_results', 'R_res'), ('postproc_xsb', 'post'), ('query_os_total', 'run')]
     # map from initial prefix of data line to our (column) name for ORB "raw" pgms.  removed ('init_tm_pf+pr', 'R_raw_tm'),  ('dump_tm_pf+pr', 'dump_tm').
@@ -52,7 +55,7 @@ def main():
 
     for pgm in pgms:
         # prefixes expected in output files for this program
-        prefixes = prefixes_map['xsb'] if pgm in xsbpgms else prefixes_map['raw'] if pgm in rawpgms else prefixes_map['daNoXSB'] if pgm in daNoXSBpgms else prefixes_map[bench]
+        prefixes = prefixes_map['xsb'] if pgm in xsbpgms else prefixes_map['raw'] if pgm in rawpgms else prefixes_map['daNoXSB_RBAC'] if pgm in daNoXSB_RBAC else prefixes_map['daNoXSB_ORB'] if pgm in daNoXSB_ORB else prefixes_map[bench]
         #print('prefixes ',prefixes)
         # character separating values in input files
         sepchar = ' ' if pgm in xsbpgms else '\t'
@@ -106,7 +109,7 @@ def main():
                 mean = statistics.fmean(times)
                 res[col,pgm,data] = mean
                 res['sd_'+col,pgm,data] = 0 if iters1==1 else statistics.stdev(times)
-            if pgm in dapgms and pgm not in daNoXSBpgms:
+            if pgm in dapgms and pgm not in daNoXSB_RBAC and pgm not in daNoXSB_ORB:
                 # sums
                 res['xsbpp',pgm,data] = res['xsb',pgm,data] + res['pre',pgm,data] + res['post',pgm,data]
                 #res['run_tm+xsb_RQW',pgm,data] = res['run_tm',pgm,data] + xsb_RQW
@@ -155,7 +158,7 @@ def main():
     dacols.append('%xsbpp-run')
     
     # da pgms that don't call xsb: measured quantities to print, with std dev for each
-    qtys = [col for (prefix,col) in prefixes_map['daNoXSB']]
+    qtys = [col for (prefix,col) in prefixes_map['daNoXSB_RBAC']]
     daNoXSBcols = []
     for qty in qtys:
         daNoXSBcols.append(qty)
@@ -181,7 +184,7 @@ def main():
     for pgm in rawpgms:
         print(',', colname(pgm), ','*(len(rawcols)-1), end='', file=out)
     for pgm in dapgms:
-        cols = daNoXSBcols if pgm in daNoXSBpgms else dacols
+        cols = daNoXSBcols if pgm in daNoXSB_RBAC or pgm in daNoXSB_ORB else dacols
         print(',', colname(pgm), ','*(len(cols)-1), end='', file=out)
     for pgm in xsbpgms:
         print(',', colname(pgm), ','*(len(xsbcols)-1), end='', file=out)
@@ -191,7 +194,7 @@ def main():
     for pgm in rawpgms:
         print(','.join(rawcols), ',', end='', file=out)
     for pgm in dapgms:
-        cols = daNoXSBcols if pgm in daNoXSBpgms else dacols
+        cols = daNoXSBcols if pgm in daNoXSB_RBAC or pgm in daNoXSB_ORB else dacols
         print(','.join(cols), ',', end='', file=out)
     for pgm in xsbpgms:
         print(','.join(xsbcols), ',', end='', file=out)
@@ -205,7 +208,7 @@ def main():
                 precision = 2 if '%' in col else 4
                 print(',', round(res[col,pgm,data],precision) if (col,pgm,data) in res else '', end='', file=out)
         for pgm in dapgms:
-            cols = daNoXSBcols if pgm in daNoXSBpgms else dacols
+            cols = daNoXSBcols if pgm in daNoXSB_RBAC or pgm in daNoXSB_ORB else dacols
             for col in cols:
                 # print percentages with 2 decimal places, everything else with 4
                 precision = 2 if '%' in col else 4
