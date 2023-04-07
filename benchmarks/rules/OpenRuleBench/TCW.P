@@ -27,7 +27,7 @@ measureTime(Q, T, WT) :-
 
 test(Filename) :- 
 	open('tc_result.txt', append, Output),
-	open('tc_answers.txt', write, Output2),  %% added for w version
+	open('tc_answers.txt', append, Output2),  %% added for w version
 	writeln(Output, Filename),
 	flush_output(Output),
 %%	measureTime(load_dyn(Filename), LoadT, LoadWT),  %% original

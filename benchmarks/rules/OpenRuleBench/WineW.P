@@ -1137,14 +1137,14 @@ measureTime(Q, T, WT) :-
 
 test :-
     open('wine_result.txt', append, Output),
-    open('wine_answers.txt', write, Output2),  %% added for w version
+    open('wine_answers.txt', append, Output2),  %% added for w version
 %%  measureTime(load_dyn('data_raw/wine'), LoadT, LoadWT),  % original
     measureTime(load_dync('data_raw/wine'), LoadT, LoadWT),  % updated
     write(Output, 'loading cputime:  '), writeln(Output, LoadT),
     write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
     flush_output(Output),
 %%  measureTime((californiawine(_), fail; true),T,WT),  %% original
-    measureTime((californiawine(A), writeln(Output2,[A]), fail; true),T,WT), %%
+    measureTime((californiawine(A), writeln(Output2,A), fail; true),T,WT), %%
     write(Output, 'computing cputime:  '), writeln(Output, T),
     write(Output, 'computing walltime: '), writeln(Output, WT),
     flush_output(Output),
