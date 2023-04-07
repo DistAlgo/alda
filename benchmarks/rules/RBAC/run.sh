@@ -1,22 +1,25 @@
 #!/bin/bash
 
-# run this script in examples/RBAC
-
 # small workload for testing
-#pgms="RBACunion"
-#datasets="$(seq 50 50 500)"
-#startIter=0
-#endIter=2
-
-# run everything.
-pgms="RBACunion RBACallloc RBACnonloc RBACpy RBACda"
+pgms="RBACunion"
 datasets="$(seq 50 50 500)"
 startIter=0
-endIter=4
+endIter=0
+
+# run everything for the experiments in the arXiv paper about Alda
+#pgms="RBACunion RBACallloc RBACnonloc RBACpy RBACda"
+#datasets="$(seq 50 50 500)"
+#startIter=0
+#endIter=9
 
 if [ ! -d "out" ]; then
     mkdir out
 fi
+
+echo "system load at start of run" >>out/top.txt
+date >>out/top.txt
+top -n 1 -b | head -n 35 >>out/top.txt
+echo >>out/top.txt
 
 for pgm in $pgms; do
   for data in $datasets; do
@@ -37,6 +40,8 @@ for pgm in $pgms; do
         if [ "$?" == "124" ]; then
             echo "timeout!" >>$outfile
             timedout="true"
+            echo "timeout; skipping remaining iterations"
+            break
         fi
         if ! grep -q "run_os" "$outfile"; then
             echo "incomplete iteration; skipping remaining iterations"
@@ -51,9 +56,10 @@ for pgm in $pgms; do
   done
 done
 
-# I usually run extract_times.py separately later, using run_extract.sh
-#iters=$(expr $endIter + 1)
-#python ../extract_times.py "RBAC" "${pgms}" "${datasets}" ${iters}
+echo "system load at end of run" >>out/top.txt
+date >>out/top.txt
+top -n 1 -b | head -n 35 >>out/top.txt
+echo >>out/top.txt
 
 echo " =============== FINISHED ==================="
 tput bel

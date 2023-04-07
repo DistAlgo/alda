@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# run this script in examples/RBAC/gen_input
-# you can pass a parameter regenerate input files in examples/hrbac
+# run this script in this directory
+# pass a parameter "regen" to regenerate input files in ../../hrbac/input
 
 # first run the code to generate input in hrbac if needed
 if [ "$1" == "regen" ]; then 
