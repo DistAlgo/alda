@@ -5,6 +5,8 @@
 :- table height/2.
 :- table numDesc/2.
 
+:- set_prolog_flag(write_depth,10000000).
+
 defined(C) :- pClassDef(_,C,_,_,_,_).
 extending(C,B) :- pClassDef(_,C,BaseList,_,_,_), 
                     pMember(BaseList,Base,_), pName(Base, B, _).
@@ -45,22 +47,26 @@ xsbtest(Filename) :-
         open('xsb_result.txt', append, Output),
         measureTime(load_dync(Filename,a), LoadT, LoadWT),
         write(Output, 'loading cputime:  '), writeln(Output, LoadT),
-        write(Output, 'loading wallitme: '), writeln(Output, LoadWT),
+        write(Output, 'loading walltime: '), writeln(Output, LoadWT),
         flush_output(Output),
         measureTime((numDefined(N1), numExtending(N2), roots(RS)),AT1,AWT1),
-        writeln(Output,f(N1,N2,RS)),
-        write(Output, 'computing cputime:  '), writeln(Output, AT1),
-        write(Output, 'computing walltime: '), writeln(Output, AWT1),
+        writeln(Output,[N1,N2,RS]),
+        write(Output, 'result1 cputime:  '), writeln(Output, AT1),
+        write(Output, 'result1 walltime: '), writeln(Output, AWT1),
         flush_output(Output),
         measureTime((maxHeight(H), rootsMaxHeight(RHS)),AT2,AWT2),
-        writeln(Output,f(H,RHS)),
-        write(Output, 'computing cputime:  '), writeln(Output, AT2),
-        write(Output, 'computing walltime: '), writeln(Output, AWT2),
+        writeln(Output,[H,RHS]),
+        write(Output, 'result2 cputime:  '), writeln(Output, AT2),
+        write(Output, 'result2 walltime: '), writeln(Output, AWT2),
         flush_output(Output),
         measureTime((maxDesc(D), rootsMaxDesc(RDS)),AT3,AWT3),
-        writeln(Output,f(D,RDS)),
-        write(Output, 'computing cputime:  '), writeln(Output, AT3),
-        write(Output, 'computing walltime: '), writeln(Output, AWT3),
+        writeln(Output,[D,RDS]),
+        write(Output, 'result3 cputime:  '), writeln(Output, AT3),
+        write(Output, 'result3 walltime: '), writeln(Output, AWT3),
+        cputime(Tfinish),
+        TcomputingCPU is AT1 + AT2 + AT3,
+        TcomputingWall is AWT1 + AWT2 + AWT3,
+        write(Output, 'computing cputime:  '), writeln(Output, TcomputingCPU),
+        write(Output, 'computing walltime:  '), writeln(Output, TcomputingWall),
         flush_output(Output),
         close(Output).
-
