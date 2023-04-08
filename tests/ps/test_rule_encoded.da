@@ -1,0 +1,55 @@
+import os
+from ps import ps
+import logging.config
+logging.config.fileConfig('logging.conf')
+
+
+def main():
+    o = LoopAnalyzer('/Users/phd/Downloads/numpy_copy')
+    print(dir(o))
+    o.query_loopdepth_rule()
+
+
+class LoopAnalyzer():
+    def __init__(self, input):
+        ps.read(source=input, target=self, db_update=True)
+        print(len(self.For))
+
+    def getDepth(self, loopid):
+        """ get the depth of a loop
+        input: loopid
+        output: level of the loop
+        """
+        subids = setof(subid, (_loopid, body) in self.Loop, (body, subid, _) in self.Member, (subid) in self.Loop)
+        return max([self.getDepth(s) for s in subids], default=0) + 1
+
+    def query_loopdepth_rule(self):
+        self.Loop = infer(rule=self.rules_allbody, queries=['Loops'])
+        print(len(self.Loop))
+        looplevel = [(forid, self.getDepth(forid)) for (forid, _, _, _, _) in self.For]
+        countLevelAll = {level: listof(forid, (forid, _level) in looplevel) for _, level in looplevel}
+        print('depth, count')
+        for key, val in countLevelAll.items():
+            print('%s, %s' % (key, len(val)))
+
+    def rules_allbody():
+        # get body and orelse from If stmt:
+        Body(id, body), if_(If(id, _, body, _))         # if test: <body>
+        Body(id, orelse), if_(If(id, _, _, orelse))     # else: <orelse>
+        # get body, orelse, fbody from Try stmt:
+        Body(id, body), if_(Try(id, body, _, _, _))     # try:  <body>
+        Body(id, body), if_(Try(id, _, handlers, _, _),  # except: <handler>
+                            Member(handlers, hid, _), ExceptHandler(hid, _, _, body))
+        Body(id, orelse), if_(Try(id, _, _, orelse, _))  # else: <orelse>
+        Body(id, fbody), if_(Try(id, _, _, _, fbody))   # finally: <fbody>
+        # get the body from With statement
+        Body(id, body), if_(With(id, _, body))        # with items: <body>
+
+        # flatten all the bodies
+        Body(id, body), if_(
+            Body(id, spbody), Member(spbody, bid, _), Body(bid, body))
+
+        # link all above bodies directly to their parent for-loops
+        Loops(id, body), if_(For(id, _, _, body, _))
+        Loops(id, body), if_(
+            Loops(id, spbody), Member(spbody, bid, _), Body(bid, body))

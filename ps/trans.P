@@ -1,0 +1,3 @@
+:- auto_table.
+ppath(Vx,Vy) :- pedge(Vx,Vy).
+ppath(Vx,Vy) :- pedge(Vx,Vz),ppath(Vz,Vy).
