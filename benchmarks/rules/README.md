@@ -28,27 +28,29 @@ This benchmark is on Hierachical Role-Based Access Control (HRBAC). Example inpu
 2. to measure a single run, run
  `python -m da --rules --message-buffer-size=409600 launcher.da --numr=NUMROLE --numq=NUMOP --q=NUMQUERY --mode=MODE`, where
 
-- `NUMROLE` is the number of roles,
-- `NUMOP` is the number of operations for
-    - adding/deleting a user (each `NUMOP` times)
-    - adding/deleting a role (each `NUMOP/10'` times)
-    - adding/deleting a UR pair (each `NUMOP*1.1` times)
-    - adding/deleting a RH pair (each `NUMOP/10` times)
-- `NUMQUERY` is the number of `AuthorizedUsers` queries, and  
-- `MODE` specifies the method used to query authorized users, and can be one of:
-    - `'rule'`: using rules with only local predicates, in file `hrbac_trans_rules.da`
-    - `'rolerule'`: in addition to the rules for `'rule'`, add a rule that uses a local `role` set, in file `hrab_trans_with_role_rules.da`
-    <!-- - `'ROLErule'`: using rules with both local and non-local predicates -->
-    - `'transRH'`: using rules with only non-local predicates, in file `hrbac_transRH_rs.da`
-    - `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers`, in file `hrbac_auth_rules.da`
-    - `'authUR'`: introducing set `authorizedUR` as a field so the rule for `'auth_rules'` can be automatically triggered to update `authorizedUR`, in file `hrbac_authorizedUR_rs.da`
-    - `'distalgo'`: using DistAlgo high-level queries. in file `hrbac_set.da`
-    - `'python'`: using Python comprehensions, in file `hrbac_py.da`
+    - `NUMROLE` is the number of roles (to use an example data file in input, use 500),
+    - `NUMOP` is the number of operations (to use an example data file in input, use 50) for
+        - adding/deleting a user (each `NUMOP` times)
+        - adding/deleting a role (each `NUMOP/10'` times)
+        - adding/deleting a UR pair (each `NUMOP*1.1` times)
+        - adding/deleting a RH pair (each `NUMOP/10` times)
+    - `NUMQUERY` is the number of `AuthorizedUsers` queries (to use an example data file in input, use a number after auth in a file name), and  
+    - `MODE` specifies the method used to query authorized users, and can be one of:
+        - `'rule'`: using rules with only local predicates, in file `hrbac_trans_rules.da`
+        - `'rolerule'`: in addition to the rules for `'rule'`, add a rule that uses a local `role` set, in file `hrab_trans_with_role_rules.da`
+        <!-- - `'ROLErule'`: using rules with both local and non-local predicates -->
+        - `'transRH'`: using rules with only non-local predicates, in file `hrbac_transRH_rs.da`
+        - `'auth_rules'`: using rules for non-recursive set queries `AuthorizedUsers`, in file `hrbac_auth_rules.da`
+        - `'authUR'`: introducing set `authorizedUR` as a field so the rule for `'auth_rules'` can be automatically triggered to update `authorizedUR`, in file `hrbac_authorizedUR_rs.da`
+        - `'distalgo'`: using DistAlgo high-level queries. in file `hrbac_set.da`
+        - `'python'`: using Python comprehensions, in file `hrbac_py.da`
 
 3. to generate your own input data, run the scripts in directory `gen_input` as follows:
 
     - run `python gen_rbacDB.py` to generate a dataset of user-role (UR) relation and role-hierach (RH) relation of 500 roles.
     - run `python -m da gen_queries.da` to generate a workload of sequence of hrbac queries
+
+    Each generated workload is in a file named as `hrbacSequence_r` followed by number of roles followed by `_q` followed by number of queries followed by `_auth` followed by number of `AuthorizedUsers` queries.
 
 #### allrbac
 
@@ -110,17 +112,17 @@ This benchmark contains Alda and XSB versions of the DBLP, TC (transitive closur
 - `run.sh` runs the benchmarks and saves the output to files.  The variables `daPgms` and `xsbPgms` control which versions of the benchmarks to run.  `run.sh` calls `ORBtimer.da` to run and time the Alda benchmarks.
 
 - The `TCraw`, `DBLPraw`, and `Wineraw` entries in `daPgms` cause `run.sh` to call `ORBtimer.da` with the option `--mode=raw`.  In this mode, `ORBtimer.da` reads raw data files in `data_raw` and writes the data in pickled form to files in `data_pickle`.  The other Alda programs read the pickled data.
- 
+
 - `TCrev` uses the same rules as TC but reversing the two conditions in the recursive rule.
 
 - `Wine_break.da` is an optimized version of `Wine`, optimized using subsumptive transformations, as mentioned in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204).
 
 - `run.sh` saves output files in the `out` directory.  Names of output files have the form `BENCHMARK_DATASET_ITERATION_TYPE.txt`, where
-   - `BENCHMARK` is the version of a benchmark, e.g., `TCrev`.
-   - `DATASET` is always `wine` for Wine, is always `dblp` for DBLP, and indicates the graph size and whether the graph has cycles for TC (e.g., `tc_d100_par200_xsb_cyc` indicates a graph with 100 nodes, 200 edges, and cycles).
-   - `ITERATION` is the iteration number (`run.sh` runs each benchmark a specified number of times). 
-   - `TYPE` is `out` for the program's output and `err` for the program's output to stderr.  Running times are recorded in the `out` files.
--  In addition, query results are saved in files named `BENCHMARK_DATASET_answers.txt`.  The iteration number is omitted, because answers are saved for the first iteration only.
+    - `BENCHMARK` is the version of a benchmark, e.g., `TCrev`.
+    - `DATASET` is always `wine` for Wine, is always `dblp` for DBLP, and indicates the graph size and whether the graph has cycles for TC (e.g., `tc_d100_par200_xsb_cyc` indicates a graph with 100 nodes, 200 edges, and cycles).
+    - `ITERATION` is the iteration number (`run.sh` runs each benchmark a specified number of times).
+    - `TYPE` is `out` for the program's output and `err` for the program's output to stderr.  Running times are recorded in the `out` files.
+- In addition, query results are saved in files named `BENCHMARK_DATASET_answers.txt`.  The iteration number is omitted, because answers are saved for the first iteration only.
 
 #### PA
 
@@ -144,7 +146,7 @@ This benchmark is for analysis of class hierarchy of Python programs.
 
 This benchmark is for hierarchical RBAC.  It compares different ways of computing the transitive role hierarchy, as described in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204) and summarized there in Table 2.
 
-- The programs in `gen_input` are used to generate input files stored in files in `input`. 
+- The programs in `gen_input` are used to generate input files stored in files in `input`.
 
 - An input file with `np` (mnemonic for "no print") in its name (e.g., `workload_randomnp_50`) contains the same workload as the corresponding input file without `np` (e.g., `workload_random_50`) except print statements have been removed.
 
@@ -157,13 +159,13 @@ This benchmark is for hierarchical RBAC.  It compares different ways of computin
 #### Extract running times from output files
 
 - to extract running times from a collection of output files generated by running benchmarks in OpenRuleBench, RBAC, or PA, and saves the running times in a single `csv` file, cd to  `OpenRuleBench`, `PA` or `RBAC` and run `python extract_times.py BENCHMARK PROGRAMS DATASETS NUMITER`, where
-   - `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"` (this should match the directory in which you run the program)
-   - `PROGRAMS` is a space-separated list of programs, identified using the same names as in `run.sh`
-   - `DATASETS` is a space-separated list of datasets, identified using the same names as in `run.sh`
-   - `NUMITER` is the number of iterations
-   - The `out` directory should contain output files produced by running each program in `PROGRAMS` `NUMITER` times on each dataset in `DATASETS`.
-   - For RBAC or PA, the generated csv file is named `timing_BENCHMARK.csv`.  For OpenRuleBench, it is named `timing_BENCHMARK_PROGRAM.csv`, where `PROGRAM` is `DBLP`, `TC`, `Wine` (they have different datasets, so `extract_times.py` needs to be run separately for each of them, as done in `run_extract.sh`).
-   - If `NUMITER` is greater than 1, the mean and standard deviation of the running times of the iterations, not the individual running times, are included in the `csv` file.
+    - `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"` (this should match the directory in which you run the program)
+    - `PROGRAMS` is a space-separated list of programs, identified using the same names as in `run.sh`
+    - `DATASETS` is a space-separated list of datasets, identified using the same names as in `run.sh`
+    - `NUMITER` is the number of iterations
+    - The `out` directory should contain output files produced by running each program in `PROGRAMS` `NUMITER` times on each dataset in `DATASETS`.
+    - For RBAC or PA, the generated csv file is named `timing_BENCHMARK.csv`.  For OpenRuleBench, it is named `timing_BENCHMARK_PROGRAM.csv`, where `PROGRAM` is `DBLP`, `TC`, `Wine` (they have different datasets, so `extract_times.py` needs to be run separately for each of them, as done in `run_extract.sh`).
+    - If `NUMITER` is greater than 1, the mean and standard deviation of the running times of the iterations, not the individual running times, are included in the `csv` file.
 
 - to extract running times from output files for all three of those benchmarks, run `./run_extract.sh`.  That script also provides examples of how to call `extract_times.py`.
 
