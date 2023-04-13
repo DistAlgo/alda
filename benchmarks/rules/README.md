@@ -1,6 +1,6 @@
 # Benchmarking experiments for using rules in Alda
 
-This directory contains the source code and data for performance benchmarking. Each subdirectory is a benchmark with its set of  experiements. The timing of compiling each program will be in a subdirectory `timing` of where `python -m da` is run.
+This directory contains the source code and data for performance benchmarking. Each subdirectory is a benchmark with its set of  experiments. The timing of compiling each program will be in a subdirectory `timing` of where `python -m da` is run.
 
 #### trans
 
@@ -103,26 +103,26 @@ This benchmark is on analyzing and transformig Python programs.
 
 #### OpenRuleBench
 
-This benchmark contains Alda and XSB versions of the DBLP, TC (transitive closure), and Wine benchmarks in OpenRuleBench.
+This benchmark contains Alda and XSB programs for the DBLP, TC (transitive closure), and Wine benchmarks in OpenRuleBench.
 
 - Before running DBLP, uncompress `data_raw/dblp.gz`.
 
 - `data_raw` contains raw data files.  `dblp` and `wine` are copied from OpenRuleBench.  The raw data files for TC are generated as in OpenRuleBench using the programs in `data_prepare`.
 
-- `run.sh` runs the benchmarks and saves the output to files.  The variables `daPgms` and `xsbPgms` control which versions of the benchmarks to run.  `run.sh` calls `ORBtimer.da` to run and time the Alda benchmarks.
+- `run.sh` runs the benchmark and saves the output to files.  The variables `daPgms` and `xsbPgms` control which programs to run.  `run.sh` calls `ORBtimer.da` to run and time the Alda programs.
 
 - The `TCraw`, `DBLPraw`, and `Wineraw` entries in `daPgms` cause `run.sh` to call `ORBtimer.da` with the option `--mode=raw`.  In this mode, `ORBtimer.da` reads raw data files in `data_raw` and writes the data in pickled form to files in `data_pickle`.  The other Alda programs read the pickled data.
-
+ 
 - `TCrev` uses the same rules as TC but reversing the two conditions in the recursive rule.
 
 - `Wine_break.da` is an optimized version of `Wine`, optimized using subsumptive transformations, as mentioned in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204).
 
-- `run.sh` saves output files in the `out` directory.  Names of output files have the form `BENCHMARK_DATASET_ITERATION_TYPE.txt`, where
-    - `BENCHMARK` is the version of a benchmark, e.g., `TCrev`.
-    - `DATASET` is always `wine` for Wine, is always `dblp` for DBLP, and indicates the graph size and whether the graph has cycles for TC (e.g., `tc_d100_par200_xsb_cyc` indicates a graph with 100 nodes, 200 edges, and cycles).
-    - `ITERATION` is the iteration number (`run.sh` runs each benchmark a specified number of times).
-    - `TYPE` is `out` for the program's output and `err` for the program's output to stderr.  Running times are recorded in the `out` files.
-- In addition, query results are saved in files named `BENCHMARK_DATASET_answers.txt`.  The iteration number is omitted, because answers are saved for the first iteration only.
+- `run.sh` saves output files in the `out` directory.  Names of output files have the form `PROGRAM_DATASET_ITERATION_TYPE.txt`, where
+   - `PROGRAM` is the program, e.g., `TCrev`.
+   - `DATASET` is always `wine` for Wine, is always `dblp` for DBLP, and indicates the graph size and whether the graph has cycles for TC (e.g., `tc_d100_par200_xsb_cyc` indicates a graph with 100 nodes, 200 edges, and cycles).
+   - `ITERATION` is the iteration number (`run.sh` runs each benchmark a specified number of times). 
+   - `TYPE` is `out` for the program's output and `err` for the program's output to stderr.  Running times are recorded in the `out` files.
+-  In addition, query results are saved in files named `PROGRAM_DATASET_answers.txt`.  The iteration number is omitted, because answers are saved for the first iteration only.
 
 #### PA
 
@@ -132,13 +132,13 @@ This benchmark is for analysis of class hierarchy of Python programs.
 
 - to prepare the data, run `run_pyast_views.sh` in the `data_prep` directory.  This generates data files in directory `data`.
 
-- the versions of the benchmark (PA, PAopt, PAXSB, PAoptXSB, and PAXSBopt) are described in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204).
+- the programs PA, PAopt, PAXSB, PAoptXSB, and PAXSBopt are described in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204).
 
-- `run.sh` runs the benchmark and saves the output to files.  The variable `pgms` controls which versions of the benchmark to run. `run.sh` calls `PAtimer.da` to run and time the Alda benchmarks.  
+- `run.sh` runs the benchmark and saves the output to files.  The variables `daPgms` and `xsbPgms` control which programs to run.  `run.sh` calls `PAtimer.da` to run and time the Alda programs.  
 
-- `run.sh` saves output files in the `out` directory.  Names of output files have the same form as for OpenRuleBench, except that `DATASET` identifies a repo (e.g., `numpy`), and results appear in `out` files there are no `answers` files.
+- `run.sh` saves output files in the `out` directory.  Names of output files have the same form as for OpenRuleBench, except that `DATASET` identifies a repo (e.g., `numpy`), and results appear in `out` files, so there are no `answers` files.
 
-- to count the numbers of facts in `astFacts` and `text-rep` in the prepared data, run `../count_facts.sh` in the `data` directory.  the counts are recorded in `line_counts.txt`.
+- to count the facts in `astFacts` and `text-rep` in the prepared data, run `../count_facts.sh` in the `data` directory.  The counts are recorded in `line_counts.txt`.
 
 - `io_time.py` measures the time to read facts from `.P` files, pickle them, and write them to files.  after running the benchmark, `__pycache__` contains a `.P` file containing facts for each dataset.  To measure the times for those files, run `python ../io_time.py` in `__pycache__`, then delete all `.pickle` files.  The times are recorded in `io_time.csv`.
 
@@ -146,33 +146,33 @@ This benchmark is for analysis of class hierarchy of Python programs.
 
 This benchmark is for hierarchical RBAC.  It compares different ways of computing the transitive role hierarchy, as described in the [arXiv paper about Alda](https://arxiv.org/abs/2205.15204) and summarized there in Table 2.
 
-- The programs in `gen_input` are used to generate input files stored in files in `input`.
+- The programs in `gen_input` are used to generate input files stored in the `input` directory. 
 
 - An input file with `np` (mnemonic for "no print") in its name (e.g., `workload_randomnp_50`) contains the same workload as the corresponding input file without `np` (e.g., `workload_random_50`) except print statements have been removed.
 
-- `RBACtimer.da` always reads workload files without `np` in the name.  To use the workloads with `np` in the name, modify the line in `RBACtimer.da` that opens the workload file, or rename the `np` files to remove `np` from the name.
+- `run.sh` runs the benchmark on the random workloads and saves the output to files.  The variable `pgms` controls which programs to run. `run.sh` calls `RBACtimer.da` to run and time the programs.  
 
-- `run.sh` runs the benchmark on the random workloads and saves the output to files.  The variable `pgms` controls which versions of the benchmark to run. `run.sh` calls `RBACtimer.da` to run and time the Alda benchmarks.  
+- `RBACtimer.da` always reads workload files without `np` in the name.  To use the workloads with `np` in the name, modify the line in `RBACtimer.da` that opens the workload file.
 
 - `run.sh` saves output files in the `out` directory.  Names of output files have the same form as for PA, except `DATASET` is the size of the workload, specifically, the number of authorized user queries.
 
 #### Extract running times from output files
 
-- to extract running times from a collection of output files generated by running benchmarks in OpenRuleBench, RBAC, or PA, and saves the running times in a single `csv` file, cd to  `OpenRuleBench`, `PA` or `RBAC` and run `python extract_times.py BENCHMARK PROGRAMS DATASETS NUMITER`, where
-    - `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"` (this should match the directory in which you run the program)
-    - `PROGRAMS` is a space-separated list of programs, identified using the same names as in `run.sh`
-    - `DATASETS` is a space-separated list of datasets, identified using the same names as in `run.sh`
-    - `NUMITER` is the number of iterations
-    - The `out` directory should contain output files produced by running each program in `PROGRAMS` `NUMITER` times on each dataset in `DATASETS`.
-    - For RBAC or PA, the generated csv file is named `timing_BENCHMARK.csv`.  For OpenRuleBench, it is named `timing_BENCHMARK_PROGRAM.csv`, where `PROGRAM` is `DBLP`, `TC`, `Wine` (they have different datasets, so `extract_times.py` needs to be run separately for each of them, as done in `run_extract.sh`).
-    - If `NUMITER` is greater than 1, the mean and standard deviation of the running times of the iterations, not the individual running times, are included in the `csv` file.
+- to extract running times from a collection of output files generated by running the OpenRuleBench, PA, or RBAC benchmark, and save the running times in a single `csv` file, run `python extract_times.py BENCHMARK PROGRAMS DATASETS NUMITER` in the `OpenRuleBench`, `PA` or `RBAC` directory, where
+   - `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"` (this should match the directory in which you run the script)
+   - `PROGRAMS` is a space-separated list of programs in that benchmark, identified using the same names as in `run.sh`
+   - `DATASETS` is a space-separated list of datasets in that benchmark, identified using the same names as in `run.sh`
+   - `NUMITER` is a number of iterations
+- Before running the script, the `out` directory should contain output files produced by running each program in `PROGRAMS` for `NUMITER` times on each dataset in `DATASETS`.
+- For PA or RBAC, the generated `csv` file is named `timing_BENCHMARK.csv`.  For OpenRuleBench, it is named `timing_BENCHMARK_PROBLEM.csv`, where `PROBLEM` is `DBLP`, `TC`, `Wine` (they have different datasets, so `extract_times.py` needs to be run separately for each of them, as done in `run_extract.sh`).
+- If `NUMITER` is greater than 1, the mean and standard deviation of the running times of the iterations, not the individual running times, are included in the `csv` file.
 
-- to extract running times from output files for all three of those benchmarks, run `./run_extract.sh`.  That script also provides examples of how to call `extract_times.py`.
+- to extract running times from output files for all three of these benchmarks, run `./run_extract.sh`.  This script also provides examples of how to call `extract_times.py`.
 
-#### Check that different versions of a benchmark produce the same results
+#### Check that different programs for the same problem produce the same results
 
-- to check that different versions of a benchmark produce the same results, run `python check_consistency.py BENCHMARK` in this folder, where `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"`.  
-- This program looks in `BENCHMARK/out` for files containing saved query results, and checks that for each dataset, the saved query results for different versions of the benchmark are equal.  Note that query results are in `_answers.txt` files for OpenRuleBench and in `_out.txt` files for RBAC and PA.
-- For example, `OpenRuleBench/out/DBLP_dblp_answers.txt` and `OpenRuleBench/out/DBLPWxsb_dblp_answers.txt` are compared to check that `DBLP.da` and `DBLPW.P` produce the same results.
-- For RBAC and PA, the results in output files from only the first iteration are compared.
-- The comparison results are saved in `consistency_BENCHMARK.csv'.
+- to check that different programs for the same problem (e.g., `DBLP.da` and `DBLPW.P`) in the 
+OpenRuleBench, PA, or RBAC benchmark produce the same results, run `python check_consistency.py BENCHMARK` in this directory, where `BENCHMARK` is `"OpenRuleBench"`, `"PA"`, or `"RBAC"`.  
+- `check_consistency.py` looks in `BENCHMARK/out` for files containing saved query results, and checks that for each dataset, the saved query results for different programs for the same problem are equal.  Note that query results are in `_answers.txt` files for OpenRuleBench and in `_out.txt` files for PA and RBAC.
+- For PA and RBAC, the results in output files from only the first iteration are compared.
+- The results are saved in `consistency_BENCHMARK.csv`.
