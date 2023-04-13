@@ -1,4 +1,4 @@
-# Persistent Storage
+# Program Storage
 
 Parse file, directory of files or AST tree and generate facts.
 
