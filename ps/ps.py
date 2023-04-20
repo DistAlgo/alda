@@ -130,9 +130,13 @@ class PS:
         if format == AST:
             return valueDict[ir]
         elif format == CODE:
-            return to_source(valueDict[ir])
+            node = valueDict[ir]
+            if isinstance(node, ast.AST):
+                #or (isinstance(node, type) and issubclass(node, ast.AST)):
+                return to_source(node)
+            else: return node
         else:
-            logging.error('invalid format, accept only `PA_FORMAT_AST` and `PA_FORMAT_CODE`')
+            logging.error('invalid format, accept only `AST` and `CODE`')
             sys.exit(0)
 
     def encode(self, value, *, target=None):
