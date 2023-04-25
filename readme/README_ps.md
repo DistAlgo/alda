@@ -1,18 +1,17 @@
 # Program Storage
 
-Parse file, directory of files or AST tree and generate facts.
+A persistent program database for a Python program file, directory of files, or abstract syntax tree (AST), with creation and lookup functions.
 
 ## Example
 
 ```python
 from ps import ps, CODE
 
-if __name__ == '__main__':
-    filename = 'FILE_OR_DIRECTORY_TO_BE_ANALYZED'
-    output = dict()         # the encoded facts will be saved to this variable
-    ps.read(source=filename, target=output, encode=True) # read in the file and encode the facts
-    print(output.keys())             # prints all the names of AST nodes
-    print(ps.decode(180, format=CODE, target=output)) # print the code snippet corresponding to the AST node with id 180
+filename = 'FILE_OR_DIRECTORY_TO_BE_ANALYZED'
+db = dict()         # variable db will hold generated program facts
+ps.read(source=filename, target=db, encode=True)  # read the file and encode the generated facts
+print(db.keys())    # print all AST node types
+print(ps.decode(180, format=CODE, target=db))     # print the code corresponding to AST node 180
 ```
 
 ## Specification
@@ -26,79 +25,64 @@ The `ps` module has the following functions:
 
 ### read
 
-Takes a source program and generates a persistent program database. The source program
-can be either a file or directory, or an AST. The database consists of sets of tuples representing the ASTs of
-the input program and the directory structure—one set of each AST node type, and one set for the directory
-nesting structure.
+Read a Python source program and create a persistent program database. The source program can be either a file or directory, or an abstract syntax tree (AST). The database consists of sets of tuples representing the ASTs of the source files and the directory structure---one set of each AST node type, and one set for the directory nesting structure.
 
 ```python
-def read(self, *, source, target, db path, db name, db update, omit, encode)
+def read(self, *, source, target, db_path, db_name, db_update, omit, encode)
 ```
 
 Keyword-only arguments:
 
 - `source`: source program to be read. This can be one of two types of values:
-    - string for path of a file or directory, where all `.py` files will be parsed using Python’s `ast.parse` and the directory structure will be captured
+    - string for path of a file or directory, where all `.py` files will be parsed using Python's `ast.parse` and the directory structure will be captured
     - AST object returned by `ast.parse`, or generally any tree object of arbitrarily nested objects and lists
 - `target`: target object or dictionary to hold generated sets of tuples. This can be one of two types of values:
     - object for which an attribute for each generated set will be created. A common use case is
-        - `self`: each generated set will be a field of self, when used in a method with argument `self`
+        - `self`: each generated set will be a field of `self`, when used in a method with argument `self`
     - dictionary for which a key for each generated set will be created. Two common use cases are
         - `globals()`: each generated set will be a global variable
         - `locals()`: each generated set will be a local variable
 
-- `db_path`: string for path of persistent database to store generated sets to disk, or None for not storing the generated sets. The default is path of parent directory of `source`.
-- `db_name`: string for name of database, as a subdirectory of db path. If source is a path, the default is the name of the file (without extension) or directory.
-- `db_update`: whether to re-generate the database (or otherwise load the last generated sets from database) when the database was already generated, default to `False`.
-- `omit`: AST object fields and attributes to be omitted in generated database. This should be a dictionary with keys fields and attributes, each with a set of names to omit. The default is
+- `db_path`: string for path of persistent database to store generated sets to disk, or `None` for not storing the generated sets. The default is a directory named `ps_db` in the home directory.
+- `db_name`: string for name of the database, as a subdirectory of `db_path`. If `source` is a path, the default is the name of the file (without extension) or directory.
+- `db_update`: whether to re-generate the database (or otherwise load the last generated sets from database) when the database was already generated. The default is `False`.
+- `omit`: AST object fields and attributes to be omitted in generated database. This should be a dictionary with keys `fields` and `attributes`, each with a set of names to omit. The default is
 
     ```python
-    dict(fields=’type_comment’, attributes=’lineno’,’col_offset’,’end_lineno’,’end_col_offset’)
+    dict(fields={'type_comment'}, attributes={'lineno','col_offset','end_lineno','end_col_offset'})
     ```
 
-- `encode`: whether to encode objects in generated sets using internal representation (or otherwise leave as objects), default to `True`. Encoding allows significantly improved performance of queries using generated sets. Not encoding allows direct queries using generated sets without encoding and decoding.
+- `encode`: whether to encode objects in generated sets using internal representation (or otherwise leave as objects). The default is `True`. Encoding allows significantly improved performance of queries using generated sets. Not encoding allows direct queries using generated sets without encoding and decoding.
 
 ### config
 
-Sets the parameter values of a program database. It can be called with any subset of
+Set the parameter values of a program database. It can be called with any subset of
 the parameters.
 
 ```python
-def config(self, *, source, target, db path, db name, db update, omit, encode, file)
+def config(source, target, db_path, db_name, db_update, omit, encode, file)
 ```
 
 Share the same parameters as `read` except for `file`.
 
 - `file`: path for a JSON file specifying the parameter values. If `file` and any other parameters are set,
-those set in parameters will override those in files.
+those set in the parameters will override those in the file.
 
-Parameter values set with config are used by read unless overridden by parameter values at a call to read.
+Parameter values set with `config` are used by `read` unless overridden by parameter values at a call to `read`.
 
 ### encode
 
-Return the internal representation of a literal value. The value must be presented in the source program.
-
 ```python
-def encode(self, value, *, target)
+def encode(object, target)
 ```
 
-Return the internal representation of a literal value. The value must be presented in the source program. By default, it will look up values in the last used target. But you can pass another target by argument `target`
+Return the internal representation of a literal or AST source node object in `target`. The value must be presented in the corresponding source program of `target`.
 
 ### decode
 
-Return the text or the AST node of the fact with internal representation.
-
 ```python
-def decode(self, ir, *, format=CODE, target=None)
+def decode(ir, target, format=CODE)
 ```
 
-- `ir`: internal representation of AST fact
-
-Keyword-only arguments:
-
-- `format`: output target, takes the following values:
-    - `CODE`: default, return the code snippet corresponding to the AST fact in string
-    - `AST`: return the AST node object itself
-- `target`: the target to find the node.
-
-    By default, target refers to the last used target.
+Return the corresponding code or AST node object of an internal representation `ir` in `target` when `format` is `CODE` or `AST`, respectively. The default for `format` is `CODE`.
+    
