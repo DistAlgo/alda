@@ -28,7 +28,7 @@ The `ps` module has the following functions:
 Read a Python source program and create a persistent program database. The source program can be either a file or directory, or an abstract syntax tree (AST). The database consists of sets of tuples representing the ASTs of the source files and the directory structure---one set of each AST node type, and one set for the directory nesting structure.
 
 ```python
-def read(self, *, source, target, db_path, db_name, db_update, omit, encode)
+def read(source, target, db_path, db_name, db_update, omit, encode)
 ```
 
 Keyword-only arguments:
