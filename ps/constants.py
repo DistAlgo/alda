@@ -6,7 +6,7 @@ PS_CLASS = 'class'
 PS_CHECK = 'check'
 CODE = 'code'
 AST = 'ast'
-DEFAULT_DB = os.path.join(os.path.expanduser('~'), 'pa_data')
+DEFAULT_DB = os.path.join(os.path.expanduser('~'), 'ps_db')
 DEFAULT_CONFIG = {
     'source': None,
     'target': None,
