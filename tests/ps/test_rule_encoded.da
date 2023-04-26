@@ -1,7 +1,7 @@
 import os
 from ps import ps
-import logging.config
-logging.config.fileConfig('logging.conf')
+#import logging.config
+#logging.config.fileConfig('logging.conf')
 
 
 def main():
@@ -24,7 +24,7 @@ class LoopAnalyzer():
         return max([self.getDepth(s) for s in subids], default=0) + 1
 
     def query_loopdepth_rule(self):
-        self.Loop = infer(rule=self.rules_allbody, queries=['Loops'])
+        self.Loop = infer(rules=self.rules_allbody, queries=['Loops'])
         print(len(self.Loop))
         looplevel = [(forid, self.getDepth(forid)) for (forid, _, _, _, _) in self.For]
         countLevelAll = {level: listof(forid, (forid, _level) in looplevel) for _, level in looplevel}
