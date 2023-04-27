@@ -7,6 +7,7 @@ PS_CHECK = 'check'
 CODE = 'code'
 AST = 'ast'
 DEFAULT_DB = os.path.join(os.path.expanduser('~'), 'ps_db')
+#DEFAULT_DB = './ps_db'
 DEFAULT_CONFIG = {
     'source': None,
     'target': None,

@@ -51,10 +51,10 @@ class PS:
         for key, val in locals().items():
             if key in DEFAULT_CONFIG:
                 if key == 'db_path':
-                    if key != '':
+                    if val != '':
                         self.conf[key] = val
                 else:
-                    if key != None:
+                    if val != None:
                         self.conf[key] = val
 
     def read(self, *, source=None, target=None, db_path='', db_update=None,
@@ -134,9 +134,11 @@ class PS:
             if isinstance(node, ast.AST):
                 #or (isinstance(node, type) and issubclass(node, ast.AST)):
                 return to_source(node)
+            elif isinstance(node, tuple):
+                return '\n\n\n'.join(to_source(x) for x in node)
             else: return node
         else:
-            logging.error('invalid format, accept only `AST` and `CODE`')
+            logging.error('invalid format, accept only AST and CODE')
             sys.exit(0)
 
     def encode(self, value, *, target=None):
