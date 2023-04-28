@@ -206,6 +206,9 @@ def parseArgs():
     parser.add_argument('--constraints', default=False,
                         help="Enable Constraint Solving",
                         action='store_true')
+    parser.add_argument('--timing', default=False,
+                        help="Enable dispaly of timing of xsb",
+                        action='store_true')
     parser.add_argument("-v", "--version", action="version",
                         version=common.__version__)
     group = parser.add_mutually_exclusive_group()

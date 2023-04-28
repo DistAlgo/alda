@@ -8,6 +8,7 @@ from ast import literal_eval
 from pathlib import PurePath
 import importlib.util
 from pprint import pformat
+from .. import common
 
 UniqueLowerCasePrefix = 'p'
 xsb_path = PurePath.joinpath(PurePath(__file__).parent, 'xsb')
@@ -196,23 +197,24 @@ class InferXSB():
                       for a in answers.split("\n")[:-1]}
             results.append(tuples)
 
-        t_res = os.times()  # after reading results
+        if common.get_runtime_option('timing', default=False):
+            t_res = os.times()  # after reading results
 
-        # times for reading data and querying in xsb
-        lines = output.stdout.split('\n')
-        lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
-        print('timing\telapse\tcpu')
-        print('xsb_load\t%s\t%s' % (lines[-4], lines[-3]))
-        print('xsb_query\t%s\t%s' % (lines[-2], lines[-1]))
+            # times for reading data and querying in xsb
+            lines = output.stdout.split('\n')
+            lines = [l for l in lines if (l and l != 'yes' and l != 'no')]
+            print('timing\telapse\tcpu')
+            print('xsb_load\t%s\t%s' % (lines[-4], lines[-3]))
+            print('xsb_query\t%s\t%s' % (lines[-2], lines[-1]))
 
-        t_end = os.times()  # after reading std outuput
+            t_end = os.times()  # after reading std outuput
 
-        # times for intefacing with xsb
-        self.time_dur(t_start, t_facts, 'write_data')
-        self.time_dur(t_start, t_pre, 'preproc_xsb')
-        self.time_dur(t_pre, t_post, 'subprocess_xsb')
-        self.time_dur(t_post, t_res, 'read_results')
-        self.time_dur(t_post, t_end, 'postproc_xsb')
+            # times for intefacing with xsb
+            self.time_dur(t_start, t_facts, 'write_data')
+            self.time_dur(t_start, t_pre, 'preproc_xsb')
+            self.time_dur(t_pre, t_post, 'subprocess_xsb')
+            self.time_dur(t_post, t_res, 'read_results')
+            self.time_dur(t_post, t_end, 'postproc_xsb')
 
         if len(results) == 0:
             return results
