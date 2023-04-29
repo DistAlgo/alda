@@ -83,10 +83,10 @@ for pgm in ${daPgms}; do
                 fi
                 last_timing="dump_os_total"
                 # no processes, so don't bother giving -I thread
-                timeout 1800 time python -m da -r --rules ORBtimer.da --data $data --mode raw 1>>${outfile} 2>>${errfile}
+                timeout 1800 time python -m da -r --rules --timing ORBtimer.da --data $data --mode raw 1>>${outfile} 2>>${errfile}
             else
                 last_timing="total_os_total"
-                timeout 1800 time python -m da -r -I thread --rules ORBtimer.da --bench $pgm --data $data 1>>${outfile} 2>>${errfile}
+                timeout 1800 time python -m da -r -I thread --rules --timing ORBtimer.da --bench $pgm --data $data 1>>${outfile} 2>>${errfile}
             fi
             # in case of timeout, append timeout message to outfile, to confirm execution didn't abort for other reasons.
             if [ "$?" == "124" ]; then

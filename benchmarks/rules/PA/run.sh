@@ -39,7 +39,7 @@ for pgm in ${daPgms}; do
         # -r option to force da to re-compile, for measurement of compilation time
         # if removing -I thread, add:  --message-buffer-size=409600000
         timedout="false"
-        timeout 1800 time python -m da -r -I thread --rules PAtimer.da --data data/$data --bench $pgm 1>>${outfile} 2>>${errfile}
+        timeout 1800 time python -m da -r -I thread --rules --timing PAtimer.da --data data/$data --bench $pgm 1>>${outfile} 2>>${errfile}
         # in case of timeout, append timeout message to outfile, to confirm that execution didn't abort for other reasons.
         if [ "$?" == "124" ]; then
             echo "timeout!" >>$outfile
