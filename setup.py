@@ -134,8 +134,8 @@ setup(name = "pyDistAlgo",
       packages = [
           'da',
           'da.compiler',
-          'da.constraint',
-          'da.rule',
+          'da.constraints',
+          'da.rules',
           'da.examples',
           'da.importer',
           'da.lib',
@@ -145,7 +145,7 @@ setup(name = "pyDistAlgo",
       include_package_data = True,
       package_data = {
         'da.examples' : ['**/*.da'],
-        'da.rule': ['**/*.P']
+        'da.rules': ['**/*.P']
       },
 
       cmdclass = {
