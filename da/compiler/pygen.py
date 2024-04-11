@@ -285,6 +285,8 @@ class MaxLineAndColFinder(NodeVisitor):
         super().__init__()
         self.max_lineno = None
         self.max_col_offset = None
+        self.max_end_lineno = None
+        self.max_end_col_offset = None
 
     def visit(self, node):
         super().visit(node)
@@ -297,13 +299,26 @@ class MaxLineAndColFinder(NodeVisitor):
                 self.max_col_offset = node.col_offset
             elif node.lineno == self.max_lineno:
                 self.max_col_offset = max(self.max_col_offset, node.col_offset)
+        if hasattr(node, 'end_lineno') and node.end_lineno is not None:
+            # print(node.end_lineno, node.end_col_offset)
+            assert isinstance(node.end_lineno, int)
+            assert (hasattr(node, 'end_col_offset') and
+                    isinstance(node.end_col_offset, int))
+            if self.max_end_lineno is None or node.end_lineno > self.max_end_lineno:
+                self.max_end_lineno = node.end_lineno
+                self.max_end_col_offset = node.end_col_offset
+            elif node.end_lineno == self.max_end_lineno:
+                self.max_end_col_offset = max(self.max_end_col_offset, node.end_col_offset, self.max_col_offset)
+            else:
+                self.max_end_lineno = self.max_lineno
+                self.max_end_col_offset = max(self.max_end_col_offset, node.end_col_offset, self.max_col_offset)
 
 def _find_max_line_and_col(node):
     finder = MaxLineAndColFinder()
     finder.visit(node)
-    return finder.max_lineno, finder.max_col_offset
+    return finder.max_lineno, finder.max_col_offset, finder.max_end_lineno, finder.max_end_col_offset
 
-def fixup_locations_in_block(block, last_lineno=None, last_col_offset=None):
+def fixup_locations_in_block(block, last_lineno=None, last_col_offset=None, last_end_lineno=None, last_end_col_offset=None):
     """Make sure '.lineno' attributes are sane within 'block'
 
     `compile` expects .lineno attributes to be always monotonically increasing
@@ -320,14 +335,18 @@ def fixup_locations_in_block(block, last_lineno=None, last_col_offset=None):
             if not hasattr(node, 'lineno') or node.lineno < last_lineno:
                 node.lineno = last_lineno
                 node.col_offset = last_col_offset
-        last_lineno, last_col_offset = _find_max_line_and_col(node)
-    return last_lineno, last_col_offset
+        if last_end_lineno is not None:
+            if not hasattr(node, 'end_lineno') or node.end_lineno is None or node.end_lineno < last_end_lineno:
+                node.end_lineno = last_end_lineno
+                node.end_col_offset = last_end_col_offset
+        last_lineno, last_col_offset, last_end_lineno, last_end_col_offset = _find_max_line_and_col(node)
+    return last_lineno, last_col_offset, last_end_lineno, last_end_col_offset
 
 class _LocationAttrRemoverCls(NodeVisitor):
     def visit(self, node):
         super().visit(node)
-        for attr in 'lineno', 'col_offset':
-            if hasattr(node, attr):
+        for attr in 'lineno', 'col_offset', 'end_lineno', 'end_col_offset':
+            if hasattr(node, attr) and getattr(node, attr) is not None:
                 delattr(node, attr)
 
 LocationAttrRemover = _LocationAttrRemoverCls()
@@ -425,6 +444,9 @@ class PythonGenerator(NodeVisitor):
         """
         if node is None:
             return None
+
+        if not isinstance(node, dast.DistNode) and isinstance(node, AST):
+            return node
 
         assert isinstance(node, dast.DistNode)
         self.current_node = node
@@ -1134,7 +1156,67 @@ class PythonGenerator(NodeVisitor):
             return pyName(node.name, self.current_context())
 
 
+    def visit_MatchValue(self, node):
+        value = self.visit(node.value)
+        ast = MatchValue(value)
+        return propagate_attributes(ast.value, ast)
+
+    def visit_MatchSingleton(self, node):
+        value = node.value
+        ast = MatchSingleton(value)
+        return propagate_attributes(ast.value, ast)
+    
+    def visit_MatchSequence(self, node):
+        patterns = [self.visit(p) for p in node.subexprs]
+        ast = MatchSequence(patterns)
+        return propagate_attributes(patterns, ast)
+    
+    def visit_MatchStar(self, node):
+        return MatchStar(node.name)
+    
+    def visit_MatchMapping(self, node):
+        patterns = [self.visit(p) for p in node.patterns]
+        keys = [self.visit(k) for k in node.keys]
+        ast = MatchMapping(keys, patterns, node.rest)
+        return propagate_attributes(keys + patterns, ast)
+    
+    def visit_MatchClass(self, node):
+        cls = self.visit(node.cls)
+        patterns = [self.visit(p) for p in node.patterns]
+        kwd_attrs = [k for k in node.kwd_attrs]
+        kwd_patterns = [self.visit(k) for k in node.kwd_patterns]
+        ast = MatchClass(cls, patterns, kwd_attrs, kwd_patterns)
+        return propagate_attributes([cls] + patterns + kwd_attrs + kwd_patterns, ast)
+    
+    def visit_MatchAs(self, node):
+        if node.pattern:
+            pattern = self.visit(node.pattern)
+        else:
+            pattern = None
+        ast = MatchAs(pattern, node.name)
+        return propagate_attributes(pattern, ast)
+    
+    def visit_MatchOr(self, node):
+        patterns = [self.visit(p) for p in node.patterns]
+        ast = MatchOr(patterns)
+        return propagate_attributes(patterns, ast)
+    
+    def visit_MatchCase(self, node):
+        pattern = self.visit(node.pattern)
+        if node.guard:
+            guard = self.visit(node.guard)
+        else:
+            guard = None
+        body = self.body(node.body)
+        return match_case(pattern=pattern, guard=guard, body=body)
+    
     ########## Statements ##########
+
+    def visit_MatchStmt(self, node):
+        subject = self.visit(node.subject)
+        cases = [self.visit(b) for b in node.body]
+        ast = Match(subject, cases)
+        return [propagate_attributes([subject] + cases, ast)]
 
     def visit_NoopStmt(self, node):
         return [Pass()]
@@ -1204,7 +1286,7 @@ class PythonGenerator(NodeVisitor):
         conds = []
         body = [INCGRD()]       # body of the main while loop
         last = body
-        last_lineno, max_colno = None, None
+        last_lineno, max_colno, last_end_lineno, max_end_colno = None, None, None, None
         timeout_branches = []
         whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, Num(0)),
                             body, [])
@@ -1221,7 +1303,7 @@ class PythonGenerator(NodeVisitor):
                 timeout_branches.append(br)
             ifbody = self.body(br.body)
             ifbody.append(INCGRD())
-            last_lineno, max_colno = fixup_locations_in_block(ifbody)
+            last_lineno, max_colno, last_end_lineno, max_end_colno = fixup_locations_in_block(ifbody)
             brnode = pyIf(cond, ifbody, [])
             copy_location(brnode, br)
             last.append(brnode)
@@ -1236,6 +1318,8 @@ class PythonGenerator(NodeVisitor):
                 brnode = pyIf(cond, ifbody, [])
                 if last_lineno is not None:
                     ifbody[0].lineno, ifbody[0].col_offset = last_lineno, max_colno
+                if last_end_lineno is not None:
+                    ifbody[0].end_lineno, ifbody[0].end_col_offset = last_end_lineno, max_end_colno
                 fixup_locations_in_block(ifbody)
                 last.append(brnode)
                 last = brnode.orelse
@@ -1246,6 +1330,8 @@ class PythonGenerator(NodeVisitor):
         last.append(DEDGRD())
         if last_lineno is not None:
             last[0].lineno, last[0].col_offset = last_lineno, max_colno
+        if last_end_lineno is not None:
+            last[0].end_lineno, last[0].end_col_offset = last_end_lineno, max_end_colno
         fixup_locations_in_block(last)
         if node.is_in_loop:
             propagate_continue \
@@ -1258,6 +1344,10 @@ class PythonGenerator(NodeVisitor):
                 propagate_continue.lineno, propagate_continue.col_offset \
                     = propagate_break.lineno, propagate_break.col_offset \
                     = last_lineno, max_colno
+            if last_end_lineno is not None:
+                propagate_continue.end_lineno, propagate_continue.end_col_offset \
+                    = propagate_break.end_lineno, propagate_break.end_col_offset \
+                    = last_end_lineno, max_end_colno
             whilenode.orelse.append(propagate_continue)
             main.append(propagate_break)
         propagate_attributes(conds, main[0])
@@ -1283,7 +1373,7 @@ class PythonGenerator(NodeVisitor):
                 conds.append(cond)
                 ifbody = self.body(br.body)
                 ifbody.append(DEDGRD())
-                last_lineno, max_colno = fixup_locations_in_block(ifbody)
+                last_lineno, max_colno, last_end_lineno, max_end_colno = fixup_locations_in_block(ifbody)
                 brnode = pyIf(cond, ifbody, [])
                 copy_location(brnode, br)
                 last.append(brnode)
@@ -1299,7 +1389,10 @@ class PythonGenerator(NodeVisitor):
             if last_lineno:
                 brnode.lineno, brnode.col_offset = last_lineno, max_colno
                 ifbody[0].lineno, ifbody[0].col_offset = last_lineno, max_colno
-            last_lineno, max_colno = fixup_locations_in_block(ifbody)
+            if last_end_lineno:
+                brnode.end_lineno, brnode.end_col_offset = last_end_lineno, max_end_colno
+                ifbody[0].end_lineno, ifbody[0].end_col_offset = last_end_lineno, max_end_colno
+            last_lineno, max_colno, last_end_lineno, max_end_colno = fixup_locations_in_block(ifbody)
             last.append(brnode)
             last = brnode.orelse
         # Label call must come after the If tests:
@@ -1311,6 +1404,8 @@ class PythonGenerator(NodeVisitor):
         last.append(labelnode)
         if last_lineno is not None:
             last[0].lineno, last[0].col_offset = last_lineno, max_colno
+        if last_end_lineno is not None:
+            last[0].end_lineno, last[0].end_col_offset = last_end_lineno, max_end_colno
         fixup_locations_in_block(last)
         whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, Num(0)),
                             body, [])

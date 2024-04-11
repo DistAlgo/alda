@@ -62,12 +62,20 @@ class ResolverException(CompilerException): pass
 def to_source(tree):
     textbuf = io.StringIO(newline='')
     # textbuf.write(VERSION_HEADER.format(da.__version__))
-    Unparser(tree, textbuf)
-    return textbuf.getvalue()
+    if sys.version_info < (3, 9):
+        Unparser(tree, textbuf)
+        return textbuf.getvalue()
+    else:
+        return ast.unparse(tree)
 
 def to_file(tree, fd):
-    fd.write(VERSION_HEADER.format(da.__version__))
-    return Unparser(tree, fd).counter
+    if sys.version_info < (3, 9):
+        fd.write(VERSION_HEADER.format(da.__version__))
+        return Unparser(tree, fd).counter
+    else:
+        output = ast.unparse(tree)
+        fd.write(output)
+        return len(output)
 
 def set_debug_level(level):
     global Debug

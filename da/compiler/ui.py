@@ -154,6 +154,8 @@ def dastr_to_pycode(src, filename='<string>', args=None, _optimize=-1):
     open('./timing/timing_%s.tsv' % os.path.basename(filename),'a').write('compile\t%s\t%s\n' % (elptime2-elptime1, cputime2-cputime1))
 
     if pyast is not None:
+        if not os.path.exists('__pycache__'):
+            os.mkdir('__pycache__')
         outname = os.path.join('__pycache__',os.path.basename(filename)+'.py')
         with open(outname,'w') as outfd:
             global OutputSize

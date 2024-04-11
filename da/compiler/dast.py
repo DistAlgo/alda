@@ -49,7 +49,7 @@ class DistNode(AST):
 
     _fields = []
     _index = 0
-    _attributes = ['lineno', 'col_offset']
+    _attributes = ['lineno', 'col_offset', 'end_lineno', 'end_col_offset']
 
     def __init__(self, parent=None, ast=None):
         """Instantiate a node.
@@ -65,6 +65,8 @@ class DistNode(AST):
         self._parent = parent
         self.lineno = 0
         self.col_offset = 0
+        self.end_lineno = 0
+        self.end_col_offset = 0
         DistNode._index += 1
         if ast is not None:
             self.copy_location(ast)
@@ -85,6 +87,10 @@ class DistNode(AST):
             self.lineno = ast.lineno
         if hasattr(ast, "col_offset"):
             self.col_offset = ast.col_offset
+        if hasattr(ast, "end_lineno"):
+            self.end_lineno = ast.end_lineno
+        if hasattr(ast, "end_col_offset"):
+            self.end_col_offset = ast.end_col_offset
 
     def transform(self, predicate, transformer):
         """Transform the subtree rooted at this node.
@@ -2188,6 +2194,155 @@ class IfStmt(CompoundStmt):
         return list(chain(*[l.ordered_nameobjs
                             for l in chain(self.body, self.elsebody)
                             if l is not None]))
+
+
+class MatchStmt(CompoundStmt):
+    _fields = ['subject', 'body']
+    
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.subject = None
+
+    def clone(self):
+        node = super().clone()
+        node.subject = self.subject.clone()
+        return node
+
+class MatchCase(DistNode):
+    _fields = ['pattern', 'guard', 'body']
+
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.pattern = None
+        self.guard = None
+        self.body = []
+
+    def clone(self):
+        node = super().clone()
+        node.pattern = self.pattern.clone()
+        node.guard = self.guard.clone()
+        node.body = [b.clone() for b in self.body]
+        return node
+
+class MatchPattern(DistNode): 
+
+    pass
+
+class MatchValue(MatchPattern, SimpleExpr): pass
+
+class MatchSingleton(MatchPattern, SimpleExpr): pass
+
+class MatchSequence(MatchPattern, Expression): 
+    def __init__(self, parent, ast=None, name=None):
+        super().__init__(parent, ast)
+        self.patterns = self.subexprs
+
+class MatchStar(MatchPattern, Expression):
+    _fields = ['name']
+    def __init__(self, parent, ast=None, name=None):
+        super().__init__(parent, ast)
+        self.name = name
+
+class MatchMapping(MatchPattern, Expression):
+    # _fields = ['keys', 'patterns', 'rest']
+    
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.subexprs = [None, None]
+        self.rest = None # string
+
+    @property
+    def keys(self):
+        return self.subexprs[0]
+
+    @property
+    def patterns(self):
+        return self.subexprs[1]
+
+    @keys.setter
+    def keys(self, keys):
+        self.subexprs[0] = keys
+
+    @patterns.setter
+    def patterns(self, patterns):
+        self.subexprs[1] = patterns
+
+    def clone(self):
+        node = super().clone()
+        node.rest = self.rest
+        return node
+
+class MatchClass(MatchPattern, Expression):
+
+    # _fields = ['cls', 'patterns', 'kwd_attrs', 'kwd_patterns']
+
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.subexprs = [None, None, None, None]
+
+    @property
+    def cls(self):
+        return self.subexprs[0]
+
+    @property
+    def patterns(self):
+        return self.subexprs[1]
+    
+    @property
+    def kwd_attrs(self):
+        return self.subexprs[2]
+    
+    @property
+    def kwd_patterns(self):
+        return self.subexprs[3]
+
+    @cls.setter
+    def cls(self, cls):
+        self.subexprs[0] = cls
+
+    @patterns.setter
+    def patterns(self, patterns):
+        self.subexprs[1] = patterns
+
+    @kwd_attrs.setter
+    def kwd_attrs(self, kwd_attrs):
+        self.subexprs[2] = kwd_attrs
+
+    @kwd_patterns.setter
+    def kwd_patterns(self, kwd_patterns):
+        self.subexprs[3] = kwd_patterns
+
+class MatchAs(MatchPattern, Expression):
+    # _fields = ['pattern', 'name']
+    
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.name = None
+
+    @property
+    def pattern(self):
+        if len(self.subexprs) < 1: 
+            return None
+        return self.subexprs[0]
+    
+    @pattern.setter
+    def pattern(self, pattern):
+        if len(self.subexprs) < 1: 
+            self.subexprs.append(pattern)
+        else:
+            self.subexprs[0] = pattern
+
+    def clone(self):
+        node = super().clone()
+        node.name = self.name
+        return node
+
+class MatchOr(MatchPattern, Expression):
+    # _fields = ['patterns']
+    
+    def __init__(self, parent, ast=None):
+        super().__init__(parent, ast)
+        self.patterns = self.subexprs
 
 class LoopStmt(CompoundStmt):
     """Abstract class for loops."""

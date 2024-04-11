@@ -1387,6 +1387,90 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             if stmtobj is not None:
                 self.pop_state()
 
+    def visit_Match(self, node):
+        s = self.create_stmt(dast.MatchStmt, node)
+        try:
+            self.current_context = Read(s)
+            s.subject = self.visit(node.subject)
+            self.current_block = s.body
+            self.body = [self.visit(b) for b in node.cases]
+        except MalformedStatementError as e:
+            self.error(e.msg if e.msg is not None else e.reason,
+                       e.node)
+        finally:
+            self.pop_state()
+
+    def visit_match_case(self, node):
+        stmtobj = None
+        try:
+            stmtobj = self.create_stmt(dast.MatchCase, node)
+            self.current_context = Read(stmtobj)
+            stmtobj.pattern = self.visit(node.pattern)
+            if hasattr(stmtobj, 'guard') and stmtobj.guard:
+                stmtobj.guard = self.visit(node.guard)
+            self.current_block = stmtobj.body
+            self.body(node.body)
+        except MalformedStatementError as e:
+            self.error(e.msg, e.node)
+        finally:
+            if stmtobj is not None:
+                self.pop_state()
+
+    def visit_MatchValue(self, node):
+        pattern = self.create_expr(dast.MatchValue, node)
+        pattern.value = self.visit(node.value)
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchSingleton(self, node):
+        pattern = self.create_expr(dast.MatchSingleton, node)
+        pattern.value = node.value
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchSequence(self, node):
+        pattern = self.create_expr(dast.MatchSequence, node)
+        for pt in node.patterns:
+            pattern.subexprs.append(self.visit(pt))
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchStar(self, node):
+        pattern = self.create_expr(dast.MatchStar, node, {'name':node.name}, nopush=True)
+        return pattern
+    
+    def visit_MatchMapping(self, node):
+        pattern = self.create_expr(dast.MatchMapping, node)
+        pattern.keys = [self.visit(k) for k in node.keys]
+        pattern.patterns = [self.visit(pt) for pt in node.patterns]
+        pattern.rest = node.rest
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchClass(self, node):
+        pattern = self.create_expr(dast.MatchClass, node)
+        pattern.cls = self.visit(node.cls)
+        pattern.patterns = [self.visit(pt) for pt in node.patterns]
+        pattern.kwd_attrs = [ka for ka in node.kwd_attrs]
+        pattern.kwd_patterns = [self.visit(kp) for kp in node.kwd_patterns]
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchAs(self, node):
+        pattern = self.create_expr(dast.MatchAs, node)
+        if node.pattern:
+            pattern.pattern = self.visit(node.pattern)
+        pattern.name = node.name
+        self.pop_state()
+        return pattern
+    
+    def visit_MatchOr(self, node):
+        pattern = self.create_expr(dast.MatchClass, node)
+        for pt in node.patterns:
+            pattern.subexprs.append(self.visit(pt))
+        self.pop_state()
+        return pattern
+
     def visit_For(self, node):
         s = self.create_stmt(dast.ForStmt, node)
         try:
@@ -2412,11 +2496,11 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             # since Python 3.8, ast classes Num, Str, Bytes, NameConstant and Ellipsis 
             # are considered deprecated and will be removed in future Python versions. 
             # Constant should be used instead.
-            if node.value == True:
+            if type(node.value) == type(True) and node.value == True:
                 return self.create_expr(dast.TrueExpr, node, nopush=True)
-            elif node.value == False:
+            elif type(node.value) == type(False) and node.value == False:
                 return self.create_expr(dast.FalseExpr, node, nopush=True)
-            elif node.value == None:
+            elif type(node.value) == type(None):
                 return self.create_expr(dast.NoneExpr, node, nopush=True)
             else:
                 return self.create_expr(dast.ConstantExpr, node, {'value': node.value}, nopush=True)
