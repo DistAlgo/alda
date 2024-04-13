@@ -1936,6 +1936,9 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
         self.enter_query()
         try:
             expr.domains, predicates = self.parse_domains_and_predicate(node)
+             # ..if no predicate found, then default to True:
+            if len(predicates) == 0:
+                predicates.append(self.create_expr(dast.TrueExpr, node, nopush=True))
             if len(predicates) > 1:
                 self.warn("multiple predicates in quantified expression, "
                           "first one is used, the rest are ignored.", node)
@@ -2030,34 +2033,42 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
             if kw.arg == KW_SUCH_THAT:
                 preds.append(kw.value)
             else:
-                self.error("Unknown keyword '%s' in comprehension expression." %
+                self.error("Unknown keyword '%s' in quantified expression." %
                            kw.arg, node)
-        # ..if no predicate found, then default to True:
-        if len(preds) == 0:
-            preds= [NameConstant(True)]
         domains = node.args
         if len(domains) == 0:
-            self.warn("No domain specifiers in comprehension expression.", node)
+            self.warn("No domain specifiers in quantified expression.", node)
         dadomains = [self.parse_domain_spec(node) for node in domains]
         dapredicates = [self.visit(pred) for pred in preds]
         return dadomains, dapredicates
 
     class NameTransformer(NodeTransformer):
         def visit_Name(self, node):
-            return Str(node.id)
+            if sys.version_info < (3, 8):
+                return Str(node.id)
+            else:
+                return Constant(node.id)
 
     def parse_config_value(self, vnode):
         value = None
         # Configuration values can not contain variables, so we treat all
         # 'Name's as 'Str's:
         vnode = Parser.NameTransformer().visit(vnode)
-        if isinstance(vnode, Num) or isinstance(vnode, Str) or \
-           isinstance(vnode, Bytes) or isinstance(vnode, NameConstant) or \
-           isinstance(vnode, Set) or isinstance(vnode, List) or \
-           isinstance(vnode, Tuple):
-            value = self.visit(vnode)
+        if sys.version_info < (3, 8):
+            if isinstance(vnode, Num) or isinstance(vnode, Str) or \
+            isinstance(vnode, Bytes) or isinstance(vnode, NameConstant) or \
+            isinstance(vnode, Set) or isinstance(vnode, List) or \
+            isinstance(vnode, Tuple):
+                value = self.visit(vnode)
+            else:
+                self.error("Invalid configuration value.", vnode)
         else:
-            self.error("Invalid configuration value.", vnode)
+            if isinstance(vnode, Constant) or \
+            isinstance(vnode, Set) or isinstance(vnode, List) or \
+            isinstance(vnode, Tuple):
+                value = self.visit(vnode)
+            else:
+                self.error("Invalid configuration value.", vnode)
         return value
 
     def parse_config_section(self, node):

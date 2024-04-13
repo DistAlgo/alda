@@ -176,8 +176,12 @@ def pyLabel(name, block=False, timeout=None):
     kws = [("block", pyTrue() if block else pyFalse())]
     if timeout is not None:
         kws.append(("timeout", timeout))
+    if sys.version_info < (3, 8):
+        strClass = Str
+    else:
+        strClass = Constant
     return Expr(pyCall(func=pyAttr(pyCall("super"), "_label"),
-                       args=[Str(name)],
+                       args=[strClass(name)],
                        keywords=kws))
 
 def pycomprehension(target, iter, ifs, is_async=0):
@@ -497,13 +501,17 @@ class PythonGenerator(NodeVisitor):
         return res
 
     def visit_IntsExpr(self, node):
+        if sys.version_info < (3, 8):
+            numClass = Num
+        else:
+            numClass = Constant
         args = []
         if node.start:
             args.append(self.visit(node.start))
         else:
-            args.append(Num(1))
+            args.append(numClass(1))
         if node.end:
-            args.append(BinOp(self.visit(node.end), Add(), Num(1)))
+            args.append(BinOp(self.visit(node.end), Add(), numClass(1)))
         if node.step:
             args.append(BinOp(self.visit(node.step), Sub(), args[0]))
         return pyCall(pyName('range'),args)
@@ -533,13 +541,20 @@ class PythonGenerator(NodeVisitor):
             return [Module(importList+fromImportList+body)]
 
     def generate_config(self, node):
+        if sys.version_info < (3, 8):
+            strClass = Str
+        else:
+            strClass = Constant
         return Assign([pyName(CONFIG_OBJECT_NAME, Store())],
-                      Dict([Str(key) for key, _ in node.configurations],
+                      Dict([strClass(key) for key, _ in node.configurations],
                            [self.visit(val) for _, val in node.configurations]))
 
     def generate_event_def(self, node):
         evtype = pyAttr(pyAttr("da", "pat"), node.type.__name__)
-        name = Str(node.name)
+        if sys.version_info < (3, 8):
+            name = Str(node.name)
+        else:
+            name = Constant(node.name)
         history = self.history_stub(node)
         pattern = self.visit(node.pattern)
         sources = pyNone()
@@ -1098,10 +1113,14 @@ class PythonGenerator(NodeVisitor):
     visit_UnaryExpr = visit_ArithmeticExpr
 
     def visit_PatternElement(self, node):
+        if sys.version_info < (3, 8):
+            strClass = Str
+        else:
+            strClass = Constant
         if type(node) is dast.FreePattern:
-            val = Str(node.value.name) if node.value is not None else pyNone()
+            val = strClass(node.value.name) if node.value is not None else pyNone()
         elif type(node) is dast.BoundPattern:
-            val = Str(node.unique_name)
+            val = strClass(node.unique_name)
         elif type(node) is dast.ConstantPattern:
             if isinstance(node.value, dast.SelfExpr):
                 # We have to special case the 'self' expr here:
@@ -1279,18 +1298,22 @@ class PythonGenerator(NodeVisitor):
 
     # 'await' and 'if await':
     def visit_AwaitStmt(self, node):
+        if sys.version_info < (3, 8):
+            numClass = Num
+        else:
+            numClass = Constant
         def INCGRD():
-            return pyAugAssign(pyName(node.unique_label, Store()), Add, Num(1))
+            return pyAugAssign(pyName(node.unique_label, Store()), Add, numClass(1))
         def DEDGRD():
-            return pyAugAssign(pyName(node.unique_label, Store()), Sub, Num(1))
+            return pyAugAssign(pyName(node.unique_label, Store()), Sub, numClass(1))
         conds = []
         body = [INCGRD()]       # body of the main while loop
         last = body
         last_lineno, max_colno, last_end_lineno, max_end_colno = None, None, None, None
         timeout_branches = []
-        whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, Num(0)),
+        whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, numClass(0)),
                             body, [])
-        main = [pyAssign([pyName(node.unique_label, Store())], Num(0))]
+        main = [pyAssign([pyName(node.unique_label, Store())], numClass(0))]
         main.append(whilenode)
         for br in node.branches:
             if br.condition is not None:
@@ -1335,10 +1358,10 @@ class PythonGenerator(NodeVisitor):
         fixup_locations_in_block(last)
         if node.is_in_loop:
             propagate_continue \
-                = pyIf(test=pyCompare(pyName(node.unique_label), NotEq, Num(2)),
+                = pyIf(test=pyCompare(pyName(node.unique_label), NotEq, numClass(2)),
                        body=[Continue()], orelse=[])
             propagate_break \
-                = pyIf(test=pyCompare(pyName(node.unique_label), NotEq, Num(2)),
+                = pyIf(test=pyCompare(pyName(node.unique_label), NotEq, numClass(2)),
                        body=[Break()], orelse=[])
             if last_lineno is not None:
                 propagate_continue.lineno, propagate_continue.col_offset \
@@ -1355,10 +1378,14 @@ class PythonGenerator(NodeVisitor):
 
     # 'while await':
     def visit_LoopingAwaitStmt(self, node):
+        if sys.version_info < (3, 8):
+            numClass = Num
+        else:
+            numClass = Constant
         def INCGRD():
-            return pyAugAssign(pyName(node.unique_label, Store()), Add, Num(1))
+            return pyAugAssign(pyName(node.unique_label, Store()), Add, numClass(1))
         def DEDGRD():
-            return pyAugAssign(pyName(node.unique_label, Store()), Sub, Num(1))
+            return pyAugAssign(pyName(node.unique_label, Store()), Sub, numClass(1))
         conds = []
         timeout_branches = []
         body = [INCGRD()]       # body of the main while loop
@@ -1396,7 +1423,7 @@ class PythonGenerator(NodeVisitor):
             last.append(brnode)
             last = brnode.orelse
         # Label call must come after the If tests:
-        labelnode = pyIf(pyCompare(pyName(node.unique_label), Eq, Num(0)),
+        labelnode = pyIf(pyCompare(pyName(node.unique_label), Eq, numClass(0)),
                          [pyLabel(node.label, block=True,
                                   timeout=(self.visit(node.timeout)
                                         if node.timeout is not None else None))
@@ -1407,9 +1434,9 @@ class PythonGenerator(NodeVisitor):
         if last_end_lineno is not None:
             last[0].end_lineno, last[0].end_col_offset = last_end_lineno, max_end_colno
         fixup_locations_in_block(last)
-        whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, Num(0)),
+        whilenode = pyWhile(pyCompare(pyName(node.unique_label), Eq, numClass(0)),
                             body, [])
-        main = [pyAssign([pyName(node.unique_label, Store())], Num(0))]
+        main = [pyAssign([pyName(node.unique_label, Store())], numClass(0))]
         if node.timeout is not None:
             main.append(pyExpr(pyCall(pyAttr("self", "_timer_start"))))
         main.append(whilenode)
@@ -1522,17 +1549,21 @@ for attr in dir(self):
         return pyAttr(pyAttr("da", "pat"), node.type.__name__)
 
     def visit_EventHandler(self, node):
+        if sys.version_info < (3, 8):
+            strClass = Str
+        else:
+            strClass = Constant
         stmts = self.visit_Function(node)
         stmts.append(pyAssign(
             [pyAttr(node.name, "_labels", Store())],
             (pyNone() if node.labels is None else
                pyCall(pyName("frozenset"),
-                      [pySet([Str(l) for l in node.labels])]))))
+                      [pySet([strClass(l) for l in node.labels])]))))
         stmts.append(pyAssign(
             [pyAttr(node.name, "_notlabels", Store())],
             (pyNone() if node.notlabels is None else
                pyCall(pyName("frozenset"),
-                      [pySet([Str(l) for l in node.notlabels])]))))
+                      [pySet([strClass(l) for l in node.notlabels])]))))
         return stmts
 
 class PatternComprehensionGenerator(PythonGenerator):
