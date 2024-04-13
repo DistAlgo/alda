@@ -690,7 +690,7 @@ class Parser(NodeVisitor, CompilerMessagePrinter):
 
         if not (len(node.body) > 0 and
                 isinstance(node.body[0], Expr) and
-                isinstance(node.body[0].value, Str)):
+                isinstance(node.body[0].value, str)):
             return
 
         self.debug("parsing module header...")
